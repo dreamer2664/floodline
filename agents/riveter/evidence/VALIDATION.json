@@ -1,0 +1,12 @@
+{
+  "server_scripts": 1,
+  "spawn_locations": 1,
+  "place_children": 3,
+  "workspace_children": 1,
+  "humanoids": 4,
+  "client_scripts": 1,
+  "proximity_prompts": 11,
+  "models": 13,
+  "world_descendants": 122,
+  "parts": 93
+}

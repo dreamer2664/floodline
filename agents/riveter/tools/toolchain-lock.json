@@ -1,0 +1,40 @@
+{
+  "platform": "linux-x86_64",
+  "tools": {
+    "rojo": {
+      "repo": "rojo-rbx/rojo",
+      "version": "v7.7.1",
+      "url": "https://github.com/rojo-rbx/rojo/releases/download/v7.7.1/rojo-7.7.1-linux-x86_64.zip",
+      "release_url": "https://github.com/rojo-rbx/rojo/releases/tag/v7.7.1",
+      "server_digest": "sha256:00feb4fa0829a1dd72b49df2639da519a352bfe13cadcd83969e2ba2bb5693c4",
+      "binary_sha256": {
+        "rojo": "cb997ef82543670e51f2114898950bcabf9911efc3bf44f798524833e0e47f6e"
+      },
+      "archive_sha256": "00feb4fa0829a1dd72b49df2639da519a352bfe13cadcd83969e2ba2bb5693c4"
+    },
+    "lune": {
+      "repo": "lune-org/lune",
+      "version": "v0.11.0",
+      "url": "https://github.com/lune-org/lune/releases/download/v0.11.0/lune-0.11.0-linux-x86_64.zip",
+      "release_url": "https://github.com/lune-org/lune/releases/tag/v0.11.0",
+      "server_digest": "sha256:5a0ea32c3e13e5e3b1dc415c2056bcfe44258b3a811dcd473c50e3b437d10f72",
+      "binary_sha256": {
+        "lune": "7ac5dee97f40259f9dd977a3e2c1725f77ed854cdfbd1c6d42324aa77331cb2a"
+      },
+      "archive_sha256": "5a0ea32c3e13e5e3b1dc415c2056bcfe44258b3a811dcd473c50e3b437d10f72"
+    },
+    "luau": {
+      "repo": "luau-lang/luau",
+      "version": "0.742",
+      "url": "https://github.com/luau-lang/luau/releases/download/0.742/luau-ubuntu.zip",
+      "release_url": "https://github.com/luau-lang/luau/releases/tag/0.742",
+      "server_digest": "sha256:152058b98c60ff1f5b5ec9bca0b8eb37793cae161dd3a05608cc3d8738ba1a4d",
+      "binary_sha256": {
+        "luau": "13c600d000a354fcccda705653bd803e65513aee610a1f83e02c5e98f84ebb32",
+        "luau-analyze": "f72cccd73bd4ed290c38c38240222ea6004f7c16c9c219187a81bcf104e5e675",
+        "luau-compile": "8e13ed98aa01f0a5e51710656b36c93e611e0a3c6cbf4f6eec2e4aac878b0fd5"
+      },
+      "archive_sha256": "152058b98c60ff1f5b5ec9bca0b8eb37793cae161dd3a05608cc3d8738ba1a4d"
+    }
+  }
+}

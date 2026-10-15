@@ -1,0 +1,21 @@
+{
+  "name": "FLOODLINE",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "$className": "Workspace",
+      "World": { "$path": "generated/models/World.rbxmx" }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "GameManager": { "$path": "src/GameManager.server.luau" }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": { "$path": "src/Client.client.luau" }
+      }
+    }
+  }
+}
