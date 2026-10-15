@@ -196,6 +196,7 @@ local function strike(position: Vector3, radius: number, damage: number)
 end
 
 local function scheduleEvent()
+	-- Config.scaling already folds the difficulty modifier into HazardRate.
 	local rate = ctx.scaling().HazardRate
 	local phase = ctx.flood.phase
 	if phase ~= "Rising" and phase ~= "Surge" then

@@ -117,7 +117,7 @@ end
 local function characterOxygen(player: Player): { value: number, submerged: boolean }
 	local entry = Flood.oxygen[player]
 	if not entry then
-		entry = { value = ctx.config.Water.OxygenSeconds, submerged = false }
+		entry = { value = ctx.scaling().OxygenSeconds, submerged = false }
 		Flood.oxygen[player] = entry
 	end
 	return entry
@@ -171,7 +171,7 @@ function Flood.updateCharacters(dt: number)
 			end
 		else
 			entry.submerged = false
-			entry.value = math.min(ctx.config.Water.OxygenSeconds, entry.value + ctx.config.Water.OxygenRecoverPerSecond * dt)
+			entry.value = math.min(ctx.scaling().OxygenSeconds, entry.value + ctx.config.Water.OxygenRecoverPerSecond * dt)
 		end
 	end
 end

@@ -172,6 +172,69 @@ Config.Scaling = {
 	},
 }
 
+-- Lobby-selectable difficulty. Multipliers stack on top of the player-count scaling table.
+Config.Modifiers = {
+	Order = { "Calm", "Standard", "Storm", "Catastrophe" },
+	Calm = {
+		Label = "Calm Tide",
+		Blurb = "Slow water, forgiving hazards. Good for a first run.",
+		RiseMultiplier = 0.72,
+		HazardMultiplier = 0.5,
+		OxygenMultiplier = 1.25,
+		QuotaDelta = -0.1,
+		PrepBonus = 20,
+		ScoreMultiplier = 0.8,
+	},
+	Standard = {
+		Label = "Standard Surge",
+		Blurb = "The district as designed.",
+		RiseMultiplier = 1.0,
+		HazardMultiplier = 1.0,
+		OxygenMultiplier = 1.0,
+		QuotaDelta = 0,
+		PrepBonus = 0,
+		ScoreMultiplier = 1.0,
+	},
+	Storm = {
+		Label = "Storm Season",
+		Blurb = "Faster rise, more debris, thinner air.",
+		RiseMultiplier = 1.22,
+		HazardMultiplier = 1.35,
+		OxygenMultiplier = 0.85,
+		QuotaDelta = 0.1,
+		PrepBonus = -10,
+		ScoreMultiplier = 1.35,
+	},
+	Catastrophe = {
+		Label = "Catastrophe",
+		Blurb = "The dam is already gone. Expect losses.",
+		RiseMultiplier = 1.45,
+		HazardMultiplier = 1.7,
+		OxygenMultiplier = 0.72,
+		QuotaDelta = 0.2,
+		PrepBonus = -25,
+		ScoreMultiplier = 1.8,
+	},
+}
+
+Config.Pings = {
+	Types = {
+		{ id = "danger", label = "Danger", color = "Bad" },
+		{ id = "objective", label = "Objective", color = "Accent" },
+		{ id = "survivor", label = "Survivor", color = "Good" },
+		{ id = "loot", label = "Supplies", color = "Water" },
+	},
+	Lifetime = 9,
+	Cooldown = 1.2,
+	MaxDistance = 260,
+}
+
+Config.Doors = {
+	OpenAngle = 95,
+	SwingSeconds = 0.55,
+	ClosedWaterLag = 2.6, -- extra foundation offset for a sealed interior
+}
+
 Config.Player = {
 	WalkSpeed = 16,
 	SprintSpeed = 23,
@@ -216,9 +279,28 @@ Config.Ui = {
 	FontBold = Enum.Font.GothamBold,
 }
 
-function Config.scaling(playerCount: number)
+-- Difficulty modifiers layer on top of the per-player-count table.
+function Config.modifier(name: string?)
+	return Config.Modifiers[name or "Standard"] or Config.Modifiers.Standard
+end
+
+function Config.scaling(playerCount: number, modifierName: string?)
 	local n = math.clamp(playerCount, 1, 4)
-	return Config.Scaling[n] or Config.Scaling[4]
+	local base = Config.Scaling[n] or Config.Scaling[4]
+	local mod = Config.modifier(modifierName)
+	return {
+		RequiredSurvivorFraction = math.clamp(base.RequiredSurvivorFraction + mod.QuotaDelta, 0.2, 0.9),
+		PhaseSeconds = base.PhaseSeconds,
+		PrepSeconds = math.max(35, base.PrepSeconds + mod.PrepBonus),
+		SurgeSeconds = base.SurgeSeconds,
+		HazardRate = base.HazardRate * mod.HazardMultiplier,
+		RiseMultiplier = base.RiseMultiplier * mod.RiseMultiplier,
+		OxygenSeconds = Config.Water.OxygenSeconds * mod.OxygenMultiplier,
+		RespawnPenaltySeconds = base.RespawnPenaltySeconds,
+		Modifier = modifierName or "Standard",
+		ModifierLabel = mod.Label,
+		ScoreMultiplier = mod.ScoreMultiplier,
+	}
 end
 
 return Config

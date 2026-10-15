@@ -148,11 +148,18 @@ function CFrameMT.__mul(a, b)
 end
 
 function CFrameMT.__add(a, b)
-	return cf(a.Position + b)
+	if getmetatable(b) == Vector3 then
+		return cf(a.Position + b, a._look)
+	end
+	return cf(a.Position + b.Position, a._look)
 end
 
 function CFrameMT.__sub(a, b)
-	return cf(a.Position - b.Position)
+	if getmetatable(b) == Vector3 then
+		-- Roblox allows CFrame - Vector3 (translates the CFrame).
+		return cf(a.Position - b, a._look)
+	end
+	return cf(a.Position - b.Position, a._look)
 end
 
 function CFrameMT.__tostring(self)

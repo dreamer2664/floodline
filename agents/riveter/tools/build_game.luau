@@ -100,6 +100,13 @@ local function prompt(parent, action, object, hold)
 	return pr
 end
 
+-- A hinged door: the Door_ prefix is what DoorService looks for; the zone name follows it.
+local function DOOR(parent, zone, position, width, height, color)
+	local door = P(parent, "Door_" .. zone, V3.new(width, height, 0.35), position, color or C3.fromRGB(120, 92, 64), WOOD, true, true, 0)
+	prompt(door, "Toggle Door", zone .. " door", 0.2)
+	return door
+end
+
 local function script_(parent, name, source, className)
 	local o = roblox.Instance.new(className or "Script")
 	o.Name = name
@@ -202,6 +209,10 @@ copyModel("World", function(world)
 	P(term, "Medkit1Cross", V3.new(0.7, 0.16, 0.55), V3.new(12.2, 2.5, -33.7), C3.fromRGB(220, 70, 60), NEON, true, false, 0)
 	prompt(term.Medkit1, "Take Medkit", "Medkit", 0.35)
 	P(term, "Sign_Terminal", V3.new(9, 2.2, 0.4), V3.new(0, 5, -19.2), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
+	-- hinged doors: closing one seals the room and slows how fast it floods
+	DOOR(term, "Terminal", V3.new(-3.2, 4.1, -19), 6.4, 7.6)
+	P(term, "DoorFrameL", V3.new(0.5, 7.8, 0.5), V3.new(-6.5, 4.1, -19), C3.fromRGB(80, 84, 94), METAL, true, true, 0)
+	P(term, "DoorFrameR", V3.new(0.5, 7.8, 0.5), V3.new(0.4, 4.1, -19), C3.fromRGB(80, 84, 94), METAL, true, true, 0)
 	P(term, "StartButton", V3.new(3.2, 2.2, 0.6), V3.new(0, 1.9, -23.5), C3.fromRGB(226, 140, 44), NEON, true, true, 0)
 	prompt(term.StartButton, "Start Round", "Round Console")
 	for i = -1, 1 do
@@ -236,6 +247,7 @@ copyModel("World", function(world)
 	P(pump, "ControlPanel", V3.new(3, 2.2, 1), V3.new(-30, 1.9, -25), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
 	P(pump, "ControlGlow", V3.new(2, 0.3, 0.2), V3.new(-30, 2.7, -24.5), C3.fromRGB(120, 220, 140), NEON, true, false, 0.2)
 	P(pump, "CrateWork", V3.new(2.4, 2.4, 2.4), V3.new(-40, 1.5, -13), C3.fromRGB(104, 84, 54), WOOD, true, true, 0)
+	DOOR(pump, "PumpHouse", V3.new(-22.2, 4.1, -18), 7.4, 7.6, C3.fromRGB(96, 112, 124))
 	P(pump, "LiveCablePump", V3.new(0.4, 0.4, 12), V3.new(-31, 0.5, -20), C3.fromRGB(255, 120, 60), NEON, true, true, 0.15)
 
 	-- ================= 3. APARTMENT BLOCK =================
@@ -263,6 +275,7 @@ copyModel("World", function(world)
 		P(apt, "Step" .. step, V3.new(4.2, 0.4, 1.3), V3.new(lane, 0.8 + step * 0.8, -12 + forward * 1.35), C3.fromRGB(88, 92, 102), CONC, true, true, 0)
 	end
 	P(apt, "StairCore", V3.new(9, 13, 12), V3.new(33, 6.5, -6.4), C3.fromRGB(58, 60, 68), CONC, false, false, 0.86)
+	DOOR(apt, "ApartmentBlock", V3.new(23.4, 3.9, -6), 6.4, 7.2, C3.fromRGB(104, 84, 54))
 	P(apt, "Bed1", V3.new(3.4, 1.1, 2.2), V3.new(27, 1.7, -11.5), C3.fromRGB(190, 192, 206), FABRIC, true, true, 0)
 	P(apt, "Bed2", V3.new(3.4, 1.1, 2.2), V3.new(40, 8.1, -11.5), C3.fromRGB(190, 192, 206), FABRIC, true, true, 0)
 	P(apt, "Bed3", V3.new(3.4, 1.1, 2.2), V3.new(27, 4.9, -0.5), C3.fromRGB(190, 192, 206), FABRIC, true, true, 0)
@@ -297,6 +310,7 @@ copyModel("World", function(world)
 	P(ws, "ShelfB", V3.new(9, 0.3, 1.6), V3.new(-18, 6.4, 26), C3.fromRGB(96, 74, 52), WOOD, true, true, 0)
 	P(ws, "Toolbox", V3.new(2.4, 1.7, 1.3), V3.new(-12.5, 1.2, 26), C3.fromRGB(200, 62, 60), METAL, true, true, 0)
 	P(ws, "GasPipe", V3.new(0.7, 0.7, 14), V3.new(-28, 7.5, 30), C3.fromRGB(150, 120, 80), METAL, true, true, 0)
+	DOOR(ws, "Workshop", V3.new(-18, 4.4, 21.4), 8, 8.4, C3.fromRGB(104, 84, 54))
 	P(ws, "GasLeak", V3.new(0.9, 0.9, 0.9), V3.new(-28, 6.9, 25), C3.fromRGB(180, 220, 160), NEON, true, false, 0.25)
 	P(ws, "Ladder", V3.new(2, 11, 0.4), V3.new(-27.6, 5.8, 24), C3.fromRGB(120, 128, 138), METAL, true, true, 0)
 	P(ws, "Medkit2", V3.new(1, 0.7, 0.5), V3.new(-19.5, 2, 26), C3.fromRGB(235, 235, 240), PLASTIC, true, true, 0)
@@ -320,6 +334,7 @@ copyModel("World", function(world)
 	P(cl, "CabinetGlow", V3.new(2, 0.3, 0.2), V3.new(32, 3.5, 29.4), C3.fromRGB(90, 200, 220), NEON, true, false, 0.2)
 	P(cl, "Shelf", V3.new(6, 0.3, 1.3), V3.new(17, 4.4, 27), C3.fromRGB(96, 74, 52), WOOD, true, true, 0)
 	P(cl, "Sign_Clinic", V3.new(7, 1.8, 0.4), V3.new(24, 5, 19.2), C3.fromRGB(84, 206, 130), NEON, true, true, 0)
+	DOOR(cl, "Clinic", V3.new(22.4, 3.4, 19.4), 5.6, 6.4, C3.fromRGB(150, 170, 180))
 	P(cl, "Medkit3", V3.new(1, 0.7, 0.5), V3.new(26, 1.7, 31), C3.fromRGB(235, 235, 240), PLASTIC, true, true, 0)
 	P(cl, "Medkit3Cross", V3.new(0.7, 0.16, 0.55), V3.new(26, 1.7, 30.7), C3.fromRGB(220, 70, 60), NEON, true, false, 0)
 	prompt(cl.Medkit3, "Take Medkit", "Medkit", 0.35)
@@ -373,6 +388,31 @@ copyModel("World", function(world)
 		local row = math.floor((i - 1) / 2)
 		SEAT(lift, "LiftSeat" .. i, V3.new(1.6, 0.4, 1.6), V3.new(column * 2.6 - 1.3, 1.55, row * 2.6 - 1.3), C3.fromRGB(60, 90, 120))
 	end
+
+	-- ================= DOCKS (canal side content) =================
+	local docks = M(world, "Docks")
+	P(docks, "Quay", V3.new(26, 0.6, 34), V3.new(30, 0.35, 20), C3.fromRGB(70, 72, 80), CONC, true, true, 0)
+	P(docks, "Edging", V3.new(26, 0.9, 0.8), V3.new(30, 0.6, 3.4), C3.fromRGB(96, 100, 110), CONC, true, true, 0)
+	P(docks, "Bollard1", V3.new(0.9, 1.8, 0.9), V3.new(20, 1.4, 6), C3.fromRGB(90, 94, 104), METAL, true, true, 0)
+	P(docks, "Bollard2", V3.new(0.9, 1.8, 0.9), V3.new(26, 1.4, 6), C3.fromRGB(90, 94, 104), METAL, true, true, 0)
+	P(docks, "Bollard3", V3.new(0.9, 1.8, 0.9), V3.new(32, 1.4, 6), C3.fromRGB(90, 94, 104), METAL, true, true, 0)
+	P(docks, "CraneBase", V3.new(6, 1.2, 6), V3.new(36, 1, 26), C3.fromRGB(84, 88, 98), CONC, true, true, 0)
+	P(docks, "CraneMast", V3.new(1.6, 12, 1.6), V3.new(36, 7.6, 26), C3.fromRGB(200, 140, 60), METAL, true, true, 0)
+	P(docks, "CraneArm", V3.new(1.4, 1.4, 14), V3.new(36, 13.4, 20), C3.fromRGB(200, 140, 60), METAL, true, true, 0)
+	P(docks, "CraneHook", V3.new(1, 3, 1), V3.new(36, 11.4, 13.5), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
+	P(docks, "Container1", V3.new(9, 3.4, 3.4), V3.new(26, 2.1, 32), C3.fromRGB(150, 70, 60), METAL, true, true, 0)
+	P(docks, "Container2", V3.new(9, 3.4, 3.4), V3.new(26, 5.6, 32), C3.fromRGB(70, 110, 150), METAL, true, true, 0)
+	P(docks, "Container3", V3.new(9, 3.4, 3.4), V3.new(16, 2.1, 32), C3.fromRGB(90, 130, 90), METAL, true, true, 0)
+	P(docks, "GaugeMast", V3.new(0.7, 8, 0.7), V3.new(18, 4.6, 4), C3.fromRGB(120, 126, 136), METAL, true, true, 0)
+	for band = 0, 4 do
+		P(docks, "GaugeBand" .. band, V3.new(0.2, 0.5, 1.6), V3.new(18, 1.6 + band * 1.5, 3.6), C3.fromRGB(230, 200, 90), NEON, true, false, 0.1)
+	end
+	P(docks, "Dinghy", V3.new(5, 1, 2.4), V3.new(30, 1.2, 4), C3.fromRGB(210, 210, 216), PLASTIC, true, true, 0)
+	P(docks, "LifeRing", V3.new(1.2, 0.3, 1.2), V3.new(22, 1.6, 4), C3.fromRGB(230, 120, 90), PLASTIC, true, true, 0)
+	P(docks, "DockLamp", V3.new(1.4, 1.4, 1.4), V3.new(20, 6.6, 10), C3.fromRGB(255, 226, 176), NEON, true, false, 0.2)
+	P(docks, "DockCrate", V3.new(2.6, 2.6, 2.6), V3.new(32, 1.6, 34), C3.fromRGB(104, 84, 54), WOOD, true, true, 0)
+	P(docks, "DockPallet", V3.new(3.4, 0.4, 2.2), V3.new(22, 0.5, 30), C3.fromRGB(122, 96, 60), WOOD, true, true, 0)
+	P(docks, "DockSign", V3.new(5, 1.4, 0.3), V3.new(30, 4.6, 36), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
 
 	-- ================= street furniture, hazards, routes =================
 	for i = -4, 4 do
@@ -473,9 +513,9 @@ end)
 local sourceFiles = {
 	shared = { "Config", "Net", "Util" },
 	server = {
-		"FloodService", "HazardService", "InteractService", "LiftService", "ObjectiveService",
-		"PlayerService", "PowerService", "RescueService", "RoundService", "ScoringService",
-		"Telemetry", "WorldService",
+		"CommsService", "DoorService", "FloodService", "HazardService", "InteractService",
+		"LiftService", "ObjectiveService", "PlayerService", "PowerService", "RescueService",
+		"RoundService", "ScoringService", "SessionService", "Telemetry", "WorldService",
 	},
 	client = { "Effects", "Hud", "Markers", "Results" },
 }
@@ -525,6 +565,8 @@ local project = [[{
       "Bootstrap": { "$path": "src/server/Bootstrap.server.luau" },
       "Modules": {
         "$className": "Folder",
+        "CommsService": { "$path": "src/server/Modules/CommsService.luau" },
+        "DoorService": { "$path": "src/server/Modules/DoorService.luau" },
         "FloodService": { "$path": "src/server/Modules/FloodService.luau" },
         "HazardService": { "$path": "src/server/Modules/HazardService.luau" },
         "InteractService": { "$path": "src/server/Modules/InteractService.luau" },
@@ -535,6 +577,7 @@ local project = [[{
         "RescueService": { "$path": "src/server/Modules/RescueService.luau" },
         "RoundService": { "$path": "src/server/Modules/RoundService.luau" },
         "ScoringService": { "$path": "src/server/Modules/ScoringService.luau" },
+        "SessionService": { "$path": "src/server/Modules/SessionService.luau" },
         "Telemetry": { "$path": "src/server/Modules/Telemetry.luau" },
         "WorldService": { "$path": "src/server/Modules/WorldService.luau" }
       }

@@ -21,6 +21,8 @@
       "Bootstrap": { "$path": "src/server/Bootstrap.server.luau" },
       "Modules": {
         "$className": "Folder",
+        "CommsService": { "$path": "src/server/Modules/CommsService.luau" },
+        "DoorService": { "$path": "src/server/Modules/DoorService.luau" },
         "FloodService": { "$path": "src/server/Modules/FloodService.luau" },
         "HazardService": { "$path": "src/server/Modules/HazardService.luau" },
         "InteractService": { "$path": "src/server/Modules/InteractService.luau" },
@@ -31,6 +33,7 @@
         "RescueService": { "$path": "src/server/Modules/RescueService.luau" },
         "RoundService": { "$path": "src/server/Modules/RoundService.luau" },
         "ScoringService": { "$path": "src/server/Modules/ScoringService.luau" },
+        "SessionService": { "$path": "src/server/Modules/SessionService.luau" },
         "Telemetry": { "$path": "src/server/Modules/Telemetry.luau" },
         "WorldService": { "$path": "src/server/Modules/WorldService.luau" }
       }

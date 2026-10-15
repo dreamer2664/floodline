@@ -1,9 +1,9 @@
 {
-  "scenarios": 14,
-  "passed": 14,
+  "scenarios": 18,
+  "passed": 18,
   "failed": 0,
   "geometry": {
-    "worldDescendants": 468,
+    "worldDescendants": 505,
     "mountedServices": 0
   },
   "results": [
@@ -20,6 +20,10 @@
     { "name": "losing every survivor fails the round honestly", "ok": true, "detail": "outcome=fail reason=every survivor was lost dead=8" },
     { "name": "a second round deploys the full survivor crew again", "ok": true, "detail": "8/8 survivors restored and visible" },
     { "name": "scaling tables react to a second player", "ok": true, "detail": "2p fraction=0.45, back to 1 player" },
-    { "name": "telemetry wrote an inspectable round log", "ok": true, "detail": "2 round log(s), 4280 bytes in the newest" }
+    { "name": "difficulty modifiers re-scale the round and lock once it starts", "ok": true, "detail": "storm: rise x1.00, hazards x0.81, prep 90s" },
+    { "name": "closing a door seals the room and slows its flooding", "ok": true, "detail": "interior depth open=0.12m closed=0.00m (5 doors wired)" },
+    { "name": "team pings validate distance, type and cooldown", "ok": true, "detail": "4 ping types, 1 broadcasts, validations enforced" },
+    { "name": "session ledger records rounds, grades and personal bests", "ok": true, "detail": "rounds=2 wins=1 best=A/1347 rescue=3 history=2" },
+    { "name": "telemetry wrote an inspectable round log", "ok": true, "detail": "2 round log(s), 4355 bytes in the newest" }
   ]
 }

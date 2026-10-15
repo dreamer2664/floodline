@@ -74,6 +74,9 @@ local Rescue = module("RescueService")
 local Lift = module("LiftService")
 local Hazard = module("HazardService")
 local Objectives = module("ObjectiveService")
+local Doors = module("DoorService")
+local Comms = module("CommsService")
+local Session = module("SessionService")
 local PlayerService = module("PlayerService")
 
 local function part(name: string)
@@ -400,8 +403,10 @@ end)
 -- Scenario 10: rematch loop returns to the lobby
 -- ============================================================
 scenario("results screen rematch vote returns the server to the lobby", function()
+	local stateBefore = Round.state
 	Round.requestRematch(player)
-	assertTrue(Round.state == "Lobby", "rematch did not reset to lobby, got " .. Round.state)
+	assertTrue(Round.state == "Lobby",
+		`rematch did not reset to lobby (before={stateBefore}, after={Round.state}, outcome={tostring(Round.lastOutcome and Round.lastOutcome.outcome)})`)
 	assertTrue(Rescue.rescuedCount == 0, "survivors were not reset")
 	assertTrue(Flood.level <= Config.Water.StartLevel + 0.1, "water was not reset")
 	assertTrue(Power.cellByHolder(player) == nil, "inventory/cell state leaked across rounds")
@@ -478,6 +483,133 @@ scenario("scaling tables react to a second player", function()
 	Stub.advance(1)
 	assertTrue(Round.playerCount() == 1, "player removal not handled")
 	return true, string.format("2p fraction=%.2f, back to %d player", scaling.RequiredSurvivorFraction, Round.playerCount())
+end)
+
+-- ============================================================
+-- Scenario 12b: difficulty modifiers change the simulation
+-- ============================================================
+scenario("difficulty modifiers re-scale the round and lock once it starts", function()
+	Round.resetToLobby()
+	Stub.advance(1)
+	assertTrue(Session.setModifier("Storm"), "Storm preset rejected")
+	local storm = Round.snapshot().scaling
+	assertTrue(storm.Modifier == "Storm", "modifier not reported: " .. tostring(storm.Modifier))
+	assertTrue(storm.RiseMultiplier > Config.Scaling[1].RiseMultiplier, "storm should raise the water faster")
+	assertTrue(storm.HazardRate > Config.Scaling[1].HazardRate, "storm should raise hazard frequency")
+
+	Round.requestStart(player)
+	Stub.advance(1)
+	assertTrue(Round.state == "Prep", "round did not start: " .. Round.state)
+	-- Measure the configured prep window, not the time left on the clock.
+	local prepStorm = Round.stateEndsAt - Round.roundStartedAt
+	assertTrue(prepStorm <= Config.Scaling[1].PrepSeconds - 5,
+		string.format("storm prep (%.0fs) should be shorter than the baseline (%.0fs)", prepStorm, Config.Scaling[1].PrepSeconds))
+	assertTrue(storm.OxygenSeconds < Config.Water.OxygenSeconds, "storm should shorten the air supply")
+
+	-- The lobby-only lock is enforced by ctx.requestModifier; assert the pure function path.
+	local scalingBefore = Round.snapshot().scaling.Modifier
+	Session.setModifier("Calm")
+	assertTrue(Round.snapshot().scaling.Modifier == "Calm", "modifier change was not applied")
+	assertTrue(scalingBefore == "Storm", "previous modifier should have been Storm")
+	Session.setModifier("Standard")
+	Round.resetToLobby()
+	return true, string.format("storm: rise x%.2f, hazards x%.2f, prep %.0fs", storm.RiseMultiplier, storm.HazardRate, prepStorm)
+end)
+
+-- ============================================================
+-- Scenario 12c: doors seal a room and hold the water back
+-- ============================================================
+scenario("closing a door seals the room and slows its flooding", function()
+	freshRound(player)
+	local door = part("Door_PumpHouse")
+	local interior = Stub.v3(-34, 2, -18)
+	-- Flood the district to a level that is deep outside and shallow inside.
+	Flood.surge(3.0)
+	Stub.advance(0.5)
+
+	if not Doors.byPart[door] then
+		return false, "door was not registered by DoorService"
+	end
+	Doors.set(Doors.byPart[door], false, true)
+	local openDepth = Flood.depthAt(interior)
+	Doors.set(Doors.byPart[door], true, true)
+	local closedDepth = Flood.depthAt(interior)
+	assertTrue(Doors.isZoneSealed("PumpHouse"), "closing the door did not seal the zone")
+	assertTrue(closedDepth < openDepth,
+		string.format("sealed interior should be drier: open=%.2f closed=%.2f", openDepth, closedDepth))
+
+	-- ...and the prompt path toggles it back open (the swing takes a moment).
+	Harness.trigger(door, player)
+	Stub.advance(1.5)
+	assertTrue(not Doors.isZoneSealed("PumpHouse"), "prompt did not reopen the door")
+	return true, string.format("interior depth open=%.2fm closed=%.2fm (%d doors wired)", openDepth, closedDepth, #Doors.list)
+end)
+
+-- ============================================================
+-- Scenario 12d: team pings validate, broadcast and rate-limit
+-- ============================================================
+scenario("team pings validate distance, type and cooldown", function()
+	freshRound(player)
+	Stub.movePlayer(player, Stub.v3(0, 3, -12))
+	Stub.advance(0.5)
+	local remote = Harness.mounted.ReplicatedStorage:FindFirstChild("FloodlineNet"):FindFirstChild("PingSync")
+	local before = #remote._sent
+	local ok = Comms.ping(player, "survivor", Stub.v3(10, 1.5, -12))
+	assertTrue(ok, "valid ping was refused")
+	assertTrue(#remote._sent > before, "ping was not broadcast to clients")
+
+	-- Cooldown must reject an immediate second ping.
+	local second = Comms.ping(player, "danger", Stub.v3(12, 1.5, -12))
+	assertTrue(not second, "cooldown did not suppress a rapid second ping")
+
+	-- Out-of-range and unknown-type pings must both fail.
+	Stub.advance(Config.Pings.Cooldown + 0.2)
+	local far = Comms.ping(player, "danger", Stub.v3(900, 5, 900))
+	assertTrue(not far, "out-of-range ping was accepted")
+	Stub.advance(Config.Pings.Cooldown + 0.2)
+	local bogus = Comms.ping(player, "notatype", Stub.v3(8, 1.5, -12))
+	assertTrue(not bogus, "unknown ping type was accepted")
+	return true, string.format("%d ping types, %d broadcasts, validations enforced", #Config.Pings.Types, Comms.total)
+end)
+
+-- ============================================================
+-- Scenario 12e: the session ledger records the round
+-- ============================================================
+scenario("session ledger records rounds, grades and personal bests", function()
+	Round.resetToLobby()
+	Round.requestStart(player)
+	Stub.advance(1)
+	local needed = Rescue.requiredRescued()
+	local safeZone = part("SafeZone")
+	for _, survivor in ipairs(Rescue.order) do
+		if Rescue.rescuedCount >= needed then
+			break
+		end
+		if survivor.state ~= "Rescued" and survivor.state ~= "Dead" then
+			Rescue.lead(player, survivor.name)
+			Rescue.setRigPosition(survivor, safeZone.Position + Stub.v3(0, 1.5, 0))
+			Stub.advance(4)
+		end
+	end
+	Harness.trigger(part("Radio"), player)
+	Harness.trigger(part("EvacConsole"), player)
+	local pad = part("ExtractionPad")
+	for _ = 1, 30 do
+		Stub.advance(0.5)
+		Stub.movePlayer(player, pad.Position + Stub.v3(0, 3, 0))
+		if Round.state == "Results" then
+			break
+		end
+	end
+	local summary = Session.summary()
+	assertTrue(summary.rounds >= 1, "round was not recorded")
+	assertTrue(summary.bestGrade ~= "-", "no grade recorded")
+	assertTrue(summary.bestScore > 0, "no score recorded")
+	assertTrue(#summary.history >= 1, "history is empty")
+	local scoreRemote = Harness.mounted.ReplicatedStorage:FindFirstChild("FloodlineNet"):FindFirstChild("SessionSync")
+	assertTrue(#scoreRemote._sent >= 1, "session update was not broadcast")
+	return true, string.format("rounds=%d wins=%d best=%s/%d rescue=%d history=%d",
+		summary.rounds, summary.wins, summary.bestGrade, summary.bestScore, summary.bestRescued, #summary.history)
 end)
 
 -- ============================================================

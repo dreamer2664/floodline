@@ -28,6 +28,7 @@ World.cells = {} :: { [string]: BasePart }
 World.survivorModels = {} :: { [string]: Model }
 World.props = {} :: { [string]: Instance }
 World.water = {} :: { BasePart }
+World.sealedZones = {} :: { [string]: boolean }
 World.lift = nil :: Model?
 World.spawnLocation = nil :: SpawnLocation?
 
@@ -117,9 +118,17 @@ function World.depthAt(position: Vector3, level: number, sectorLevels: { number 
 	local foundation = 0
 	if zone and zone.interior then
 		foundation = 0.9
+		if World.sealedZones[zone.name] then
+			-- Sealed rooms hold the water back: the floor floods much later.
+			foundation += 2.6
+		end
 	end
 	local waterY = localLevel - foundation
 	return math.max(0, waterY - position.Y)
+end
+
+function World.setSealed(zoneName: string, sealed: boolean)
+	World.sealedZones[zoneName] = sealed
 end
 
 function World.createWaterVolumes(): { BasePart }

@@ -24,6 +24,8 @@ local player = Players.LocalPlayer
 local remotes = Net.clientInit(25)
 
 local C = Config.Ui.Colors
+local activeModifier = "Standard"
+local pingTypes = Config.Pings.Types
 
 local state = {
 	water = { level = 0, sectorLevels = { 0, 0, 0 }, pumped = false },
@@ -139,6 +141,31 @@ local function wireRemotes()
 		end)
 	end
 
+	if remotes.PingSync then
+		remotes.PingSync.OnClientEvent:Connect(function(payload: any)
+			Markers.addPing(payload)
+			if payload and payload.player ~= player.Name then
+				Hud.notify({ text = `{payload.player} marked {payload.label}`, tone = "info" })
+			end
+		end)
+	end
+
+	if remotes.ModifierSync then
+		remotes.ModifierSync.OnClientEvent:Connect(function(payload: any)
+			activeModifier = payload.modifier or "Standard"
+			Hud.setModifier(payload)
+			if payload.blurb then
+				Hud.showCentrePrompt(`{payload.label} — {payload.blurb}`)
+			end
+		end)
+	end
+
+	if remotes.SessionSync then
+		remotes.SessionSync.OnClientEvent:Connect(function(payload: any)
+			Hud.setSession(payload)
+		end)
+	end
+
 	if remotes.PlayerEvent then
 		remotes.PlayerEvent.OnClientEvent:Connect(function(kind: string, data: any)
 			if kind == "downed" then
@@ -152,6 +179,19 @@ local function wireRemotes()
 end
 
 -- ===================== interactions =====================
+
+local function cycleModifier(direction: number): string
+	local order = Config.Modifiers.Order
+	local index = 1
+	for position, key in ipairs(order) do
+		if key == activeModifier then
+			index = position
+			break
+		end
+	end
+	local nextIndex = ((index - 1 + direction) % #order) + 1
+	return order[nextIndex]
+end
 
 local function nearestSurvivor(): (string?, number)
 	local character = player.Character
@@ -236,6 +276,24 @@ local function handleCellKey()
 	end
 end
 
+-- Ping at the point the camera is looking at, so a mark means what the player sees.
+local function pingAt(typeId: string)
+	local camera = Workspace.CurrentCamera
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (camera and root) then
+		return
+	end
+	local origin = camera.CFrame.Position
+	local direction = camera.CFrame.LookVector * 220
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+	local result = Workspace:Raycast(origin, direction, params)
+	local point = result and result.Position or (origin + direction)
+	remotes.RequestPing:FireServer(typeId, point)
+end
+
 local function bindInput()
 	ContextActionService:BindAction("FloodlineSprint", function(_, inputState)
 		if inputState == Enum.UserInputState.Begin then
@@ -278,6 +336,25 @@ local function bindInput()
 		remotes.RequestStart:FireServer()
 	end)
 
+	-- Number keys mark a point for the team; this is the only shared channel the game has.
+	local pingKeys = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
+	for index, pingType in ipairs(pingTypes) do
+		local key = pingKeys[index] or Enum.KeyCode.One
+		ContextActionService:BindAction(`FloodlinePing_{pingType.id}`, function(_, inputState)
+			if inputState == Enum.UserInputState.Begin then
+				pingAt(pingType.id)
+			end
+			return Enum.ContextActionResult.Pass
+		end, false, key)
+	end
+
+	Hud.modifierPrev.MouseButton1Click:Connect(function()
+		remotes.RequestModifier:FireServer(cycleModifier(-1))
+	end)
+	Hud.modifierNext.MouseButton1Click:Connect(function()
+		remotes.RequestModifier:FireServer(cycleModifier(1))
+	end)
+
 end
 
 -- ===================== per-frame =====================
@@ -314,7 +391,8 @@ local function updateHints(dt: number)
 	if name and distance < 14 then
 		table.insert(lines, `[F] {name} ({math.floor(distance)}m)`)
 	end
-	Hud.hintLabel.Text = #lines > 0 and table.concat(lines, "  ·  ") or "E: grab/use cell  ·  F: survivor  ·  G: lift  ·  Q: drop  ·  Shift: sprint"
+	Hud.hintLabel.Text = #lines > 0 and table.concat(lines, "  ·  ")
+		or "E grab/use · F survivor · G lift · Q drop · Shift sprint · 1-4 ping team"
 end
 
 local function updateCamera(dt: number)
@@ -360,6 +438,8 @@ task.spawn(function()
 		Hud.updatePower(snapshot.power)
 		Hud.updateSurvivors(snapshot.survivors)
 		Hud.updateObjectives(snapshot.objectives or {})
+		Hud.setModifier(snapshot.modifier)
+		Hud.setSession(snapshot.session)
 		state.water = snapshot.water
 		state.power = snapshot.power
 		state.survivors = snapshot.survivors

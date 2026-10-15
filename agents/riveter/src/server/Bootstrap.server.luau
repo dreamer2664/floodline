@@ -25,6 +25,9 @@ local ObjectiveService = require(Modules:WaitForChild("ObjectiveService"))
 local ScoringService = require(Modules:WaitForChild("ScoringService"))
 local TelemetryService = require(Modules:WaitForChild("Telemetry"))
 local RoundService = require(Modules:WaitForChild("RoundService"))
+local DoorService = require(Modules:WaitForChild("DoorService"))
+local CommsService = require(Modules:WaitForChild("CommsService"))
+local SessionService = require(Modules:WaitForChild("SessionService"))
 
 local remotes = Net.serverInit()
 
@@ -56,6 +59,9 @@ local ctx: any = {
 	scoring = ScoringService,
 	telemetry = TelemetryService,
 	round = RoundService,
+	doors = DoorService,
+	comms = CommsService,
+	session = SessionService,
 	world = WorldService,
 }
 
@@ -69,8 +75,25 @@ function ctx.playerCount(): number
 	return #Players:GetPlayers()
 end
 
+function ctx.currentModifier(): string
+	return SessionService.modifier
+end
+
 function ctx.scaling()
-	return Config.scaling(ctx.playerCount())
+	return Config.scaling(ctx.playerCount(), SessionService.modifier)
+end
+
+function ctx.requestModifier(player: Player, modifierName: string)
+	if RoundService.state ~= "Lobby" and RoundService.state ~= "Intermission" then
+		ctx.notifyPlayer(player, "Difficulty is locked once a round starts.", "warn")
+		return
+	end
+	if not SessionService.setModifier(modifierName) then
+		ctx.notifyPlayer(player, "Unknown difficulty preset.", "warn")
+		return
+	end
+	ctx.notify(`{player.Name} set the difficulty to {SessionService.modifier}.`, "info")
+	ctx.objective.markDirty()
 end
 
 function ctx.roundActive(): boolean
@@ -169,6 +192,9 @@ local services = {
 	{ name = "Objective", service = ObjectiveService },
 	{ name = "Scoring", service = ScoringService },
 	{ name = "Telemetry", service = TelemetryService },
+	{ name = "Door", service = DoorService },
+	{ name = "Comms", service = CommsService },
+	{ name = "Session", service = SessionService },
 	{ name = "Round", service = RoundService },
 }
 
@@ -291,6 +317,14 @@ remotes.RequestInteract.OnServerEvent:Connect(function(player: Player, action: s
 	end
 end)
 
+remotes.RequestPing.OnServerEvent:Connect(function(player: Player, pingType: string, position: Vector3)
+	ctx.comms.ping(player, pingType, position)
+end)
+
+remotes.RequestModifier.OnServerEvent:Connect(function(player: Player, modifierName: string)
+	ctx.requestModifier(player, modifierName)
+end)
+
 remotes.ReportPosition.OnServerEvent:Connect(function(player: Player, position: Vector3)
 	local state = PlayerService.getState(player)
 	if state then
@@ -308,6 +342,8 @@ remotes.GetSnapshot.OnServerInvoke = function(player: Player)
 		lift = LiftService.snapshot(),
 		objectives = ObjectiveService.list,
 		scaling = ctx.scaling(),
+		modifier = SessionService.snapshot(),
+		session = SessionService.summary(),
 		version = Config.Game.Version,
 	}
 end

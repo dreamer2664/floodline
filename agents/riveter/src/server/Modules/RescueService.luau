@@ -6,6 +6,13 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+-- PathfindingService is engine-only; the headless harness runs without it and falls back to
+-- the steering code below.
+local okPathfinding, PathfindingService = pcall(function()
+	return game:GetService("PathfindingService")
+end)
+local hasPathfinding = okPathfinding and PathfindingService ~= nil and type(PathfindingService.CreatePath) == "function"
+
 local Util = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Util"))
 
 local Rescue = {}
@@ -78,6 +85,7 @@ local NAMES = {
 }
 
 local RX = 0.42
+local PATH_RECOMPUTE_SECONDS = 2.5
 
 function Rescue.get(name: string): Survivor?
 	return Rescue.survivors[name]
@@ -381,6 +389,60 @@ function Rescue.setRigPosition(survivor, position: Vector3)
 	applyRig(survivor, position, survivor.yaw or 0, false, 0)
 end
 
+-- Ask the engine for a real route; survivors use it when a straight line stops working.
+local function computePath(survivor, goal: Vector3): boolean
+	if not hasPathfinding then
+		return false
+	end
+	local ok, path = pcall(function()
+		local instance = PathfindingService:CreatePath({
+			AgentRadius = 2,
+			AgentHeight = 5,
+			AgentCanJump = true,
+			AgentMaxSlope = 45,
+			WaypointSpacing = 4,
+		})
+		instance:ComputeAsync(survivor.position, goal)
+		return instance
+	end)
+	if not ok or not path or path.Status ~= Enum.PathStatus.Success then
+		return false
+	end
+	local okWaypoints, waypoints = pcall(function()
+		return path:GetWaypoints()
+	end)
+	if not okWaypoints or type(waypoints) ~= "table" or #waypoints == 0 then
+		return false
+	end
+	local queue = {}
+	for _, waypoint in ipairs(waypoints) do
+		local position = waypoint.Position or waypoint
+		table.insert(queue, Vector3.new(position.X, position.Y, position.Z))
+	end
+	survivor.path = queue
+	survivor.pathIndex = 1
+	survivor.pathComputedAt = os.clock()
+	return true
+end
+
+local function nextPathWaypoint(survivor): Vector3?
+	local queue = survivor.path
+	if not queue then
+		return nil
+	end
+	while survivor.pathIndex and queue[survivor.pathIndex] do
+		local waypoint = queue[survivor.pathIndex]
+		if (waypoint - survivor.position).Magnitude < 3.5 then
+			survivor.pathIndex += 1
+		else
+			return waypoint
+		end
+	end
+	survivor.path = nil
+	survivor.pathIndex = nil
+	return nil
+end
+
 -- Steering with a cheap detour: survivors walk straight at their goal, and when a prop blocks
 -- them they slide around it for a moment instead of grinding against it forever.
 local function moveToward(survivor: Survivor, target: Vector3, dt: number, speedScale: number): boolean
@@ -394,6 +456,24 @@ local function moveToward(survivor: Survivor, target: Vector3, dt: number, speed
 	end
 
 	local direction = delta.Unit
+	-- Prefer an engine path once the survivor starts struggling or the goal moves a long way.
+	if survivor.path and survivor.pathGoal and (survivor.pathGoal - flatTarget).Magnitude > 6 then
+		survivor.path = nil
+	end
+	if survivor.path then
+		local waypoint = nextPathWaypoint(survivor)
+		if waypoint then
+			local waypointDelta = Vector3.new(waypoint.X, current.Y, waypoint.Z) - current
+			if waypointDelta.Magnitude > 0.4 then
+				direction = waypointDelta.Unit
+			end
+		end
+	elseif survivor.stuckSeconds > 1.2 then
+		if (not survivor.pathComputedAt) or os.clock() - survivor.pathComputedAt > PATH_RECOMPUTE_SECONDS then
+			survivor.pathGoal = flatTarget
+			computePath(survivor, flatTarget)
+		end
+	end
 	if survivor.detourUntil and os.clock() < survivor.detourUntil then
 		local angle = (survivor.detourSign or 1) * math.rad(72)
 		local cos, sin = math.cos(angle), math.sin(angle)

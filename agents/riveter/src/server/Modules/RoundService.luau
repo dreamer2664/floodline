@@ -148,6 +148,9 @@ local function finish(outcome: string, reason: string)
 		required = summary.required,
 	})
 	ctx.telemetry.flush(summary)
+	ctx.session.recordRound(summary)
+	summary.modifier = ctx.session.snapshot()
+	summary.session = ctx.session.summary()
 	ctx.remotes.RoundSummary:FireAllClients(summary)
 	if outcome == "win" then
 		Round.notifyAll(`District cleared. Grade {summary.grade} — {summary.teamScore} points.`, "good")

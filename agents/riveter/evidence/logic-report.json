@@ -13,12 +13,12 @@
     {
       "check": "all remote usages are declared",
       "ok": true,
-      "detail": "19 remotes used, all declared"
+      "detail": "24 remotes used, all declared"
     },
     {
       "check": "bootstrap modules exported",
       "ok": true,
-      "detail": "12 modules required, all present"
+      "detail": "15 modules required, all present"
     },
     {
       "check": "client modules exported",
@@ -33,7 +33,7 @@
     {
       "check": "eight survivors with interaction prompts",
       "ok": true,
-      "detail": "models=8 survivorPrompts=8 (all prompts=28)"
+      "detail": "models=8 survivorPrompts=8 (all prompts=33)"
     },
     {
       "check": "lift cabin has four seats",
@@ -66,6 +66,8 @@
   "sourceFiles": {
     "server": [
       "src/server/Bootstrap.server.luau",
+      "src/server/Modules/CommsService.luau",
+      "src/server/Modules/DoorService.luau",
       "src/server/Modules/FloodService.luau",
       "src/server/Modules/HazardService.luau",
       "src/server/Modules/InteractService.luau",
@@ -76,6 +78,7 @@
       "src/server/Modules/RescueService.luau",
       "src/server/Modules/RoundService.luau",
       "src/server/Modules/ScoringService.luau",
+      "src/server/Modules/SessionService.luau",
       "src/server/Modules/Telemetry.luau",
       "src/server/Modules/WorldService.luau"
     ],

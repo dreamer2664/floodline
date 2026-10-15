@@ -104,6 +104,7 @@ local function build()
 		{ key = "lost", label = "Survivors lost" },
 		{ key = "elapsedText", label = "Round time" },
 		{ key = "waterLevel", label = "Peak water level" },
+		{ key = "modifier", label = "Difficulty" },
 	}
 	Results.statLabels = {}
 	for index, row in ipairs(rows) do
@@ -184,6 +185,12 @@ function Results.show(summary: any)
 	Results.statLabels.lost.Text = `{summary.lost or 0} lost, {summary.dead or 0} dead`
 	Results.statLabels.elapsedText.Text = summary.elapsedText or "0:00"
 	Results.statLabels.waterLevel.Text = string.format("%.1f m", summary.waterLevel or 0)
+	local modifierLabel = summary.modifier and summary.modifier.label or "Standard Surge"
+	local session = summary.session
+	local sessionText = session
+			and `{modifierLabel}  ·  best {session.bestGrade} / {session.bestScore}  ·  {session.wins}/{session.rounds} rounds won`
+		or modifierLabel
+	Results.statLabels.modifier.Text = sessionText
 
 	Results.playerList:ClearAllChildren()
 	local layout = Instance.new("UIListLayout")

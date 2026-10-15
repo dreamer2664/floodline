@@ -20,6 +20,8 @@ local tags = {} :: { [string]: BillboardGui }
 local objectiveTag: BillboardGui? = nil
 local arrow: TextLabel? = nil
 
+Markers.pings = {}
+
 local function ensureContainer()
 	if container and container.Parent then
 		return container
@@ -123,6 +125,84 @@ function Markers.syncSurvivors(snapshot: any)
 	end
 end
 
+-- Co-op pings: short-lived world markers with the caller's name and type label.
+function Markers.addPing(payload: any)
+	local folder = ensureContainer()
+	local key = `Ping_{payload.player}_{math.floor(os.clock() * 1000)}`
+	local anchor = Instance.new("Part")
+	anchor.Name = key
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Position = payload.position
+	anchor.Parent = folder
+
+	local color = C.Accent
+	local palette = { danger = C.Bad, objective = C.Accent, survivor = C.Good, loot = C.Water }
+	color = palette[payload.type] or C.Accent
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "PingTag"
+	gui.Adornee = anchor
+	gui.Size = UDim2.fromOffset(150, 44)
+	gui.AlwaysOnTop = true
+	gui.MaxDistance = 400
+	gui.LightInfluence = 0
+	gui.Parent = folder
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.BackgroundTransparency = 1
+	frame.Parent = gui
+	local marker = Instance.new("Frame")
+	marker.Size = UDim2.fromOffset(12, 12)
+	marker.Position = UDim2.new(0.5, -6, 0, 0)
+	marker.Rotation = 45
+	marker.BackgroundColor3 = color
+	marker.BorderSizePixel = 0
+	marker.Parent = frame
+	local text = Instance.new("TextLabel")
+	text.Font = Config.Ui.FontBold
+	text.TextSize = 13
+	text.TextColor3 = color
+	text.BackgroundTransparency = 1
+	text.TextStrokeTransparency = 0.5
+	text.Size = UDim2.new(1, 0, 0, 18)
+	text.Position = UDim2.new(0, 0, 0, 14)
+	text.Text = `{payload.label} · {payload.player}`
+	text.Parent = frame
+	local distance = Instance.new("TextLabel")
+	distance.Name = "Distance"
+	distance.Font = Config.Ui.Font
+	distance.TextSize = 11
+	distance.TextColor3 = C.TextDim
+	distance.BackgroundTransparency = 1
+	distance.Size = UDim2.new(1, 0, 0, 16)
+	distance.Position = UDim2.new(0, 0, 0, 30)
+	distance.Parent = frame
+
+	-- The server sends a lifetime; the expiry instant is computed on this client's clock.
+	local lifetime = payload.lifetime or Config.Pings.Lifetime
+	local expiresAt = os.clock() + lifetime
+	table.insert(Markers.pings, { anchor = anchor, gui = gui, expiresAt = expiresAt })
+	return gui
+end
+
+function Markers.updatePings()
+	local remaining = {}
+	for _, entry in ipairs(Markers.pings) do
+		if os.clock() >= entry.expiresAt or not entry.anchor.Parent then
+			entry.gui:Destroy()
+			entry.anchor:Destroy()
+		else
+			table.insert(remaining, entry)
+		end
+	end
+	Markers.pings = remaining
+end
+
 function Markers.setObjective(entry: any)
 	local folder = ensureContainer()
 	if not entry or not entry.target then
@@ -210,6 +290,7 @@ function Markers.makeArrow(parent: Instance): TextLabel
 end
 
 function Markers.update()
+	Markers.updatePings()
 	local current = Workspace.CurrentCamera
 	if current and current ~= camera then
 		camera = current

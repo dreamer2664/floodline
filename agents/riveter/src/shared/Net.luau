@@ -21,6 +21,9 @@ Net.Remotes = {
 	LiftSync = "RemoteEvent",
 	PlayerEvent = "RemoteEvent",
 	RoundSummary = "RemoteEvent",
+	PingSync = "RemoteEvent",
+	ModifierSync = "RemoteEvent",
+	SessionSync = "RemoteEvent",
 	-- client -> server
 	RequestStart = "RemoteEvent",
 	RequestRematch = "RemoteEvent",
@@ -30,6 +33,8 @@ Net.Remotes = {
 	RequestLiftCall = "RemoteEvent",
 	RequestRevive = "RemoteEvent",
 	ReportPosition = "RemoteEvent",
+	RequestPing = "RemoteEvent",
+	RequestModifier = "RemoteEvent",
 	GetSnapshot = "RemoteFunction",
 }
 

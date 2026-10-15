@@ -204,7 +204,7 @@ function Hud.build(): ScreenGui
 	Hud.rosterRows = {}
 
 	-- ============ status strip ============
-	local strip = panel("StatusStrip", UDim2.fromOffset(360, 74), UDim2.new(0.5, -180, 1, -86))
+	local strip = panel("StatusStrip", UDim2.fromOffset(360, 86), UDim2.new(0.5, -180, 1, -98))
 	strip.Parent = gui
 	local carrying = label("", 13, C.Text)
 	carrying.Name = "CarryingLabel"
@@ -250,6 +250,13 @@ function Hud.build(): ScreenGui
 	hint.Size = UDim2.fromOffset(330, 16)
 	hint.Parent = strip
 	Hud.hintLabel = hint
+
+	local session = label("", 11, C.TextDim)
+	session.Name = "SessionLabel"
+	session.Position = UDim2.fromOffset(14, 68)
+	session.Size = UDim2.fromOffset(330, 14)
+	session.Parent = strip
+	Hud.sessionLabel = session
 
 	-- ============ water gauge ============
 	local gauge = panel("WaterGauge", UDim2.fromOffset(74, 320), UDim2.new(1, -90, 0.5, -160))
@@ -354,10 +361,53 @@ function Hud.build(): ScreenGui
 	startButton.Parent = lobby
 	Hud.startButton = startButton
 	local lobbyHint = label("Solo rounds auto-start. 1-4 players supported.", 12, C.TextDim)
+	lobbyHint.Name = "LobbyHint"
 	lobbyHint.Position = UDim2.fromOffset(0, 104)
 	lobbyHint.Size = UDim2.fromOffset(430, 16)
 	lobbyHint.TextXAlignment = Enum.TextXAlignment.Center
 	lobbyHint.Parent = lobby
+
+	-- Difficulty selector (lobby only)
+	local modifierRow = new("Frame", {
+		Name = "ModifierRow",
+		Size = UDim2.new(1, -40, 0, 26),
+		Position = UDim2.fromOffset(20, 120),
+		BackgroundTransparency = 1,
+	}) :: Frame
+	modifierRow.Parent = lobby
+	local lower = new("TextButton", {
+		Name = "ModifierPrev",
+		Text = "◀",
+		Font = Config.Ui.FontBold,
+		TextSize = 16,
+		TextColor3 = C.Text,
+		BackgroundColor3 = C.PanelLight,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(30, 26),
+		Position = UDim2.fromOffset(60, 0),
+	}, { corner(6) }) :: TextButton
+	lower.Parent = modifierRow
+	local modifierLabel = label("Standard Surge", 13, C.Accent, Config.Ui.FontBold)
+	modifierLabel.Name = "ModifierLabel"
+	modifierLabel.Position = UDim2.fromOffset(100, 4)
+	modifierLabel.Size = UDim2.fromOffset(230, 18)
+	modifierLabel.TextXAlignment = Enum.TextXAlignment.Center
+	modifierLabel.Parent = modifierRow
+	local higher = new("TextButton", {
+		Name = "ModifierNext",
+		Text = "▶",
+		Font = Config.Ui.FontBold,
+		TextSize = 16,
+		TextColor3 = C.Text,
+		BackgroundColor3 = C.PanelLight,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(30, 26),
+		Position = UDim2.fromOffset(340, 0),
+	}, { corner(6) }) :: TextButton
+	higher.Parent = modifierRow
+	Hud.modifierLabel = modifierLabel
+	Hud.modifierPrev = lower
+	Hud.modifierNext = higher
 	Hud.lobbyBanner = lobby
 
 	return gui
@@ -643,6 +693,25 @@ function Hud.setTick(payload: any)
 	Hud.phaseLabel.Text = payload.phaseIndex and payload.phaseIndex > 0
 			and `Phase {payload.phaseIndex}/{Config.Round.PhaseCount}  ·  {payload.players} player(s)`
 		or `{payload.players} player(s)  ·  need {payload.required} rescued`
+end
+
+function Hud.setModifier(payload: any)
+	if not payload then
+		return
+	end
+	Hud.modifierLabel.Text = payload.label or payload.modifier or "Standard"
+	Hud.modifierHint = payload.blurb
+end
+
+function Hud.setSession(payload: any)
+	if not payload then
+		return
+	end
+	Hud.sessionLabel.Text = string.format(
+		"Session: %d round(s), %d won, best %s / %d, best rescue %d",
+		payload.rounds or 0, payload.wins or 0, payload.bestGrade or "-",
+		payload.bestScore or 0, payload.bestRescued or 0
+	)
 end
 
 function Hud.setWater(snapshot: any)

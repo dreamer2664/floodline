@@ -210,6 +210,43 @@ check("results screen renders a real round summary and votes for a rematch", fun
 	return voted and true, "summary rendered, rematch vote path armed"
 end)
 
+check("ping markers render and expire, and the modifier selector reacts", function()
+	local gui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
+	local banner = gui:FindFirstChild("LobbyBanner")
+	local row = banner:FindFirstChild("ModifierRow")
+	assert(row, "modifier selector row missing from the lobby banner")
+	local label_ = row:FindFirstChild("ModifierLabel")
+	Hud.setModifier({ modifier = "Storm", label = "Storm Season", blurb = "Faster rise" })
+	assert(label_.Text == "Storm Season", "modifier label did not update: " .. label_.Text)
+	Hud.setSession({ rounds = 3, wins = 2, bestGrade = "A", bestScore = 1347, bestRescued = 5 })
+	local sessionLabel = gui:FindFirstChild("StatusStrip"):FindFirstChild("SessionLabel")
+	assert(sessionLabel and string.find(sessionLabel.Text, "best A / 1347", 1, true) ~= nil,
+		"session summary not shown: " .. tostring(sessionLabel and sessionLabel.Text))
+
+	Markers.addPing({
+		type = "survivor", label = "Survivor", player = "Teammate",
+		position = Stub.v3(-9, 1.2, -12), lifetime = 0.5,
+	})
+	local container = Workspace:FindFirstChild("FloodlineMarkers")
+	local pingTags = 0
+	for _, child in ipairs(container:GetChildren()) do
+		if child.Name == "PingTag" then
+			pingTags += 1
+		end
+	end
+	assert(pingTags >= 1, "ping marker was not created")
+	Stub.advance(1.2)
+	Markers.update()
+	local remaining = 0
+	for _, child in ipairs(container:GetChildren()) do
+		if child.Name == "PingTag" then
+			remaining += 1
+		end
+	end
+	assert(remaining == 0, "ping marker did not expire")
+	return true, string.format("modifier selector, session line and %d ping marker(s) verified", pingTags)
+end)
+
 check("effects respond to submersion, drowning and downed states", function()
 	Effects.Init()
 	Effects.setWater({ level = 9, sectorLevels = { 9, 9, 9 } }, 0.2, false, false)
