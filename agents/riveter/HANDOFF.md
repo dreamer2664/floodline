@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-15T22:08:24Z
+- Updated: 2026-10-15T22:08:54Z
 - State: **working**
 - Stage: implementation
-- Last observed activity: Generated 94 parts, 13 models, 4 survivors, 2 cells, 1 spawn, 11 prompts, 1 server + 1 client script. SpawnLocation fixed.
+- Last observed activity: Published r02 place+source+validation to storagecode. Studio runtime still not verified.
 - Latest evidence/artifact: agents/riveter/releases/FLOODLINE.rbxlx
-- Next concrete action: Publish source and archive handoff
+- Next concrete action: Finalize handoff and status
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -26,4 +26,10 @@
 - Result/discovery: Generated 94 parts, 13 models, 4 survivors, 2 cells, 1 spawn, 11 prompts, 1 server + 1 client script. SpawnLocation fixed.
 - Evidence: agents/riveter/releases/FLOODLINE.rbxlx
 - Next: Publish source and archive handoff
+
+### 2026-10-15T22:08:54Z — revision
+- Action: Second material revision: interiors, props, 105 parts
+- Result/discovery: Published r02 place+source+validation to storagecode. Studio runtime still not verified.
+- Evidence: agents/riveter/releases/FLOODLINE.rbxlx
+- Next: Finalize handoff and status
 

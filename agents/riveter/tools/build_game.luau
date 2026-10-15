@@ -211,6 +211,24 @@ writeModel("World", function(world)
 	surv("Survivor3", V3.new(-20,1,20))
 	surv("Survivor4", V3.new(28,1,-5))
 
+	-- Interiors / rooms (revision 3)
+	-- Terminal interior partitions
+	P(term, "Partition1", V3.new(0.4,6,10), V3.new(4,3.25,-28), C3.fromRGB(70,72,82), CONC, true, true, 0)
+	P(term, "Desk1", V3.new(4,1,2), V3.new(-6,1,-24), C3.fromRGB(90,70,50), WOOD, true, true, 0)
+	P(term, "Chair1", V3.new(1.5,1.5,1.5), V3.new(-6,0.75,-22), C3.fromRGB(60,60,70), Enum.Material.Fabric, true, true, 0)
+	-- Apartment interiors
+	for _, f in ipairs({0,1,2}) do
+		local y = f*3.2+0.25
+		P(apt, "RoomDiv"..f, V3.new(0.4,2.8,14), V3.new(30,y+1.4,-8), C3.fromRGB(75,77,85), CONC, true, true, 0)
+	end
+	P(apt, "Bed1", V3.new(3,1,2), V3.new(24,1,-12), C3.fromRGB(180,180,200), Enum.Material.Fabric, true, true, 0)
+	P(apt, "Table1", V3.new(2,1,2), V3.new(34,1,-4), C3.fromRGB(90,70,50), WOOD, true, true, 0)
+	-- Clinic interiors
+	P(cl, "Counter", V3.new(6,1,1.5), V3.new(24,1,20), C3.fromRGB(200,200,210), Enum.Material.SmoothPlastic, true, true, 0)
+	P(cl, "Cabinet", V3.new(2,3,1), V3.new(30,1.75,28), C3.fromRGB(120,130,140), METAL, true, true, 0)
+	-- Workshop extra
+	P(ws, "Shelf", V3.new(8,0.3,1.5), V3.new(-18,4,26), C3.fromRGB(90,70,50), WOOD, true, true, 0)
+	P(ws, "Toolbox", V3.new(2,1.5,1), V3.new(-12,1,26), C3.fromRGB(200,60,60), METAL, true, true, 0)
 	-- Extra props / signage (revision 2)
 	P(world, "Sign_Terminal", V3.new(6,2,0.3), V3.new(0,4,-19.3), C3.fromRGB(220,150,60), Enum.Material.Neon, true, true, 0)
 	P(world, "Railing_Terminal", V3.new(22,1,0.3), V3.new(0,11,-28), C3.fromRGB(120,130,140), Enum.Material.Metal, true, true, 0)
