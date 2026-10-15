@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-15T21:41:58+00:00",
+  "purpose": "Toolchain integration fixture, NOT a game and NOT a Studio playtest",
+  "pipeline": [
+    "Lune serialized actual baked model",
+    "Rojo built XML place",
+    "Lune deserialized exact exported place",
+    "asserted anchored floor, spawn, embedded server-script source"
+  ],
+  "file": "TOOLCHAIN_FIXTURE.rbxlx",
+  "bytes": 1786,
+  "sha256": "6e39ce706cd5e5259ce61f48416d062b64960b04af3640e5995719e4bac3fc7b",
+  "studio_runtime_tested": false,
+  "game_produced": false
+}

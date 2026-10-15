@@ -1,0 +1,17 @@
+test_clean_source_archive_allowed (test_ops.ArtifactSafetyTests.test_clean_source_archive_allowed) ... ok
+test_compressed_known_key_and_private_entry_refused (test_ops.ArtifactSafetyTests.test_compressed_known_key_and_private_entry_refused) ... ok
+test_other_folder_refused (test_ops.ArtifactSafetyTests.test_other_folder_refused) ... ok
+test_embedded_private_bootstrap_executes (test_ops.ContractTests.test_embedded_private_bootstrap_executes) ... ok
+test_only_own_identity (test_ops.ContractTests.test_only_own_identity) ... ok
+test_standalone_clean_complete_game_charter (test_ops.ContractTests.test_standalone_clean_complete_game_charter) ... ok
+test_tools_pinned_with_hashes (test_ops.ContractTests.test_tools_pinned_with_hashes) ... ok
+test_actual_process_auth_isolated_and_not_delivered (test_ops.JournalTests.test_actual_process_auth_isolated_and_not_delivered) ... ok
+test_failures_solutions_resume_and_secret_redaction (test_ops.JournalTests.test_failures_solutions_resume_and_secret_redaction) ... ok
+test_missing_and_nonzero_commands_fail (test_ops.JournalTests.test_missing_and_nonzero_commands_fail) ... ok
+test_partial_output_cannot_block_observation (test_ops.JournalTests.test_partial_output_cannot_block_observation) ... ok
+test_rapid_commands_have_distinct_raw_logs (test_ops.JournalTests.test_rapid_commands_have_distinct_raw_logs) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.233s
+
+OK
