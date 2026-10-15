@@ -2,7 +2,7 @@
   "recorded_at": "2026-10-15T21:53:07+00:00",
   "agent": "riveter",
   "game": "FLOODLINE: Last District",
-  "brief_words": 4893,
+  "brief_words": 4973,
   "private_packets": 1,
   "private_mode": "0600",
   "kit": "KIT-DBF340 existing shared identity",
@@ -23,5 +23,6 @@
   "goal_card": "t-20261015-ffaa",
   "activation": "Prepared only; actual future first wake registers/claims",
   "primary_archive": "dreamer2664/storagecode",
-  "mars": "paused"
+  "mars": "paused",
+  "stateless_shell_credentials_and_tool_path_instructions": true
 }

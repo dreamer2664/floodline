@@ -12,6 +12,6 @@ test_partial_output_cannot_block_observation (test_ops.JournalTests.test_partial
 test_rapid_commands_have_distinct_raw_logs (test_ops.JournalTests.test_rapid_commands_have_distinct_raw_logs) ... ok
 
 ----------------------------------------------------------------------
-Ran 12 tests in 0.233s
+Ran 12 tests in 0.234s
 
 OK

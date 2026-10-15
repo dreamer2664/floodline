@@ -166,7 +166,7 @@ python3 agents/riveter/tools/build.py
 rojo build agents/riveter/default.project.json -o agents/riveter/releases/FLOODLINE.rbxlx
 ```
 
-The bootstrap reinstalls official pinned binaries rootlessly into excluded cache and verifies checksums. It is not a Roblox login or engine emulator. Use legitimate official builds on another OS. **Opening the delivered place must not require the Rojo Studio plugin**; live sync is optional development convenience, not a handoff dependency.
+The bootstrap reinstalls official pinned binaries rootlessly into excluded cache and verifies checksums. It is not a Roblox login or engine emulator. Use legitimate official builds on another OS. Shell variables/cwd may reset between tool calls: your one-command build must locate the pinned binaries itself (for example via the bootstrap's `install()` return value), not assume an earlier PATH export survived. **Opening the delivered place must not require the Rojo Studio plugin**; live sync is optional development convenience, not a handoff dependency.
 
 Lune's `@lune/roblox` can read/write actual place/model files, create Instances and use Roblox datatypes for building. `serializePlace(dataModel, true)` writes XML; `deserializePlace(fileContents)` checks a real export. It does not simulate Roblox physics, networking, players or Studio's full runtime. Use its reflection database to check supported classes/properties; don't invent them. Build scripts and gameplay have different environments.
 
@@ -310,7 +310,7 @@ python3 chatcode/bin/chatcode whoami
 python3 chatcode/bin/chatcode tasks claim t-20261015-ffaa --hours 4
 ```
 
-Your name was collision-checked at commissioning. If a genuine new identity collision appears, don't overwrite another operative; use a clear suffixed bus identity, keep this production folder and log the reason without a creative poll. If `.git` is missing on restore, fresh-clone current remote and selectively restore your own files; never reset a stale tree and stage it wholesale. Prefer clone reads over API-per-task scans; the token budget is shared.
+Your name was collision-checked at commissioning. If a genuine new identity collision appears, don't overwrite another operative; use a clear suffixed bus identity, keep this production folder and log the reason without a creative poll. If `.git` is missing on restore, fresh-clone current remote and selectively restore your own files; never reset a stale tree and stage it wholesale. Prefer clone reads over API-per-task scans; the token budget is shared. If tool shells are stateless, source your private `riveter.env` and set the safe GIT_ASKPASS in **each authenticated shell invocation**; a successful export in an earlier tool call does not persist credentials into the next. Never fix that by putting a token in a URL, script, argument or Git config.
 
 ### Boundaries that broad permission does not remove
 
