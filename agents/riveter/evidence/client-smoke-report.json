@@ -1,0 +1,17 @@
+{
+  "checks": 9,
+  "passed": 9,
+  "failed": 0,
+  "note": "Client UI construction and remote reaction only. No rendering, layout, device or latency validation.",
+  "results": [
+    { "name": "client scripts are present in the shipped place", "ok": true, "detail": "modules=true client=true" },
+    { "name": "HUD builds its full interface tree", "ok": true, "detail": "8 panels built" },
+    { "name": "objective + power + roster panels accept live payloads", "ok": true, "detail": "power rows=5 roster rows=4" },
+    { "name": "state/water/tick updates drive the banner, gauge and status strip", "ok": true, "detail": "timer=01:32 gauge=0.36 carry='Carrying: power cell'" },
+    { "name": "notifications stack and expire", "ok": true, "detail": "notes 1 -> 3, 1 after expiry" },
+    { "name": "world markers bind to survivors and the active objective", "ok": true, "detail": "markers=3, objective anchor=true" },
+    { "name": "results screen renders a real round summary and votes for a rematch", "ok": true, "detail": "summary rendered, rematch vote path armed" },
+    { "name": "effects respond to submersion, drowning and downed states", "ok": true, "detail": "underwater tint, blur and downed grading all applied" },
+    { "name": "client bootstrap runs end to end on live payload shapes", "ok": true, "detail": "client ticked 3s of live payloads, banner=SURGE" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "scenarios": 14,
+  "passed": 14,
+  "failed": 0,
+  "geometry": {
+    "worldDescendants": 468,
+    "mountedServices": 0
+  },
+  "results": [
+    { "name": "server boots with a lobbyless, fully wired world", "ok": true, "detail": "4 sockets, 8 survivors, 6 objectives, 3 water volumes" },
+    { "name": "solo round auto-starts and scales difficulty", "ok": true, "detail": "state=Prep quota=3/8 prepCountdown active" },
+    { "name": "power grid enforces capacity and brownout priority", "ok": true, "detail": "capacity=2 load=2 pump=true lift=true bridge=false" },
+    { "name": "relay fuse repair raises capacity and powers the bridge", "ok": true, "detail": "capacity=3 bridge=true" },
+    { "name": "flood rises, pump suppresses the rate, surges add water", "ok": true, "detail": "pumped=0.002/s unpumped=0.008/s surge sector1 2.83->3.33" },
+    { "name": "escorting a survivor into the safe zone rescues them", "ok": true, "detail": "rescued=1/8 (quota 3) after escort" },
+    { "name": "lift loads survivors, travels and unloads them at the pad", "ok": true, "detail": "boarded=2, lift at 70%, passengers left=0, pad rescues +2 (total 4)" },
+    { "name": "live cables shock and the gas leak is fixable", "ok": true, "detail": "health 100 -> 64, leak fixed=true" },
+    { "name": "round reaches a win when the quota is met and the team extracts", "ok": true, "detail": "outcome=win grade=A score=1347 rescued=3 elapsed=0:08s" },
+    { "name": "results screen rematch vote returns the server to the lobby", "ok": true, "detail": "reset clean, second round in Prep" },
+    { "name": "losing every survivor fails the round honestly", "ok": true, "detail": "outcome=fail reason=every survivor was lost dead=8" },
+    { "name": "a second round deploys the full survivor crew again", "ok": true, "detail": "8/8 survivors restored and visible" },
+    { "name": "scaling tables react to a second player", "ok": true, "detail": "2p fraction=0.45, back to 1 player" },
+    { "name": "telemetry wrote an inspectable round log", "ok": true, "detail": "2 round log(s), 4280 bytes in the newest" }
+  ]
+}

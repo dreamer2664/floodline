@@ -1,0 +1,95 @@
+{
+  "checks": [
+    {
+      "check": "services reference only existing geometry",
+      "ok": true,
+      "detail": "23 named hooks present in the place"
+    },
+    {
+      "check": "every socket maps to a configured consumer",
+      "ok": true,
+      "detail": "sockets=['Socket_Bridge', 'Socket_Lift', 'Socket_Pump'] consumers=['Bridge', 'Lift', 'Pump', 'Relay']"
+    },
+    {
+      "check": "all remote usages are declared",
+      "ok": true,
+      "detail": "19 remotes used, all declared"
+    },
+    {
+      "check": "bootstrap modules exported",
+      "ok": true,
+      "detail": "12 modules required, all present"
+    },
+    {
+      "check": "client modules exported",
+      "ok": true,
+      "detail": "4 modules required, all present"
+    },
+    {
+      "check": "shared modules exported",
+      "ok": true,
+      "detail": "3 shared modules required, all present"
+    },
+    {
+      "check": "eight survivors with interaction prompts",
+      "ok": true,
+      "detail": "models=8 survivorPrompts=8 (all prompts=28)"
+    },
+    {
+      "check": "lift cabin has four seats",
+      "ok": true,
+      "detail": "seats=4"
+    },
+    {
+      "check": "power cell count matches config",
+      "ok": true,
+      "detail": "geometry=3 config=3"
+    },
+    {
+      "check": "no loadstring / http code / external asset ids",
+      "ok": true,
+      "detail": "{}"
+    },
+    {
+      "check": "numeric client input is constrained",
+      "ok": true,
+      "detail": "client-sent scalars: [('sprinting', 'boolean')]"
+    },
+    {
+      "check": "audio uses only bundled engine sounds",
+      "ok": true,
+      "detail": "only rbxasset:// engine sounds"
+    }
+  ],
+  "passed": 12,
+  "failed": 0,
+  "sourceFiles": {
+    "server": [
+      "src/server/Bootstrap.server.luau",
+      "src/server/Modules/FloodService.luau",
+      "src/server/Modules/HazardService.luau",
+      "src/server/Modules/InteractService.luau",
+      "src/server/Modules/LiftService.luau",
+      "src/server/Modules/ObjectiveService.luau",
+      "src/server/Modules/PlayerService.luau",
+      "src/server/Modules/PowerService.luau",
+      "src/server/Modules/RescueService.luau",
+      "src/server/Modules/RoundService.luau",
+      "src/server/Modules/ScoringService.luau",
+      "src/server/Modules/Telemetry.luau",
+      "src/server/Modules/WorldService.luau"
+    ],
+    "client": [
+      "src/client/Client.client.luau",
+      "src/client/Modules/Effects.luau",
+      "src/client/Modules/Hud.luau",
+      "src/client/Modules/Markers.luau",
+      "src/client/Modules/Results.luau"
+    ],
+    "shared": [
+      "src/shared/Config.luau",
+      "src/shared/Net.luau",
+      "src/shared/Util.luau"
+    ]
+  }
+}

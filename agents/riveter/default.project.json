@@ -4,18 +4,59 @@
     "$className": "DataModel",
     "Workspace": {
       "$className": "Workspace",
+      "$properties": { "StreamingEnabled": false, "FilteringEnabled": true },
       "World": { "$path": "generated/models/World.rbxmx" }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$className": "Folder",
+        "Config": { "$path": "src/shared/Config.luau" },
+        "Net": { "$path": "src/shared/Net.luau" },
+        "Util": { "$path": "src/shared/Util.luau" }
+      }
     },
     "ServerScriptService": {
       "$className": "ServerScriptService",
-      "GameManager": { "$path": "src/GameManager.server.luau" }
+      "Bootstrap": { "$path": "src/server/Bootstrap.server.luau" },
+      "Modules": {
+        "$className": "Folder",
+        "FloodService": { "$path": "src/server/Modules/FloodService.luau" },
+        "HazardService": { "$path": "src/server/Modules/HazardService.luau" },
+        "InteractService": { "$path": "src/server/Modules/InteractService.luau" },
+        "LiftService": { "$path": "src/server/Modules/LiftService.luau" },
+        "ObjectiveService": { "$path": "src/server/Modules/ObjectiveService.luau" },
+        "PlayerService": { "$path": "src/server/Modules/PlayerService.luau" },
+        "PowerService": { "$path": "src/server/Modules/PowerService.luau" },
+        "RescueService": { "$path": "src/server/Modules/RescueService.luau" },
+        "RoundService": { "$path": "src/server/Modules/RoundService.luau" },
+        "ScoringService": { "$path": "src/server/Modules/ScoringService.luau" },
+        "Telemetry": { "$path": "src/server/Modules/Telemetry.luau" },
+        "WorldService": { "$path": "src/server/Modules/WorldService.luau" }
+      }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
+      "$properties": { "CharacterWalkSpeed": 16, "CharacterJumpPower": 50, "CameraMaxZoomDistance": 34, "EnableMouseLockOption": true },
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "Client": { "$path": "src/Client.client.luau" }
+        "Client": { "$path": "src/client/Client.client.luau" },
+        "Modules": {
+          "$className": "Folder",
+          "Effects": { "$path": "src/client/Modules/Effects.luau" },
+          "Hud": { "$path": "src/client/Modules/Hud.luau" },
+          "Markers": { "$path": "src/client/Modules/Markers.luau" },
+          "Results": { "$path": "src/client/Modules/Results.luau" }
+        }
       }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": { "Brightness": 1.6, "ClockTime": 17.2, "Ambient": [0.18, 0.2, 0.24], "OutdoorAmbient": [0.22, 0.25, 0.3], "FogEnd": 420, "FogStart": 90 }
+    },
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": { "RespectFilteringEnabled": true }
     }
   }
 }

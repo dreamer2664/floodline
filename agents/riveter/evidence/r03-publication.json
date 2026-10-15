@@ -1,0 +1,84 @@
+{
+  "agent": "riveter",
+  "published_at": "2026-10-15T22:28:27Z",
+  "revision": "r03",
+  "code_sha": "46870ae69ff6072b5786c56dff66feddda99301f",
+  "release": "https://github.com/dreamer2664/storagecode/releases/tag/floodline/riveter/r03-db183983e5de",
+  "tag": "floodline/riveter/r03-db183983e5de",
+  "assets": [
+    {
+      "name": "FLOODLINE.rbxlx",
+      "bytes": 496454,
+      "sha256": "db183983e5de914e326b6093c4a0027d73f222fed50b5ad632e4ff76d6d42d66",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/FLOODLINE.rbxlx",
+      "remote_digest": "sha256:db183983e5de914e326b6093c4a0027d73f222fed50b5ad632e4ff76d6d42d66",
+      "remote_size": 496454
+    },
+    {
+      "name": "FLOODLINE-source.zip",
+      "bytes": 121516,
+      "sha256": "c563ef784a825fd831c63d3728f4f5b8752b7a5704ee39cf0c24c84a9ef81cdf",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/FLOODLINE-source.zip",
+      "remote_digest": "sha256:c563ef784a825fd831c63d3728f4f5b8752b7a5704ee39cf0c24c84a9ef81cdf",
+      "remote_size": 121516
+    },
+    {
+      "name": "FLOODLINE.rbxl",
+      "bytes": 89265,
+      "sha256": "8105bedcfe44ee3eddcb039ae9ea3ad488ba501767c77101f66abedcd30e5e8a",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/FLOODLINE.rbxl",
+      "remote_digest": "sha256:8105bedcfe44ee3eddcb039ae9ea3ad488ba501767c77101f66abedcd30e5e8a",
+      "remote_size": 89265
+    },
+    {
+      "name": "VERIFICATION.md",
+      "bytes": 8131,
+      "sha256": "3aa9d8ef1334503e9b106b42411cccb145d6bd8d405ccc464b4876854d049b5f",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/VERIFICATION.md",
+      "remote_digest": "sha256:3aa9d8ef1334503e9b106b42411cccb145d6bd8d405ccc464b4876854d049b5f",
+      "remote_size": 8131
+    },
+    {
+      "name": "headless-report.json",
+      "bytes": 2096,
+      "sha256": "76d12fae83d915a46c77443b8005d280f37c2471b9bb7e2713a8f57de802b590",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/headless-report.json",
+      "remote_digest": "sha256:76d12fae83d915a46c77443b8005d280f37c2471b9bb7e2713a8f57de802b590",
+      "remote_size": 2096
+    },
+    {
+      "name": "client-smoke-report.json",
+      "bytes": 1375,
+      "sha256": "430e51165cf7d09ec35e67268ac19b292cb02fd31f45ac5c1a1129c82638b960",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/client-smoke-report.json",
+      "remote_digest": "sha256:430e51165cf7d09ec35e67268ac19b292cb02fd31f45ac5c1a1129c82638b960",
+      "remote_size": 1375
+    },
+    {
+      "name": "compile-report.json",
+      "bytes": 5928,
+      "sha256": "46de3ca0aa373c908f857926e351827f42f71ab9ef725a88a2edf6db50e41610",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/compile-report.json",
+      "remote_digest": "sha256:46de3ca0aa373c908f857926e351827f42f71ab9ef725a88a2edf6db50e41610",
+      "remote_size": 5928
+    },
+    {
+      "name": "logic-report.json",
+      "bytes": 2674,
+      "sha256": "13a9b53be22aebbf61cf5762daaec5317d7feae5f5c1fa7e0e7aa91e71b495f2",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/logic-report.json",
+      "remote_digest": "sha256:13a9b53be22aebbf61cf5762daaec5317d7feae5f5c1fa7e0e7aa91e71b495f2",
+      "remote_size": 2674
+    },
+    {
+      "name": "place-structure.json",
+      "bytes": 9644,
+      "sha256": "e06f29b2d43eb396e1b9c2ac6bed951a77eff46442d925c4d1b64afb5244ea3b",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r03-db183983e5de/place-structure.json",
+      "remote_digest": "sha256:e06f29b2d43eb396e1b9c2ac6bed951a77eff46442d925c4d1b64afb5244ea3b",
+      "remote_size": 9644
+    }
+  ],
+  "acceptance": "Published Roblox build candidate; refer to actual validation and explicit engine-test limitations.",
+  "primary_archive": "https://github.com/dreamer2664/storagecode/tree/main/data/floodline/riveter/r03-db183983e5de"
+}

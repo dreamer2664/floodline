@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-15T22:08:54Z
+- Updated: 2026-10-15T22:28:36Z
 - State: **working**
 - Stage: implementation
-- Last observed activity: Published r02 place+source+validation to storagecode. Studio runtime still not verified.
+- Last observed activity: r03 published. 44 scripts compile; 12/12 static checks; 14/14 headless gameplay scenarios on the real exported place; 9/9 client UI checks. 9 real bugs found and fixed (prep phase length, unwired cell/socket prompts, duplicate cells, unreachable extraction pad, missing lift call button, destroyed NPCs breaking rematches, NPC jamming, Vector3:Distance misuse, non-idempotent HUD). No Studio session run - engine runtime unverified.
 - Latest evidence/artifact: agents/riveter/releases/FLOODLINE.rbxlx
-- Next concrete action: Finalize handoff and status
+- Next concrete action: First real Studio playtest, then act on it
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -32,4 +32,10 @@
 - Result/discovery: Published r02 place+source+validation to storagecode. Studio runtime still not verified.
 - Evidence: agents/riveter/releases/FLOODLINE.rbxlx
 - Next: Finalize handoff and status
+
+### 2026-10-15T22:28:36Z — revision
+- Action: Rebuilt FLOODLINE as a real game: 6 landmark interiors, 402 parts, 12 server services, 4 client modules, headless verification harness
+- Result/discovery: r03 published. 44 scripts compile; 12/12 static checks; 14/14 headless gameplay scenarios on the real exported place; 9/9 client UI checks. 9 real bugs found and fixed (prep phase length, unwired cell/socket prompts, duplicate cells, unreachable extraction pad, missing lift call button, destroyed NPCs breaking rematches, NPC jamming, Vector3:Distance misuse, non-idempotent HUD). No Studio session run - engine runtime unverified.
+- Evidence: agents/riveter/releases/FLOODLINE.rbxlx
+- Next: First real Studio playtest, then act on it
 
