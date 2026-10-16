@@ -1,0 +1,36 @@
+{
+  "agent": "riveter",
+  "published_at": "2026-10-16T15:45:24Z",
+  "revision": "r07",
+  "code_sha": "671ed13ae8ad7d7d57b3d5e2979fec92edec9d37",
+  "release": "https://github.com/dreamer2664/storagecode/releases/tag/floodline/riveter/r07-a9d07bfbd5fa",
+  "tag": "floodline/riveter/r07-a9d07bfbd5fa",
+  "assets": [
+    {
+      "name": "FLOODLINE.rbxlx",
+      "bytes": 919467,
+      "sha256": "a9d07bfbd5fa7f9ac477b2e07c01cd45b20937fd78f5cf975100b1074c7120fa",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r07-a9d07bfbd5fa/FLOODLINE.rbxlx",
+      "remote_digest": "sha256:a9d07bfbd5fa7f9ac477b2e07c01cd45b20937fd78f5cf975100b1074c7120fa",
+      "remote_size": 919467
+    },
+    {
+      "name": "FLOODLINE-source.zip",
+      "bytes": 231699,
+      "sha256": "5c57c31c19de1eb0f221756fee7a969b01c63b3af52b243eb8ef69a288990334",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r07-a9d07bfbd5fa/FLOODLINE-source.zip",
+      "remote_digest": "sha256:5c57c31c19de1eb0f221756fee7a969b01c63b3af52b243eb8ef69a288990334",
+      "remote_size": 231699
+    },
+    {
+      "name": "VALIDATION.json",
+      "bytes": 603,
+      "sha256": "d44290064cb3836f2992701b91fcc29b7cfbcc27ec30b88a046d3bf173ed24bb",
+      "url": "https://github.com/dreamer2664/storagecode/releases/download/floodline/riveter/r07-a9d07bfbd5fa/VALIDATION.json",
+      "remote_digest": "sha256:d44290064cb3836f2992701b91fcc29b7cfbcc27ec30b88a046d3bf173ed24bb",
+      "remote_size": 603
+    }
+  ],
+  "acceptance": "Published Roblox build candidate; refer to actual validation and explicit engine-test limitations.",
+  "primary_archive": "https://github.com/dreamer2664/storagecode/tree/main/data/floodline/riveter/r07-a9d07bfbd5fa"
+}
