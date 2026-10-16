@@ -6,7 +6,7 @@ local Config = {}
 
 Config.Game = {
 	Name = "FLOODLINE: Last District",
-	Version = "r07",
+	Version = "r08",
 	MaxPlayers = 4,
 	MinPlayersToStart = 1,
 	LobbyAutoStartSeconds = 10,
@@ -232,6 +232,17 @@ Config.Survivors = {
 	PanicCalmPerSecond = 7.0,
 	PanicThreshold = 100,
 	LostAfterPanicSeconds = 12,
+	-- The whistle: the answer to "I can only ever move one person at a time". Three survivors within
+	-- earshot join you at once, panicking survivors calm down when they hear it, and the cooldown is
+	-- long enough that it is a resource, not a drumbeat.
+	Rally = {
+		Radius = 26,
+		MaxGathered = 3,
+		CooldownSeconds = 40,
+		PanicRelief = 24,
+		ScorePerSurvivor = 15,
+		ChildCarryNote = "still needs carrying",
+	},
 	ReviveSeconds = 6.5,
 	DownedBleedoutSeconds = 75, -- long enough that a crew can cross the district for someone
 	DownedWetDepth = 0.75, -- lying in waist-deep water halves that window

@@ -41,6 +41,7 @@ Net.Remotes = {
 	RequestModifier = "RemoteEvent",
 	RequestUpgrade = "RemoteEvent",
 	RequestRole = "RemoteEvent",
+	RequestRally = "RemoteEvent",
 	RequestAbility = "RemoteEvent",
 	GetSnapshot = "RemoteFunction",
 }

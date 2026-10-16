@@ -103,6 +103,7 @@ local function wireRemotes()
 	if remotes.SurvivorSync then
 		remotes.SurvivorSync.OnClientEvent:Connect(function(snapshot: any)
 			state.survivors = snapshot
+			state.rallyReadyIn = snapshot.rallyReadyIn or 0
 			Hud.updateSurvivors(snapshot)
 			Markers.syncSurvivors(snapshot)
 			Minimap.setState({ survivors = snapshot })
@@ -279,6 +280,12 @@ local function nearestSurvivor(): (string?, number)
 end
 
 local function handleSurvivorKey()
+	local whistle = state.rallyReadyIn or 0
+	if whistle > 0 then
+		table.insert(lines, `[H] whistle in {math.ceil(whistle)}s`)
+	else
+		table.insert(lines, "[H] whistle")
+	end
 	local me = state.status and state.status[player.Name]
 	if me and me.dragging then
 		table.insert(lines, `[Q] set {me.dragging} down`)
@@ -391,6 +398,14 @@ local function bindInput()
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.F)
 
+	-- H calls the survivors in earshot: three of them, if the whistle is off cooldown.
+	ContextActionService:BindAction("FloodlineRally", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			remotes.RequestRally:FireServer()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.H)
+
 	ContextActionService:BindAction("FloodlineLift", function(_, inputState)
 		if inputState == Enum.UserInputState.Begin then
 			remotes.RequestLiftCall:FireServer()
@@ -501,7 +516,7 @@ local function updateHints(dt: number)
 		table.insert(lines, `[F] {name} ({math.floor(distance)}m)`)
 	end
 	Hud.hintLabel.Text = #lines > 0 and table.concat(lines, "  ·  ")
-		or "E grab/use · F survivor · G lift · Q drop/let go · V ability · N role · 1-4 ping · M map · B systems"
+		or "E grab/use · F survivor · H whistle · G lift · Q drop/let go · V ability · N role · 1-4 ping · M map"
 end
 
 local function updateCamera(dt: number)

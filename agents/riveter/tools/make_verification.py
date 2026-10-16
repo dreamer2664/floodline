@@ -72,7 +72,7 @@ def main() -> int:
 
 Autonomous bots play complete rounds through the shipped server modules on the virtual clock
 (`tests/headless/playtest.luau`): {playtest['wins']} wins, {playtest['fails']} fails,
-{playtest['unresolved']} unresolved.
+{playtest.get('partials', 0)} partial (quota met, lift missed), {playtest['unresolved']} unresolved.
 
 | Crew | Modifier | Outcome | Elapsed | Reason | Rescued/Required | Lost | Salvage | Score | Grade |
 |---|---|---|---|---|---|---|---|---|---|
@@ -198,7 +198,7 @@ lune run agents/riveter/tools/build_game.luau # build only
             "headlessScenarios": f"{sim['passed']}/{sim['scenarios']}",
             "clientChecks": f"{client['passed']}/{client['checks']}",
             "botPlaytests": (
-                f"{playtest['wins']}W/{playtest['fails']}F/{playtest['unresolved']}U over {playtest['runs']} rounds"
+                f"{playtest['wins']}W/{playtest['fails']}F/{playtest.get('partials', 0)}P/{playtest['unresolved']}U over {playtest['runs']} rounds"
                 if playtest else "not run"
             ),
         },

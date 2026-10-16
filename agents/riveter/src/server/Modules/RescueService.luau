@@ -62,6 +62,9 @@ Rescue.lostCount = 0
 Rescue.deadCount = 0
 Rescue.recoveredCount = 0
 Rescue.dirty = true
+Rescue.rallies = 0            -- whistles blown this round
+Rescue.ralliedSurvivors = 0   -- people who answered one
+Rescue.lastRallyAt = -math.huge
 Rescue.lastSnapshots = {} :: { [string]: any }
 
 local ctx
@@ -271,6 +274,10 @@ function Rescue.reset()
 	Rescue.rescuedCount = 0
 	Rescue.lostCount = 0
 	Rescue.deadCount = 0
+	-- Fresh survivors, fresh whistle: the cooldown must not carry across rounds.
+	Rescue.rallies = 0
+	Rescue.ralliedSurvivors = 0
+	Rescue.lastRallyAt = -math.huge
 	local world = ctx.worldFolder
 	local folder = world:FindFirstChild("Survivors")
 	if not folder then
@@ -290,6 +297,83 @@ function Rescue.reset()
 end
 
 -- ===================== interactions =====================
+
+-- The whistle: three people at once, if they can hear you and you are not already holding a crowd.
+function Rescue.rally(player: Player, now: number?): (boolean, string?)
+	local cfg = ctx.config.Survivors.Rally
+	local clockNow = now or os.clock()
+	if not ctx.roundActive() then
+		return false, "There is nothing to call anybody away from yet."
+	end
+	local ownerState = ctx.playerService and ctx.playerService.getState(player) or nil
+	if ownerState and ownerState.downed then
+		return false, "You are down. Somebody has to whistle for you."
+	end
+	local wait = cfg.CooldownSeconds - (clockNow - Rescue.lastRallyAt)
+	if wait > 0 then
+		return false, `Catch your breath: {math.ceil(wait)}s before the next whistle.`
+	end
+	local leaderRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not leaderRoot then
+		return false, "Nowhere to call them to."
+	end
+	local leaderPart = leaderRoot :: BasePart
+	-- Gather the nearest unclaimed survivors in earshot. Children come too, but they still refuse
+	-- to wade: a whistle is not a pair of arms.
+	local candidates = {}
+	for _, survivor in ipairs(Rescue.order) do
+		if survivor.state ~= "Rescued" and survivor.state ~= "Dead" and survivor.state ~= "Downed" then
+			if not survivor.leader and not survivor.carriedBy and not survivor.boarding then
+				local distance = (survivor.position - leaderPart.Position).Magnitude
+				if distance <= cfg.Radius then
+					table.insert(candidates, { survivor = survivor, distance = distance })
+				end
+			end
+		end
+	end
+	if #candidates == 0 then
+		return false, "Nobody is close enough to hear you."
+	end
+	table.sort(candidates, function(a, b)
+		return a.distance < b.distance
+	end)
+	local gathered = 0
+	local carried = false
+	for _, entry in ipairs(candidates) do
+		if gathered >= cfg.MaxGathered then
+			break
+		end
+		local survivor = entry.survivor
+		survivor.leader = player
+		survivor.state = "Following"
+		survivor.panic = math.max(0, survivor.panic - cfg.PanicRelief)
+		gathered += 1
+		if survivor.role == "Child" then
+			carried = true
+			ctx.notify(`{NAMES[survivor.name] or survivor.name} answers the whistle but refuses the water — {cfg.ChildCarryNote}.`, "warn")
+		end
+	end
+	Rescue.lastRallyAt = clockNow
+	Rescue.rallies += 1
+	Rescue.ralliedSurvivors += gathered
+	Rescue.dirty = true
+	ctx.addScore(player, cfg.ScorePerSurvivor * gathered, "gathered survivors")
+	ctx.notify(`You whistle — {gathered} survivor(s) fall in behind you.`, "good")
+	local note = carried and " (one still needs carrying)" or ""
+	return true, `{gathered} answered{note}`
+end
+
+function Rescue.rallyReadyIn(now: number?): number
+	local cfg = ctx.config.Survivors.Rally
+	local clockNow = now or os.clock()
+	return math.max(0, cfg.CooldownSeconds - (clockNow - Rescue.lastRallyAt))
+end
+
+function Rescue.resetRally()
+	Rescue.rallies = 0
+	Rescue.ralliedSurvivors = 0
+	Rescue.lastRallyAt = -math.huge
+end
 
 function Rescue.lead(player: Player, name: string): (boolean, string?)
 	local survivor = Rescue.survivors[name]
@@ -1017,6 +1101,9 @@ function Rescue.snapshot()
 		recovered = Rescue.recoveredCount,
 		required = Rescue.requiredRescued(),
 		total = ctx.config.Survivors.Total,
+		rallies = Rescue.rallies,
+		ralliedSurvivors = Rescue.ralliedSurvivors,
+		rallyReadyIn = math.ceil(Rescue.rallyReadyIn()),
 	}
 end
 

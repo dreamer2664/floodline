@@ -1743,6 +1743,95 @@ scenario("a downed player rides with whoever drags them, and the clock stretches
 end)
 
 -- ============================================================
+-- Scenario 46: the whistle gathers a small crowd, once every forty seconds
+-- ============================================================
+-- Escorting twelve people one at a time is the slowest part of the game, and the whistle is the
+-- tool that fixes it. It has to gather only what is in earshot, only unclaimed people, calm the
+-- ones who answer, and then actually cost something.
+scenario("the whistle gathers three survivors at once and then goes on cooldown", function()
+	local safe = part("SafeZone").Position
+
+	-- Nobody answers a whistle while the water is still standing still in the lobby. (This has to be
+	-- checked before the round starts, and the survivors have to be placed after it: resetting the
+	-- round rebuilds every survivor rig from the baked models.)
+	Round.resetToLobby()
+	Stub.advance(0.2)
+	local lobbyOk, lobbyWhy = Rescue.rally(player)
+	assertTrue(not lobbyOk, "the whistle worked before the round started")
+	assertTrue(lobbyWhy ~= nil, "refusing a lobby whistle gave no reason")
+
+	freshRound(player)
+	Stub.movePlayer(player, safe + V3(0, 0, -6))
+
+	-- Three survivors in earshot, one well out of it.
+	local gathered, far = {}, nil
+	local placed = 0
+	for _, survivor in ipairs(Rescue.order) do
+		if survivor.state == "Lost" or survivor.state == "Rescued" or survivor.state == "Dead" then
+			continue
+		end
+		if placed < 3 then
+			survivor.panic = 60
+			Stub.moveSurvivor(survivor, safe + V3(placed * 3, 0, -9))
+			table.insert(gathered, survivor)
+			placed += 1
+		elseif not far then
+			far = survivor
+			-- Out of earshot, and on the apartment roof: a survivor parked in the street for the
+			-- cooldown would be downed by the flood and the whistle would refuse them for the
+			-- wrong reason.
+			Stub.moveSurvivor(survivor, V3(40, 14.6, 1))
+		end
+	end
+	assertTrue(#gathered == 3 and far ~= nil, "the scenario could not place test survivors")
+
+	local ok, detail = Rescue.rally(player)
+	assertTrue(ok, `the whistle failed in a live round: {detail}`)
+	for _, survivor in ipairs(gathered) do
+		assertTrue(survivor.leader == player, `{survivor.name} did not fall in`)
+		assertTrue(survivor.state == "Following", `{survivor.name} is {survivor.state}, not following`)
+		assertTrue(survivor.panic <= 60 - Config.Survivors.Rally.PanicRelief + 0.01,
+			`{survivor.name} was not calmed by the whistle (panic {survivor.panic})`)
+	end
+	assertTrue(far.leader ~= player, "the whistle reached a survivor 140 studs away")
+	assertTrue(Rescue.rallies == 1, `the whistle was counted {Rescue.rallies} times`)
+
+	-- One shout is a resource: the second one has to wait, and while it waits it changes nothing.
+	local before = Rescue.ralliedSurvivors
+	local again, why = Rescue.rally(player)
+	assertTrue(not again, "the whistle was reusable with no cooldown")
+	assertTrue(string.find(tostring(why), "whistle", 1, true) ~= nil, `odd cooldown reason: {tostring(why)}`)
+	assertTrue(Rescue.ralliedSurvivors == before, "a refused whistle still gathered people")
+	assertTrue(Rescue.rallyReadyIn() > 0, "a used whistle reported itself ready")
+
+	-- And after the cooldown it works again, on whoever is still out there.
+	Stub.advance(Config.Survivors.Rally.CooldownSeconds + 1)
+	assertTrue(Rescue.rallyReadyIn() == 0, "the whistle never came off cooldown")
+	Stub.moveSurvivor(far, safe + V3(0, 0, -10))
+	far.health = math.max(far.health, 60)
+	if far.state == "Downed" then
+		far.state = "Idle"
+		far.downedAt = nil
+	end
+	local second, secondWhy = Rescue.rally(player)
+	assertTrue(second, `the whistle could not be blown a second time after the cooldown: {tostring(secondWhy)}`)
+	assertTrue(far.leader == player, "the survivor in earshot was left behind on the second whistle")
+
+	-- A downed player cannot whistle for themselves.
+	local mate = Stub.addPlayer("Whistler")
+	PlayerService.downed(mate, "a fall")
+	Stub.advance(0.2)
+	local downedOk, downedWhy = Rescue.rally(mate)
+	assertTrue(not downedOk, "a downed player could whistle")
+	assertTrue(downedWhy ~= nil, "refusing a downed whistle gave no reason")
+	Stub.removePlayer(mate)
+
+	return true, string.format(
+		"3 gathered inside %d studs, a survivor at 140 studs ignored, cooldown %.0fs enforced, %d shouts",
+		Config.Survivors.Rally.Radius, Config.Survivors.Rally.CooldownSeconds, Rescue.rallies)
+end)
+
+-- ============================================================
 -- report
 -- ============================================================
 local passed = #results - failures

@@ -1,7 +1,7 @@
 # FLOODLINE: Last District — verification report
 
-Artifact: `releases/FLOODLINE.rbxlx` — 919,467 bytes, SHA256 `a9d07bfbd5fa7f9ac477b2e07c01cd45b20937fd78f5cf975100b1074c7120fa`
-Scripts: 60 compiled (6548 server, 2982 client, 810 shared lines)
+Artifact: `releases/FLOODLINE.rbxlx` — 924,195 bytes, SHA256 `b14c80d16506ec4590bfac1794f3255ddaf7d0c773eb95d7a75b2d4c478518af`
+Scripts: 60 compiled (6643 server, 2999 client, 822 shared lines)
 World: 750 parts, 51 proximity prompts, 4 climbable trusses, 4 lift seats
 
 ## 1. What was verified, and how
@@ -12,7 +12,7 @@ World: 750 parts, 51 proximity prompts, 4 climbable trusses, 4 lift seats
 | Place structure | `tools/inspect_place.luau` | 647 named world objects, 0 required hooks missing |
 | Luau compilation | `tools/compile_check.luau` (`luau.compile` on every script, in both the source tree and the shipped place) | 60 checked, 0 failures |
 | Static wiring | `tools/logic_check.py` | 25/25 checks |
-| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 45/45 scenarios |
+| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 46/46 scenarios |
 | Client interface | `tests/headless/client_smoke.luau` | 14/14 checks |
 
 Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`.
@@ -45,7 +45,7 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | survivors cross the roof span on route waypoints, not through the air | crossed the span on waypoints: t 0.00 -> 0.45 over 240 ticks |
 | PASS | the service cut opens only after the collapse is dug out | cleared in 3 digs, +20 salvage, routes=ServiceCut |
 | PASS | sealing the service cut slows its flooding (it floods first when open) | cut depth open=2.02m closed=0.00m |
-| PASS | salvage crates pay out once and the bench spends the pool | crate paid 20, pool 20 -> 20, SealKit fitted |
+| PASS | salvage crates pay out once and the bench spends the pool | crate paid 12, pool 20 -> 12, SealKit fitted |
 | PASS | the capacitor upgrade lifts a real brownout | capacity 2 -> 3, brownout cleared without touching the sockets |
 | PASS | impeller and rebreather upgrades change water and air numbers | air 22s -> 31s, 12s of water: 0.10 dry, 0.03 pumped, 0.01 fitted |
 | PASS | the lift servo upgrade speeds travel and adds a passenger slot | 3s of travel: 15% -> 21%, seats 3 -> 4 |
@@ -66,6 +66,7 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | roles reset with the round and cannot be swapped mid-flood | role locked in-round, kept across a lobby reset, ability cooldown cleared |
 | PASS | no survivor starts the round already standing in a rescue zone | 12 spawn points, nearest to the safe zone is outside the 7.5 stud radius |
 | PASS | a downed player rides with whoever drags them, and the clock stretches | carrier walked 24 studs at 8.4 (free 16.0), casualty stayed 2.2m behind, bleedout 0.00889/s (base 0.01333/s) |
+| PASS | the whistle gathers three survivors at once and then goes on cooldown | 3 gathered inside 26 studs, a survivor at 140 studs ignored, cooldown 40s enforced, 2 shouts |
 
 The harness loads `FLOODLINE.rbxlx`, mirrors the 750-part district and the shipped
 module sources into a stub runtime (Instance tree, Vector3/CFrame math, AABB raycasts, DataModel
@@ -75,20 +76,20 @@ fast-forwarded through Prep → Rising → Surge → Extraction → Results.
 ## 1.2 Bot playtests (7 timed rounds)
 
 Autonomous bots play complete rounds through the shipped server modules on the virtual clock
-(`tests/headless/playtest.luau`): 6 wins, 1 fails,
-0 unresolved.
+(`tests/headless/playtest.luau`): 5 wins, 2 fails,
+0 partial (quota met, lift missed), 0 unresolved.
 
 | Crew | Modifier | Outcome | Elapsed | Reason | Rescued/Required | Lost | Salvage | Score | Grade |
 |---|---|---|---|---|---|---|---|---|---|
-| 1p | Calm | win | 293.8s | team evacuated with the required survivors | 4/3 | 2 | 140 | 1364 | A |
-| 1p | Standard | win | 683.8s | extraction window closed with the quota met | 8/5 | 1 | 256 | 1795 | S |
-| 1p | Storm | win | 1005.3s | extraction window closed with the quota met | 6/6 | 6 | 234 | 1345 | A |
-| 2p | Standard | win | 940.1s | extraction window closed with the quota met | 6/6 | 5 | 234 | 1415 | S |
-| 2p | Storm | win | 604s | extraction window closed with the quota met | 9/7 | 2 | 281 | 1995 | S |
-| 4p | Standard | win | 213.3s | team evacuated with the required survivors | 8/7 | 3 | 240 | 2500 | S |
-| 4p | Catastrophe | fail | 433.9s | the district drowned | 6/9 | 4 | 226 | 1966 | S |
+| 1p | Calm | win | 111.8s | team evacuated with the required survivors | 4/3 | 0 | 140 | 1468 | S |
+| 1p | Standard | win | 1015.2s | extraction window closed with the quota met | 8/5 | 4 | 284 | 1810 | S |
+| 1p | Storm | fail | 876.9s | every survivor was lost | 5/6 | 8 | 209 | 1270 | A |
+| 2p | Standard | win | 843s | extraction window closed with the quota met | 11/6 | 3 | 359 | 2380 | S |
+| 2p | Storm | win | 90.5s | team evacuated with the required survivors | 7/7 | 0 | 215 | 2098 | S |
+| 4p | Standard | win | 312.5s | team evacuated with the required survivors | 10/7 | 3 | 298 | 2936 | S |
+| 4p | Catastrophe | fail | 317.4s | not enough survivors can still be saved | 6/9 | 4 | 218 | 1771 | S |
 
-**Downed-crew drill.** A teammate is downed in standing water on purpose, and the crew has to get them out rather than kneel beside them: hauled (casualty down at 8s, grabbed 10s), hauled=True, revived=True, casualty finished 17m from the shelter.
+**Downed-crew drill.** A teammate is downed in standing water on purpose, and the crew has to get them out rather than kneel beside them: hauled (casualty down at 8s, grabbed 10s), hauled=True, revived=True, casualty finished 15.4m from the shelter.
 
 What this does **not** measure:
 
@@ -125,7 +126,7 @@ and they are not player telemetry.
 |---|---|---|
 | PASS | services reference only existing geometry | 23 named hooks present in the place |
 | PASS | every socket maps to a configured consumer | sockets=['Socket_Bridge', 'Socket_Lift', 'Socket_Pump', 'Socket_Winch'] consumers=['Bridge', 'Lift', 'Pump', 'Relay', 'Winch'] |
-| PASS | all remote usages are declared | 31 remotes used, all declared |
+| PASS | all remote usages are declared | 32 remotes used, all declared |
 | PASS | bootstrap modules exported | 19 modules required, all present |
 | PASS | client modules exported | 6 modules required, all present |
 | PASS | shared modules exported | 3 shared modules required, all present |

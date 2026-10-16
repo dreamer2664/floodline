@@ -563,7 +563,9 @@ end
 
 function Hud.updateSurvivors(snapshot: any)
 	local list = snapshot.list or {}
-	Hud.rosterCount.Text = `{snapshot.rescued}/{snapshot.total} out  ·  need {snapshot.required}`
+	local whistle = snapshot.rallyReadyIn or 0
+	local whistleText = whistle > 0 and `  ·  whistle {math.ceil(whistle)}s` or "  ·  whistle ready"
+	Hud.rosterCount.Text = `{snapshot.rescued}/{snapshot.total} out  ·  need {snapshot.required}{whistleText}`
 	for index, entry in ipairs(list) do
 		local row = Hud.rosterRows[index]
 		if not row then

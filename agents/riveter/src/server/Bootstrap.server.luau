@@ -267,6 +267,14 @@ remotes.RequestDrop.OnServerEvent:Connect(function(player: Player)
 	end
 end)
 
+-- The whistle: one shout, three survivors.
+remotes.RequestRally.OnServerEvent:Connect(function(player: Player)
+	local ok, reason = RescueService.rally(player)
+	if not ok then
+		ctx.notifyPlayer(player, reason or "Nobody answers.", "warn")
+	end
+end)
+
 remotes.RequestLiftCall.OnServerEvent:Connect(function(player: Player)
 	if not RoundService.active() then
 		ctx.notifyPlayer(player, "Round has not started.", "warn")

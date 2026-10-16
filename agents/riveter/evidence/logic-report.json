@@ -13,7 +13,7 @@
     {
       "check": "all remote usages are declared",
       "ok": true,
-      "detail": "31 remotes used, all declared"
+      "detail": "32 remotes used, all declared"
     },
     {
       "check": "bootstrap modules exported",

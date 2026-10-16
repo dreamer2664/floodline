@@ -1,6 +1,6 @@
 {
-  "scenarios": 45,
-  "passed": 45,
+  "scenarios": 46,
+  "passed": 46,
   "failed": 0,
   "geometry": {
     "worldDescendants": 855,
@@ -31,7 +31,7 @@
     { "name": "survivors cross the roof span on route waypoints, not through the air", "ok": true, "detail": "crossed the span on waypoints: t 0.00 -> 0.45 over 240 ticks" },
     { "name": "the service cut opens only after the collapse is dug out", "ok": true, "detail": "cleared in 3 digs, +20 salvage, routes=ServiceCut" },
     { "name": "sealing the service cut slows its flooding (it floods first when open)", "ok": true, "detail": "cut depth open=2.02m closed=0.00m" },
-    { "name": "salvage crates pay out once and the bench spends the pool", "ok": true, "detail": "crate paid 20, pool 20 -> 20, SealKit fitted" },
+    { "name": "salvage crates pay out once and the bench spends the pool", "ok": true, "detail": "crate paid 12, pool 20 -> 12, SealKit fitted" },
     { "name": "the capacitor upgrade lifts a real brownout", "ok": true, "detail": "capacity 2 -> 3, brownout cleared without touching the sockets" },
     { "name": "impeller and rebreather upgrades change water and air numbers", "ok": true, "detail": "air 22s -> 31s, 12s of water: 0.10 dry, 0.03 pumped, 0.01 fitted" },
     { "name": "the lift servo upgrade speeds travel and adds a passenger slot", "ok": true, "detail": "3s of travel: 15% -> 21%, seats 3 -> 4" },
@@ -51,6 +51,7 @@
     { "name": "the outfall drains every sector while it is cranked and closes on its own", "ok": true, "detail": "8 cranks to full: district 3.62 -> 2.71, drained 3.2 studs, gate dropped 1.0m" },
     { "name": "roles reset with the round and cannot be swapped mid-flood", "ok": true, "detail": "role locked in-round, kept across a lobby reset, ability cooldown cleared" },
     { "name": "no survivor starts the round already standing in a rescue zone", "ok": true, "detail": "12 spawn points, nearest to the safe zone is outside the 7.5 stud radius" },
-    { "name": "a downed player rides with whoever drags them, and the clock stretches", "ok": true, "detail": "carrier walked 24 studs at 8.4 (free 16.0), casualty stayed 2.2m behind, bleedout 0.00889/s (base 0.01333/s)" }
+    { "name": "a downed player rides with whoever drags them, and the clock stretches", "ok": true, "detail": "carrier walked 24 studs at 8.4 (free 16.0), casualty stayed 2.2m behind, bleedout 0.00889/s (base 0.01333/s)" },
+    { "name": "the whistle gathers three survivors at once and then goes on cooldown", "ok": true, "detail": "3 gathered inside 26 studs, a survivor at 140 studs ignored, cooldown 40s enforced, 2 shouts" }
   ]
 }

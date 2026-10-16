@@ -44,6 +44,8 @@ local Crew = module("CrewService")
 local outfallCranks = 0
 local dragsStarted = 0
 local dragsHauled = 0
+local whistles = 0
+local whistledSurvivors = 0
 -- Prompt hold durations the bots have to respect (read from the baked Config at boot).
 local Holds = { outfallHold = Config.Outfall.HoldSeconds, socketHold = 1.0 }
 local Outfall = module("OutfallService")
@@ -456,6 +458,37 @@ function BOT:targets()
 		end
 	end
 
+	-- 4b. The whistle. Walking to twelve people one at a time is the slow part of the game, so a
+	--     bot that is not already leading anybody blows the whistle whenever a few people are in
+	--     earshot. The whistle answers itself: three survivors fall in for one prompt press.
+	local leading = {}
+	for _, survivor in ipairs(Rescue.order) do
+		if survivor.leader == self.player and survivor.state == "Following" then
+			table.insert(leading, survivor)
+		end
+	end
+	if #leading == 0 and Rescue.rallyReadyIn() <= 0 then
+		local inEarshot = 0
+		for _, survivor in ipairs(Rescue.order) do
+			if not survivor.leader and survivor.state ~= "Rescued" and survivor.state ~= "Dead"
+				and survivor.state ~= "Downed"
+				and (survivor.position - position).Magnitude <= Config.Survivors.Rally.Radius then
+				inEarshot += 1
+			end
+		end
+		if inEarshot >= 2 then
+			return { goal = position, label = `whistle ({inEarshot} nearby)`, arrive = 2, act = function(bot)
+				local before = Rescue.ralliedSurvivors
+				local ok = Rescue.rally(bot.player)
+				if ok then
+					whistles += 1
+					whistledSurvivors += Rescue.ralliedSurvivors - before
+					bot:note(`whistled {Rescue.ralliedSurvivors - before} survivors in`)
+				end
+			end }
+		end
+	end
+
 	-- 5. Survivors. Each bot takes a different one so a crew spreads out instead of stacking up.
 	local candidates = escortCandidates(position, self)
 	if #candidates > 0 then
@@ -570,6 +603,8 @@ local function runRound(crew: number, modifier: string)
 		casualties = {},
 		dragsStarted = 0,
 		dragsHauled = 0,
+		whistles = 0,
+		whistledSurvivors = 0,
 		survivorDowns = 0,
 		abilitiesUsed = 0,
 		outfallOpens = 0,
@@ -582,6 +617,8 @@ local function runRound(crew: number, modifier: string)
 	local abilitiesUsed = 0
 	dragsStarted = 0
 	dragsHauled = 0
+	whistles = 0
+	whistledSurvivors = 0
 	local casualties = {}
 	local seenNotes = {}
 	local downs = 0
@@ -725,6 +762,10 @@ local function runRound(crew: number, modifier: string)
 	record.survivorDowns = downs
 	record.abilitiesUsed = abilitiesUsed
 	record.outfallCranks = outfallCranks
+	record.dragsStarted = dragsStarted
+	record.dragsHauled = dragsHauled
+	record.whistles = whistles
+	record.whistledSurvivors = whistledSurvivors
 	releaseAllDrags(bots)
 	record.roles = {}
 	for _, bot in ipairs(bots) do
@@ -903,13 +944,17 @@ end
 
 -- ===================== report =====================
 
-local wins, fails, unresolved = 0, 0, 0
+-- Four outcomes, not three: a crew can meet the quota and still miss the lift, which is a real
+-- result ("some survivors evacuated") and not the same thing as a round that never resolved.
+local wins, fails, partials, unresolved = 0, 0, 0, 0
 local gradeCount = {}
 for _, record in ipairs(runs) do
 	if record.outcome == "win" then
 		wins += 1
 	elseif record.outcome == "fail" then
 		fails += 1
+	elseif record.outcome == "partial" then
+		partials += 1
 	else
 		unresolved += 1
 	end
@@ -965,6 +1010,7 @@ local report = {
 	runs = #runs,
 	wins = wins,
 	fails = fails,
+	partials = partials,
 	unresolved = unresolved,
 	note = "Bots play the shipped server modules on a virtual clock. Timings are a lower bound for a competent crew; engine physics, input and rendering are NOT exercised.",
 	limitations = limitations,
@@ -976,5 +1022,6 @@ for _, record in ipairs(report.results) do
 end
 
 fs.writeFile(AGENT .. "/evidence/playtest-report.json", encode(report, "") .. "\n")
-print(string.format("\n%d wins / %d fails / %d unresolved across %d bot rounds", wins, fails, unresolved, #runs))
+print(string.format("\n%d wins / %d fails / %d partial / %d unresolved across %d bot rounds",
+	wins, fails, partials, unresolved, #runs))
 print(`report: agents/riveter/evidence/playtest-report.json`)

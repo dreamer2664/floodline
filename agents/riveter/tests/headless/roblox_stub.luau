@@ -989,6 +989,20 @@ function Stub.playerPosition(player)
 	return root and root.Position or v3(0, 0, 0)
 end
 
+-- Place a survivor rig (RescueService's object, not an Instance) where a scenario needs it.
+function Stub.moveSurvivor(survivor, position)
+	survivor.position = position
+	local model = survivor.model
+	if model then
+		for _, part in pairs(survivor.parts or {}) do
+			part.Position = position
+		end
+		if model.PivotTo then
+			model:PivotTo(Stub.cframe(position))
+		end
+	end
+end
+
 function Stub.movePlayer(player, position)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
