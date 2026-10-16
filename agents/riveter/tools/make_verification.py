@@ -7,6 +7,7 @@ from what the tools actually measured.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -163,6 +164,39 @@ lune run agents/riveter/tools/build_game.luau # build only
 
     (EVIDENCE / "VERIFICATION.md").write_text(doc, encoding="utf-8")
     print(f"wrote {EVIDENCE / 'VERIFICATION.md'} ({len(doc)} chars)")
+
+    # Machine-readable companion: every number here is read back out of the reports above, so a
+    # release asset can never describe a different build than the one that was measured.
+    validation = {
+        # Read the revision straight out of the shipped shared config, so the release asset
+        # always names the same revision the place itself reports at runtime.
+        "revision": re.search(
+            r'Config\.Game = \{.*?Version = "([^"]+)"', (ROOT / "src" / "shared" / "Config.luau").read_text(encoding="utf-8"), re.S
+        ).group(1),
+        "place": "releases/FLOODLINE.rbxlx",
+        "placeBytes": size,
+        "placeSha256": sha,
+        "parts": structure["parts"],
+        "models": len(structure["names"]),
+        "proximityPrompts": structure["prompts"],
+        "climbableTrusses": structure["trusses"],
+        "liftSeats": structure["seats"],
+        "embeddedScripts": structure["scriptCount"],
+        "gates": {
+            "luauCompile": f"{compile_report['checked'] - compile_report['failures']}/{compile_report['checked']}",
+            "staticWiring": f"{logic['passed']}/{len(logic['checks'])}",
+            "headlessScenarios": f"{sim['passed']}/{sim['scenarios']}",
+            "clientChecks": f"{client['passed']}/{client['checks']}",
+            "botPlaytests": (
+                f"{playtest['wins']}W/{playtest['fails']}F/{playtest['unresolved']}U over {playtest['runs']} rounds"
+                if playtest else "not run"
+            ),
+        },
+        "studioRuntime": "NOT RUN - no Roblox Studio in the build environment",
+        "generatedBy": "tools/make_verification.py",
+    }
+    (EVIDENCE / "VALIDATION.json").write_text(json.dumps(validation, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {EVIDENCE / 'VALIDATION.json'}")
     return 0
 
 

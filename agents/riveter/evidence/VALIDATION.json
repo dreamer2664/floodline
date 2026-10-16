@@ -1,12 +1,21 @@
 {
-  "server_scripts": 1,
-  "spawn_locations": 1,
-  "place_children": 3,
-  "workspace_children": 1,
-  "humanoids": 4,
-  "client_scripts": 1,
-  "proximity_prompts": 11,
-  "models": 13,
-  "world_descendants": 134,
-  "parts": 105
+  "revision": "r05",
+  "place": "releases/FLOODLINE.rbxlx",
+  "placeBytes": 852923,
+  "placeSha256": "ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba",
+  "parts": 731,
+  "models": 627,
+  "proximityPrompts": 50,
+  "climbableTrusses": 3,
+  "liftSeats": 4,
+  "embeddedScripts": 28,
+  "gates": {
+    "luauCompile": "56/56",
+    "staticWiring": "17/17",
+    "headlessScenarios": "38/38",
+    "clientChecks": "12/12",
+    "botPlaytests": "5W/2F/0U over 7 rounds"
+  },
+  "studioRuntime": "NOT RUN - no Roblox Studio in the build environment",
+  "generatedBy": "tools/make_verification.py"
 }

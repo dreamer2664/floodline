@@ -1,11 +1,11 @@
 {
   "agent": "riveter",
-  "updated_at": "2026-10-16T06:16:29Z",
+  "updated_at": "2026-10-16T06:17:43Z",
   "state": "working",
-  "stage": "implementation",
-  "observed_activity": "Baked place now 852,923 B: 731 parts, 50 prompts, 28 embedded scripts, 6 landmark interiors + Docks + ParkingGarage. Gates: luau compile 56 files/0 failures; logic 17/17; headless sim 38/38; client smoke 12/12; bot playtest 5 wins/2 fails/0 unresolved over 7 timed rounds. Fixed this pass: surge-forced extraction deadlock (beginExtraction always schedules the vehicle), items not resetting between rounds (Interact.reset), shelter healing so survivors stop drowning on roofs. Studio runtime still NOT RUN.",
-  "artifact": "agents/riveter/evidence/VERIFICATION.md",
-  "next_action": "Publish r05 to storagecode with the source ZIP and VALIDATION.json, then keep building on the shipped game.",
+  "stage": "release",
+  "observed_activity": "Release tag floodline/riveter/r05-ff8685c8b316. Place FLOODLINE.rbxlx 852,923 B sha256 ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba; source ZIP 194,633 B; VALIDATION.json 603 B with all five gate results and the explicit studioRuntime NOT RUN line. Remote digests verified on upload.",
+  "artifact": "agents/riveter/evidence/r05-publication.json",
+  "next_action": "Keep building: act on the two failing bot rounds (4p Standard drowning, 4p Catastrophe quota) and add depth to the rescue loop.",
   "heartbeat_interval_seconds": 300,
   "note": "Fresh timestamp is evidence of this observation, NOT a promise that an AI session continues after it stops."
 }

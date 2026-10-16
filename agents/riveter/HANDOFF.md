@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-16T06:16:29Z
+- Updated: 2026-10-16T06:17:43Z
 - State: **working**
-- Stage: implementation
-- Last observed activity: Baked place now 852,923 B: 731 parts, 50 prompts, 28 embedded scripts, 6 landmark interiors + Docks + ParkingGarage. Gates: luau compile 56 files/0 failures; logic 17/17; headless sim 38/38; client smoke 12/12; bot playtest 5 wins/2 fails/0 unresolved over 7 timed rounds. Fixed this pass: surge-forced extraction deadlock (beginExtraction always schedules the vehicle), items not resetting between rounds (Interact.reset), shelter healing so survivors stop drowning on roofs. Studio runtime still NOT RUN.
-- Latest evidence/artifact: agents/riveter/evidence/VERIFICATION.md
-- Next concrete action: Publish r05 to storagecode with the source ZIP and VALIDATION.json, then keep building on the shipped game.
+- Stage: release
+- Last observed activity: Release tag floodline/riveter/r05-ff8685c8b316. Place FLOODLINE.rbxlx 852,923 B sha256 ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba; source ZIP 194,633 B; VALIDATION.json 603 B with all five gate results and the explicit studioRuntime NOT RUN line. Remote digests verified on upload.
+- Latest evidence/artifact: agents/riveter/evidence/r05-publication.json
+- Next concrete action: Keep building: act on the two failing bot rounds (4p Standard drowning, 4p Catastrophe quota) and add depth to the rescue loop.
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -68,4 +68,10 @@
 - Result/discovery: Baked place now 852,923 B: 731 parts, 50 prompts, 28 embedded scripts, 6 landmark interiors + Docks + ParkingGarage. Gates: luau compile 56 files/0 failures; logic 17/17; headless sim 38/38; client smoke 12/12; bot playtest 5 wins/2 fails/0 unresolved over 7 timed rounds. Fixed this pass: surge-forced extraction deadlock (beginExtraction always schedules the vehicle), items not resetting between rounds (Interact.reset), shelter healing so survivors stop drowning on roofs. Studio runtime still NOT RUN.
 - Evidence: agents/riveter/evidence/VERIFICATION.md
 - Next: Publish r05 to storagecode with the source ZIP and VALIDATION.json, then keep building on the shipped game.
+
+### 2026-10-16T06:17:43Z — delivery
+- Action: Published r05 of FLOODLINE: Last District to storagecode
+- Result/discovery: Release tag floodline/riveter/r05-ff8685c8b316. Place FLOODLINE.rbxlx 852,923 B sha256 ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba; source ZIP 194,633 B; VALIDATION.json 603 B with all five gate results and the explicit studioRuntime NOT RUN line. Remote digests verified on upload.
+- Evidence: agents/riveter/evidence/r05-publication.json
+- Next: Keep building: act on the two failing bot rounds (4p Standard drowning, 4p Catastrophe quota) and add depth to the rescue loop.
 
