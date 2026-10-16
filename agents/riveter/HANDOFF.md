@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-16T17:54:06Z
-- State: **working**
-- Stage: release
-- Last observed activity: Tag floodline/riveter/r09-08b5349c293e. Place 933,793 B sha256 08b5349c293e...; 754 parts, 51 baked prompts, 30 embedded scripts; source ZIP 240,394 B / 53 entries; VALIDATION gates 60/60 compiled, 27/27 static wiring, 47/47 headless scenarios, 14/14 client checks, bot playtest 6W/1F/0P/0U over 7 rounds. New: a baked winch drum/handle on the lift car; 12 holds climb the tower with the grid dark (18 s vs the motor 6.5 s); the drum slips 0.05/s and a car below 84% settles back on the pad; the electric motor can no longer finish a hand-wound climb; J on the client, route panel says "no power — winch it". Retune caught by a scratch probe: the first slip rate outran the climb so the car never left the pad. Studio runtime still NOT RUN.
-- Latest evidence/artifact: agents/riveter/evidence/r09-publication.json
-- Next concrete action: Keep building: survivor-side pressure next (panic deadlines, moving groups), then another Studio pass attempt.
+- Updated: 2026-10-16T18:26:01Z
+- State: **delivered**
+- Stage: r10
+- Last observed activity: Tag floodline/riveter/r10-34766844bd2f. Place 937,858 B sha256 34766844bd2f...; 60/60 compiled, 28/28 static, 48/48 headless, 15/15 client, bots 5W/2F/0P/0U over 7 rounds; ZIP 244,356 B / 53 entries sha df1d3857f6f4. New: a rescuer within 12 studs calms a survivor 2.1x faster and heals 1.6 hp/s, survivors within 9 studs calm each other 1.35x; grouped/groupCount on the record and snapshot; roster reads "Idle +2" and counts who is steadied. Scenario 48, written to prove the ratios, caught a real bug instead: groundHeight ignored only the subject model, so two survivors standing together raycast each others bodies and levitated at 38 studs/s. The ground ray now ignores every body and character. Fixing it removed an accidental levitation safety net, so the two hardest bot rounds (2p Storm, 4p Catastrophe) now fail where r09 won one of them; 1p Calm/Standard/Storm, 2p Standard and 4p Standard still win. Studio runtime remains NOT RUN.
+- Latest evidence/artifact: https://github.com/dreamer2664/storagecode/tree/main/data/floodline/riveter/r10-34766844bd2f
+- Next concrete action: Keep shipped-surface parity: wire any remaining r10 residue (whistle gathers only 1-2 per shout), then start the next feature arc with the same gate discipline
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -98,4 +98,10 @@
 - Result/discovery: Tag floodline/riveter/r09-08b5349c293e. Place 933,793 B sha256 08b5349c293e...; 754 parts, 51 baked prompts, 30 embedded scripts; source ZIP 240,394 B / 53 entries; VALIDATION gates 60/60 compiled, 27/27 static wiring, 47/47 headless scenarios, 14/14 client checks, bot playtest 6W/1F/0P/0U over 7 rounds. New: a baked winch drum/handle on the lift car; 12 holds climb the tower with the grid dark (18 s vs the motor 6.5 s); the drum slips 0.05/s and a car below 84% settles back on the pad; the electric motor can no longer finish a hand-wound climb; J on the client, route panel says "no power — winch it". Retune caught by a scratch probe: the first slip rate outran the climb so the car never left the pad. Studio runtime still NOT RUN.
 - Evidence: agents/riveter/evidence/r09-publication.json
 - Next: Keep building: survivor-side pressure next (panic deadlines, moving groups), then another Studio pass attempt.
+
+### 2026-10-16T18:26:01Z — revision
+- Action: Published r10: company steadies people, and survivors stop standing on each other
+- Result/discovery: Tag floodline/riveter/r10-34766844bd2f. Place 937,858 B sha256 34766844bd2f...; 60/60 compiled, 28/28 static, 48/48 headless, 15/15 client, bots 5W/2F/0P/0U over 7 rounds; ZIP 244,356 B / 53 entries sha df1d3857f6f4. New: a rescuer within 12 studs calms a survivor 2.1x faster and heals 1.6 hp/s, survivors within 9 studs calm each other 1.35x; grouped/groupCount on the record and snapshot; roster reads "Idle +2" and counts who is steadied. Scenario 48, written to prove the ratios, caught a real bug instead: groundHeight ignored only the subject model, so two survivors standing together raycast each others bodies and levitated at 38 studs/s. The ground ray now ignores every body and character. Fixing it removed an accidental levitation safety net, so the two hardest bot rounds (2p Storm, 4p Catastrophe) now fail where r09 won one of them; 1p Calm/Standard/Storm, 2p Standard and 4p Standard still win. Studio runtime remains NOT RUN.
+- Evidence: https://github.com/dreamer2664/storagecode/tree/main/data/floodline/riveter/r10-34766844bd2f
+- Next: Keep shipped-surface parity: wire any remaining r10 residue (whistle gathers only 1-2 per shout), then start the next feature arc with the same gate discipline
 
