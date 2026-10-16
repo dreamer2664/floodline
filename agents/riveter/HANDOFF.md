@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-16T16:13:59Z
+- Updated: 2026-10-16T17:54:06Z
 - State: **working**
 - Stage: release
-- Last observed activity: Tag floodline/riveter/r08-b14c80d16506. Place 924,195 B sha256 b14c80d16506...; source ZIP 235,680 B / 53 entries; VALIDATION gates 60/60 compiled, 25/25 static wiring, 46/46 headless scenarios, 14/14 client checks, bot playtest 5W/2F/0P/0U over 7 rounds. New: H blows a whistle that gathers up to three unclaimed survivors within 26 studs, calms them and pays 15 salvage each on a 40s cooldown; the roster header carries the whistle timer; every bot round now uses it (2-7 survivors gathered per round). Sim scenario 46 covers gathering, the lobby refusal, the cooldown and downed players. Studio runtime still NOT RUN.
-- Latest evidence/artifact: agents/riveter/evidence/r08-publication.json
-- Next concrete action: Keep building: next is survivor-side pressure (panic deadlines and group escort behaviour) and a Studio pass when one is available.
+- Last observed activity: Tag floodline/riveter/r09-08b5349c293e. Place 933,793 B sha256 08b5349c293e...; 754 parts, 51 baked prompts, 30 embedded scripts; source ZIP 240,394 B / 53 entries; VALIDATION gates 60/60 compiled, 27/27 static wiring, 47/47 headless scenarios, 14/14 client checks, bot playtest 6W/1F/0P/0U over 7 rounds. New: a baked winch drum/handle on the lift car; 12 holds climb the tower with the grid dark (18 s vs the motor 6.5 s); the drum slips 0.05/s and a car below 84% settles back on the pad; the electric motor can no longer finish a hand-wound climb; J on the client, route panel says "no power — winch it". Retune caught by a scratch probe: the first slip rate outran the climb so the car never left the pad. Studio runtime still NOT RUN.
+- Latest evidence/artifact: agents/riveter/evidence/r09-publication.json
+- Next concrete action: Keep building: survivor-side pressure next (panic deadlines, moving groups), then another Studio pass attempt.
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -92,4 +92,10 @@
 - Result/discovery: Tag floodline/riveter/r08-b14c80d16506. Place 924,195 B sha256 b14c80d16506...; source ZIP 235,680 B / 53 entries; VALIDATION gates 60/60 compiled, 25/25 static wiring, 46/46 headless scenarios, 14/14 client checks, bot playtest 5W/2F/0P/0U over 7 rounds. New: H blows a whistle that gathers up to three unclaimed survivors within 26 studs, calms them and pays 15 salvage each on a 40s cooldown; the roster header carries the whistle timer; every bot round now uses it (2-7 survivors gathered per round). Sim scenario 46 covers gathering, the lobby refusal, the cooldown and downed players. Studio runtime still NOT RUN.
 - Evidence: agents/riveter/evidence/r08-publication.json
 - Next: Keep building: next is survivor-side pressure (panic deadlines and group escort behaviour) and a Studio pass when one is available.
+
+### 2026-10-16T17:54:06Z — revision
+- Action: Published r09: the hand winch, a second unpowered way up the tower
+- Result/discovery: Tag floodline/riveter/r09-08b5349c293e. Place 933,793 B sha256 08b5349c293e...; 754 parts, 51 baked prompts, 30 embedded scripts; source ZIP 240,394 B / 53 entries; VALIDATION gates 60/60 compiled, 27/27 static wiring, 47/47 headless scenarios, 14/14 client checks, bot playtest 6W/1F/0P/0U over 7 rounds. New: a baked winch drum/handle on the lift car; 12 holds climb the tower with the grid dark (18 s vs the motor 6.5 s); the drum slips 0.05/s and a car below 84% settles back on the pad; the electric motor can no longer finish a hand-wound climb; J on the client, route panel says "no power — winch it". Retune caught by a scratch probe: the first slip rate outran the climb so the car never left the pad. Studio runtime still NOT RUN.
+- Evidence: agents/riveter/evidence/r09-publication.json
+- Next: Keep building: survivor-side pressure next (panic deadlines, moving groups), then another Studio pass attempt.
 
