@@ -26,6 +26,8 @@ Net.Remotes = {
 	SessionSync = "RemoteEvent",
 	RouteSync = "RemoteEvent",
 	UpgradeSync = "RemoteEvent",
+	CrewSync = "RemoteEvent",
+	OutfallSync = "RemoteEvent",
 	-- client -> server
 	RequestStart = "RemoteEvent",
 	RequestRematch = "RemoteEvent",
@@ -38,6 +40,8 @@ Net.Remotes = {
 	RequestPing = "RemoteEvent",
 	RequestModifier = "RemoteEvent",
 	RequestUpgrade = "RemoteEvent",
+	RequestRole = "RemoteEvent",
+	RequestAbility = "RemoteEvent",
 	GetSnapshot = "RemoteFunction",
 }
 

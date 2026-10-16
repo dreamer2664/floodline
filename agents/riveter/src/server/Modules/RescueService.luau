@@ -390,6 +390,11 @@ function Rescue.onHazardDown(name: string, cause: string)
 	if not survivor or survivor.state == "Rescued" or survivor.state == "Dead" then
 		return
 	end
+	if survivor.state == "Downed" then
+		-- Already down: injuries do not stack into a second "X is down" message, and the bleedout
+		-- clock is not restarted, so a survivor lying in water actually dies.
+		return
+	end
 	survivor.health = 0
 	survivor.state = "Downed"
 	survivor.downedAt = os.clock()
@@ -620,7 +625,9 @@ local function moveToward(survivor: Survivor, rawTarget: Vector3, dt: number, sp
 		survivor.detourUntil = nil
 	end
 
-	local speed = survivor.speed * dt * (speedScale or 1)
+	-- Rigger's Rope Line: everybody in the aura moves quicker, escorts included.
+	local line = ctx.crew and ctx.crew.speedMultiplierAt(survivor.position) or 1
+	local speed = survivor.speed * dt * (speedScale or 1) * line
 	local nextPos = current + direction * math.min(speed, distance)
 	nextPos = Vector3.new(nextPos.X, groundHeight(Vector3.new(nextPos.X, nextPos.Y, nextPos.Z), survivor.model), nextPos.Z)
 	local yaw = math.atan2(direction.X, direction.Z)
@@ -717,8 +724,17 @@ local function deliver(survivor: Survivor, how: string)
 	Rescue.dirty = true
 end
 
+-- Terminal and idempotent: a person who has already died cannot die again, and nothing that runs
+-- later in the same tick may walk them back out of "Dead" (this loops a death counter otherwise).
 local function kill(survivor: Survivor, cause: string)
+	if survivor.state == "Dead" then
+		return
+	end
 	survivor.state = "Dead"
+	survivor.health = 0
+	survivor.panic = 0
+	survivor.leader = nil
+	survivor.downedAt = nil
 	Rescue.retire(survivor)
 	Rescue.deadCount += 1
 	table.insert(survivor.notes, cause)
@@ -733,6 +749,10 @@ local function updateDanger(survivor: Survivor, dt: number)
 
 	if survivor.state == "Carried" then
 		-- Carried survivors are kept high and dry by their carrier.
+		return
+	end
+
+	if survivor.state == "Dead" then
 		return
 	end
 
@@ -754,23 +774,32 @@ local function updateDanger(survivor: Survivor, dt: number)
 				end
 			end
 		end
-		survivor.panic = math.min(140, survivor.panic + ctx.config.Survivors.PanicGrowthPerSecond * (submerged and 1.8 or 0.7) * dt)
-		survivor.health -= (submerged and 8.0 or 2.0) * dt
-		if survivor.health <= 0 and survivor.state ~= "Dead" and survivor.state ~= "Rescued" then
-			if survivor.state == "Downed" then
-				kill(survivor, "the water")
-			else
-				Rescue.onHazardDown(survivor.name, "the water")
-			end
+		-- Neck-deep is its own kind of terror: at 1.4 m the panic climb nearly doubles, which is what
+		-- makes the rising water a deadline for the survivors and not just for the crew's feet.
+		local panicFill = ctx.flood.depthAt(survivor.position) >= 1.4 and 1.35 or 1.0
+		survivor.panic = math.min(140, survivor.panic + ctx.config.Survivors.PanicGrowthPerSecond * (submerged and 1.8 or 0.7) * panicFill * dt)
+		survivor.health = math.max(0, survivor.health - (submerged and 8.0 or 2.0) * dt)
+		if survivor.health <= 0 and survivor.state ~= "Downed" and survivor.state ~= "Rescued" then
+			-- Someone who is already down and still in the water is not told again that they are
+			-- in the water: they were told once, when they went down.
+			Rescue.onHazardDown(survivor.name, "the water")
 		end
+
 	else
 		survivor.panic = math.max(0, survivor.panic - ctx.config.Survivors.PanicCalmPerSecond * dt)
 	end
 
 	if survivor.state == "Downed" then
+		local depth = ctx.flood.depthAt(survivor.position)
+		if depth >= ctx.config.Survivors.DownedDrownDepth then
+			-- Face down in standing water: this is not a bleedout to be raced, it is a drowning.
+			kill(survivor, "the water")
+			return
+		end
+		-- Waist-deep and down: cold, wet and much worse off, but still a rescue the crew can make.
 		local bleed = ctx.config.Survivors.DownedBleedoutSeconds
-		if inWater then
-			bleed *= 0.35
+		if depth >= ctx.config.Survivors.DownedWetDepth then
+			bleed *= 0.5
 		end
 		if survivor.downedAt and os.clock() - survivor.downedAt > bleed then
 			kill(survivor, "their injuries")
@@ -778,7 +807,11 @@ local function updateDanger(survivor: Survivor, dt: number)
 		return
 	end
 
-	if survivor.panic >= ctx.config.Survivors.PanicThreshold and survivor.state ~= "Lost" then
+	if survivor.panic >= ctx.config.Survivors.PanicThreshold
+		and survivor.state ~= "Lost"
+		and survivor.state ~= "Downed"
+		and survivor.state ~= "Dead"
+		and survivor.state ~= "Rescued" then
 		survivor.state = "Lost"
 		survivor.leader = nil
 		ctx.notify(`{NAMES[survivor.name] or survivor.name} panicked and broke away.`, "bad")

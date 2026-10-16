@@ -13,12 +13,12 @@
     {
       "check": "all remote usages are declared",
       "ok": true,
-      "detail": "27 remotes used, all declared"
+      "detail": "31 remotes used, all declared"
     },
     {
       "check": "bootstrap modules exported",
       "ok": true,
-      "detail": "17 modules required, all present"
+      "detail": "19 modules required, all present"
     },
     {
       "check": "client modules exported",
@@ -33,7 +33,7 @@
     {
       "check": "survivor rigs and prompts match Config.Survivors.Total",
       "ok": true,
-      "detail": "models=12 survivorPrompts=12 config=12 (all prompts=50)"
+      "detail": "models=12 survivorPrompts=12 config=12 (all prompts=51)"
     },
     {
       "check": "lift cabin has four seats",
@@ -84,20 +84,52 @@
       "check": "survivor role effects are implemented",
       "ok": true,
       "detail": "roles=['Child', 'Engineer', 'Medic'] missing=[]"
+    },
+    {
+      "check": "crew roles and abilities are complete and ordered",
+      "ok": true,
+      "detail": "order=['Diver', 'Engineer', 'Medic', 'Rigger'] roles=['Diver', 'Engineer', 'Medic', 'Rigger'] abilities=['SecondWind', 'SocketJumper', 'Triage', 'RopeLine'] unhandled=[]"
+    },
+    {
+      "check": "outfall sluice is baked and adopted by the server",
+      "ok": true,
+      "detail": "parts=['OutfallHouse', 'OutfallLintel', 'OutfallGate', 'OutfallFrameE', 'OutfallFrameW', 'OutfallGrate', 'OutfallPost', 'OutfallWheel', 'OutfallWheelHub', 'OutfallWalkway', 'OutfallWalkRail', 'OutfallLamp', 'OutfallSign', 'OutfallRung'] missing=[]"
+    },
+    {
+      "check": "outfall drain is subtracted from the district water level",
+      "ok": true,
+      "detail": "FloodService applies the outfall pull each tick: True"
+    },
+    {
+      "check": "tripped breakers can be reset by hand and re-wire their prompt",
+      "ok": true,
+      "detail": "resetBreaker + prompt text + config hold present"
+    },
+    {
+      "check": "client ships a crew board with role rows, an ability button and the outfall gauge",
+      "ok": true,
+      "detail": "crew board widgets + role/ability remotes present in the client"
+    },
+    {
+      "check": "client remotes exist and every server service is registered in the lifecycle",
+      "ok": true,
+      "detail": "undeclared=[] lifecycle=CrewService/OutfallService"
     }
   ],
-  "passed": 17,
+  "passed": 23,
   "failed": 0,
   "sourceFiles": {
     "server": [
       "src/server/Bootstrap.server.luau",
       "src/server/Modules/CommsService.luau",
+      "src/server/Modules/CrewService.luau",
       "src/server/Modules/DoorService.luau",
       "src/server/Modules/FloodService.luau",
       "src/server/Modules/HazardService.luau",
       "src/server/Modules/InteractService.luau",
       "src/server/Modules/LiftService.luau",
       "src/server/Modules/ObjectiveService.luau",
+      "src/server/Modules/OutfallService.luau",
       "src/server/Modules/PlayerService.luau",
       "src/server/Modules/PowerService.luau",
       "src/server/Modules/RescueService.luau",

@@ -6,7 +6,7 @@ local Config = {}
 
 Config.Game = {
 	Name = "FLOODLINE: Last District",
-	Version = "r05",
+	Version = "r06",
 	MaxPlayers = 4,
 	MinPlayersToStart = 1,
 	LobbyAutoStartSeconds = 10,
@@ -63,6 +63,7 @@ Config.Power = {
 	CellDrainPerSecond = 0.14, -- per powered consumer slot
 	CellRechargePerSecond = 2.6, -- while docked at the charger
 	ShortOutDepth = 0.85, -- socket submerged -> trips
+	BreakerResetSeconds = 3.2, -- hand work needed to close a tripped breaker (3 holds)
 	BrownoutPriority = { "Pump", "Lift", "Winch", "Bridge", "Relay" }, -- highest first in list
 	Consumers = {
 		Pump = {
@@ -121,6 +122,90 @@ Config.Route = {
 	},
 }
 
+-- Crew roles. Every player picks one role in the lobby; each role is always-on passives plus a
+-- single long-cooldown ability, so a four-player crew covers four jobs at once and a solo player
+-- still gets exactly one of them.
+Config.Crew = {
+	Order = { "Diver", "Engineer", "Medic", "Rigger" },
+	Default = "Diver",
+	BarTop = 120, -- studs of screen distance at which the role chip fades out
+	Diver = {
+		Label = "Diver",
+		Blurb = "Lungs and fins: more air, faster in the water, and hauls bodies out quicker.",
+		OxygenMultiplier = 1.5,
+		SwimMultiplier = 1.25,
+		CarryBonus = 1.5,
+		Ability = {
+			Id = "SecondWind",
+			Label = "Second Wind",
+			Cooldown = 80,
+			Duration = 20,
+			Desc = "Refill the whole crew's air and shrug off water drag for 20 seconds.",
+		},
+	},
+	Engineer = {
+		Label = "Engineer",
+		Blurb = "Plant knowledge: holds resolve faster and flooded breakers can be reset by hand.",
+		HoldMultiplier = 1.35,
+		BreakerMultiplier = 1.5,
+		Ability = {
+			Id = "SocketJumper",
+			Label = "Socket Jumper",
+			Cooldown = 70,
+			Desc = "Reset every tripped socket in the district from wherever you are standing.",
+		},
+	},
+	Medic = {
+		Label = "Medic",
+		Blurb = "Steady hands: revives land faster, and a downed teammate near you bleeds out slower.",
+		ReviveMultiplier = 1.45,
+		BleedoutMultiplier = 1.4,
+		AuraRadius = 60,
+		Ability = {
+			Id = "Triage",
+			Label = "Triage",
+			Cooldown = 75,
+			Radius = 34,
+			Desc = "Patch up every teammate and survivor near you and stop their bleeding.",
+		},
+	},
+	Rigger = {
+		Label = "Rigger",
+		Blurb = "Ropes and winches: cranks turn faster and the whole crew moves quicker with you.",
+		CrankMultiplier = 1.45,
+		CarryBonus = 1.0,
+		Ability = {
+			Id = "RopeLine",
+			Label = "Rope Line",
+			Cooldown = 65,
+			Duration = 25,
+			Radius = 60,
+			SpeedMultiplier = 1.18,
+			Desc = "Rig a line: nearby survivors and teammates move 18% faster for 25 seconds.",
+		},
+	},
+}
+
+-- The district outfall: a sluice on the canal that drains water while somebody cranks it. It is
+-- hand-powered on purpose - it costs a body, not a cell, so holding it is a real decision.
+Config.Outfall = {
+	Name = "Outfall",
+	Wheel = "OutfallWheel",
+	Gate = "OutfallGate",
+	HoldSeconds = 1.4, -- one crank hold
+	-- ~11 holds (about 15 s of standing on the wheel) to open it, and about 22 s to creep shut.
+	-- The first pass at 14 s of cranking meant a committed player could never finish the job, so the
+	-- sluice was dead content in every bot round; 9 s makes it a real alternative to the pump.
+	OpenSeconds = 9,
+	ClosePerSecond = 0.045, -- it creeps shut on its own
+	DrainPerSecond = 0.09, -- studs of water pulled out of every sector per second at full open
+	DropDepth = 3.2, -- how far the gate plate travels when fully open
+	EngineerMultiplier = 1.4,
+	ScorePerOpen = 30,
+	CrankCooldown = 0.3,
+	ReopenThreshold = 0.2, -- below this it counts as shut again and re-opening pays out once more
+}
+
 Config.Lift = {
 	Capacity = 3, -- passengers (survivors) per trip
 	PlayerCapacity = 4,
@@ -148,7 +233,9 @@ Config.Survivors = {
 	PanicThreshold = 100,
 	LostAfterPanicSeconds = 12,
 	ReviveSeconds = 6.5,
-	DownedBleedoutSeconds = 55,
+	DownedBleedoutSeconds = 75, -- long enough that a crew can cross the district for someone
+	DownedWetDepth = 0.75, -- lying in waist-deep water halves that window
+	DownedDrownDepth = 1.7, -- and this is over their face: it is a drowning, not a bleedout
 	Traits = {
 		Worker = { Label = "Worker", Speed = 1.0, Bonus = 10, Note = "Knows the district: opens the workshop valve faster." },
 		Injured = { Label = "Injured", Speed = 0.74, Bonus = 30, Note = "Slow. Keep them out of the water." },
@@ -378,6 +465,8 @@ Config.Player = {
 	WaterDragMultiplier = 0.55,
 	ShockDamage = 18,
 	FallDamageThreshold = 26,
+	DownedBleedoutSeconds = 75, -- a downed player bleeds out and is carried to the safe zone
+	BleedoutRespawnHealth = 45,
 }
 
 Config.Fx = {

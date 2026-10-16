@@ -23,6 +23,11 @@ export type Cell = {
 
 Power.cells = {} :: { [string]: Cell }
 Power.sockets = {} :: { [string]: { part: BasePart, consumer: string, cellId: string?, tripped: boolean, trippedReason: string? } }
+-- Breaker resets: a tripped socket can be brought back by hand once it is out of the water.
+-- Work accumulates per socket across holds (like the service cut), so one hold never undoes a trip.
+Power.breakerWork = {} :: { [string]: number }
+Power.breakerCleared = 0
+Power.prompts = {} :: { [string]: ProximityPrompt }
 Power.consumers = {} :: { [string]: { powered: boolean, load: number, label: string, reason: string? } }
 Power.capacity = 0
 Power.relayRepaired = false
@@ -338,6 +343,8 @@ function Power.tripSocket(socketKey: string, reason: string)
 	end
 	socket.tripped = true
 	socket.trippedReason = reason
+	-- A fresh trip starts a fresh hand reset: nobody gets credit for work done before the short.
+	Power.breakerWork[socketKey] = 0
 	local cell = socket.cellId and Power.cells[socket.cellId]
 	if cell then
 		cell.destroyed = true
@@ -349,6 +356,9 @@ function Power.tripSocket(socketKey: string, reason: string)
 		socket.cellId = nil
 	end
 	Power.recompute()
+	if Power.refreshPrompt then
+		Power.refreshPrompt(socketKey)
+	end
 end
 
 -- Clear a flood trip so a socket can be used again (engineer effect / salvage kit).
@@ -363,9 +373,57 @@ function Power.clearTrips(reason: string?): number
 	end
 	if cleared > 0 then
 		Power.recompute()
+		if Power.refreshPrompts then
+			Power.refreshPrompts()
+		end
 	end
 	return cleared
 end
+-- Hand reset of a flooded breaker. Refused while the socket is still under the short-out depth:
+-- the crew has to get the water down first, which is what makes the outfall and the pump matter.
+function Power.resetBreaker(player: Player, socketKey: string): (boolean, string?)
+	local socket = Power.sockets[socketKey]
+	if not socket then
+		return false, "That socket does not exist."
+	end
+	if not socket.tripped then
+		return false, "That breaker is already closed."
+	end
+	local depth = ctx.waterLevel() - socket.part.Position.Y
+	local limit = ctx.config.Power.ShortOutDepth
+	if depth > limit then
+		return false, string.format("Still submerged (%.1f studs of water). Drain the district, then reset it.", depth)
+	end
+	local cfg = ctx.config.Power
+	local crew = ctx.crew
+	local speed = crew and crew.breakerMultiplier(player) or 1
+	Power.breakerWork[socketKey] = (Power.breakerWork[socketKey] or 0) + cfg.BreakerResetSeconds / 3 * speed
+	local progress = Power.breakerWork[socketKey]
+	if progress < cfg.BreakerResetSeconds then
+		ctx.notifyPlayer(player, `Throwing the breaker… ({math.floor(progress / cfg.BreakerResetSeconds * 100)}%)`, "warn")
+		Util.playSound(socket.part, ctx.config.Fx.PingSounds.Prompt, 0.4, 0.7)
+		return true, nil
+	end
+	Power.breakerWork[socketKey] = 0
+	Power.breakerCleared += 1
+	socket.tripped = false
+	socket.trippedReason = nil
+	Power.recompute()
+	Util.playSound(socket.part, ctx.config.Fx.PingSounds.Switch, 0.6, 1.0)
+	ctx.notify(`{player.Name} reset the {socket.consumer} breaker.`, "good")
+	ctx.addScore(player, 25, "breaker reset")
+	ctx.telemetry.note("power", `{socketKey} breaker reset by {player.Name}`)
+	return true, nil
+end
+
+-- Progress of the hand reset on a socket (0..1), for the HUD and the harness.
+function Power.breakerProgress(socketKey: string): number
+	if not ctx.config.Power.BreakerResetSeconds or ctx.config.Power.BreakerResetSeconds <= 0 then
+		return 0
+	end
+	return math.clamp((Power.breakerWork[socketKey] or 0) / ctx.config.Power.BreakerResetSeconds, 0, 1)
+end
+
 
 function Power.update(dt: number)
 	if not ctx then
@@ -389,6 +447,7 @@ function Power.update(dt: number)
 					cell.socket = nil
 					ctx.notify("A power cell ran flat. Swap it out at the terminal.", "warn")
 					Power.recompute()
+					Power.refreshPrompts()
 				end
 				Power.dirty = true
 			end
@@ -426,6 +485,33 @@ local function ensurePrompt(part: BasePart, action: string, object: string): Pro
 	return prompt
 end
 
+-- A tripped socket offers "Reset Breaker" instead of "Use Socket": the same prompt object, so a
+-- player standing in front of a dead pump sees exactly one obvious thing to do.
+function Power.refreshPrompt(socketKey: string)
+	local socket = Power.sockets[socketKey]
+	local prompt = Power.prompts[socketKey]
+	if not (socket and prompt) then
+		return
+	end
+	local def = consumerDef(socket.consumer)
+	local label = socket.isDock and "Cell Charger" or (def and def.Label or socketKey)
+	if socket.tripped and not socket.isDock then
+		prompt.ActionText = "Reset Breaker"
+		prompt.ObjectText = label .. " (tripped)"
+		prompt.HoldDuration = ctx.config.Power.BreakerResetSeconds / 3
+	else
+		prompt.ActionText = socket.isDock and "Dock Cell" or "Use Socket"
+		prompt.ObjectText = label
+		prompt.HoldDuration = 0.3
+	end
+end
+
+function Power.refreshPrompts()
+	for key in pairs(Power.sockets) do
+		Power.refreshPrompt(key)
+	end
+end
+
 local function wireSocket(key: string, socket)
 	if wired[socket.part] then
 		return
@@ -434,8 +520,19 @@ local function wireSocket(key: string, socket)
 	local def = consumerDef(socket.consumer)
 	local label = socket.isDock and "Cell Charger" or (def and def.Label or key)
 	local prompt = ensurePrompt(socket.part, socket.isDock and "Dock Cell" or "Use Socket", label)
+	Power.prompts[key] = prompt
+	Power.refreshPrompt(key)
 	prompt.Triggered:Connect(function(player: Player)
 		if not ctx.roundActive() then
+			return
+		end
+		-- A tripped breaker is the priority interaction: it is the thing standing between the
+		-- crew and their power, so one hold here starts the reset instead of a cell swap.
+		if socket.tripped and not socket.isDock then
+			local ok, reason = Power.resetBreaker(player, key)
+			if not ok and reason then
+				ctx.notifyPlayer(player, reason, "warn")
+			end
 			return
 		end
 		local ok, reason
@@ -487,10 +584,15 @@ function Power.reset()
 	Power.cells = {}
 	Power.relayRepaired = false
 	Power.capacity = ctx.config.Power.BaseCapacity
+	Power.breakerWork = {}
+	Power.breakerCleared = 0
 	for _, socket in pairs(Power.sockets) do
 		socket.cellId = nil
 		socket.tripped = false
 		socket.trippedReason = nil
+	end
+	if Power.refreshPrompts and next(Power.prompts) then
+		Power.refreshPrompts()
 	end
 	local cellsFolder = ctx.worldFolder:FindFirstChild("Cells")
 	if not cellsFolder then

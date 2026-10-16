@@ -80,6 +80,8 @@ local Session = module("SessionService")
 local PlayerService = module("PlayerService")
 local Route = module("RouteService")
 local Upgrades = module("UpgradeService")
+local Crew = module("CrewService")
+local Outfall = module("OutfallService")
 
 local function part(name: string)
 	local found = Harness.findDescendantByName(World, name)
@@ -1382,6 +1384,263 @@ scenario("a surge-forced evacuation still schedules the evac vehicle", function(
 	end
 	assertTrue(extracted, "the pad stayed inert after the vehicle landed")
 	return true, string.format("surge forced the call at t=%ds, vehicle landed, pad accepted the crew", advanced)
+end)
+
+
+-- ============================================================
+-- Scenario 39: crew roles assign, grant passives and gate the ability on a cooldown
+-- ============================================================
+scenario("crew roles change the maths and the ability respects its cooldown", function()
+	-- Roles are a lobby decision: pick them before the water starts moving.
+	Round.resetToLobby()
+	Stub.advance(0.2)
+	-- Default role for a fresh player, and switching is a server decision.
+	assertTrue(Crew.roleOf(player) == Config.Crew.Default, `default role was {Crew.roleOf(player)}`)
+	local ok, reason = Crew.set(player, "Nope")
+	assertTrue(not ok, "an unknown role was accepted")
+	assertTrue(reason ~= nil, "refusing a role gave no reason")
+	assertTrue(Crew.set(player, "Engineer"), "could not switch to Engineer")
+	assertTrue(math.abs(Crew.holdMultiplier(player) - Config.Crew.Engineer.HoldMultiplier) < 0.001,
+		"engineer hold passive did not apply")
+
+	-- The diver's air budget must actually differ from the engineer's.
+	Crew.set(player, "Diver")
+	local diverAir = Flood.oxygenTarget(player)
+	Crew.set(player, "Engineer")
+	local engineerAir = Flood.oxygenTarget(player)
+	assertTrue(diverAir > engineerAir, `diver air {diverAir} should exceed engineer air {engineerAir}`)
+
+	-- Ability: fires once, then refuses until the cooldown has run. The round has to be running
+	-- for an ability to be spent, so start it now (roles are already locked in).
+	Round.requestStart(player)
+	Stub.advance(1)
+	Crew.set(player, "Engineer")
+	local used, message = Crew.useAbility(player)
+	assertTrue(used, "the socket jumper ability did not fire: " .. tostring(message))
+	assertTrue(Crew.cooldownLeft(player) > 0, "the ability did not go on cooldown")
+	local again, blocked = Crew.useAbility(player)
+	assertTrue(not again and blocked ~= nil, "the ability fired twice with no cooldown")
+	Stub.advance(Config.Crew.Engineer.Ability.Cooldown + 1)
+	assertTrue(Crew.cooldownLeft(player) == 0, "the ability never came back off cooldown")
+	return true, string.format("4 roles, diver air %.0fs vs engineer %.0fs, cooldown %ds enforced",
+		diverAir, engineerAir, Config.Crew.Engineer.Ability.Cooldown)
+end)
+
+-- ============================================================
+-- Scenario 40: the medic's revive passive is real, and a downed player bleeds out without one
+-- ============================================================
+scenario("revives are faster for a medic and bleedout is slower with one standing over you", function()
+	Round.resetToLobby()
+	Stub.advance(0.2)
+	local other = Stub.addPlayer("SimMate")
+	Stub.spawnCharacter(other, Stub.v3(0, 3, -30))
+	Stub.movePlayer(player, Stub.v3(0, 3, -30))
+	Stub.advance(0.5)
+
+	-- Baseline: an engineer revives at the shipped rate.
+	Crew.set(player, "Engineer")
+	Round.requestStart(player)
+	Stub.advance(1)
+	PlayerService.downed(other, "a test")
+	local before = PlayerService.getState(other).reviveProgress
+	for _ = 1, 6 do
+		PlayerService.progressRevive(player, other, 0.25)
+	end
+	local engineerProgress = PlayerService.getState(other).reviveProgress - before
+	PlayerService.revivePlayer(other, player)
+	-- A revive teleports the patient to the safe zone: walk them back before the next measurement.
+	Stub.movePlayer(other, Stub.v3(0, 3, -31))
+	Stub.advance(0.2)
+
+	-- Medic: same number of ticks must move the bar further. Swap in the lobby (roles lock in-round,
+	-- which scenario 43 checks on its own).
+	Round.resetToLobby()
+	Stub.advance(0.2)
+	assertTrue(Crew.set(player, "Medic"), "could not take the medic role in the lobby")
+	Round.requestStart(player)
+	Stub.advance(1)
+	Stub.movePlayer(other, Stub.v3(0, 3, -31))
+	PlayerService.downed(other, "a test")
+	before = PlayerService.getState(other).reviveProgress
+	for _ = 1, 6 do
+		PlayerService.progressRevive(player, other, 0.25)
+	end
+	local medicProgress = PlayerService.getState(other).reviveProgress - before
+	assertTrue(medicProgress > engineerProgress * 1.2,
+		string.format("medic revive was not faster: engineer=%.2f medic=%.2f", engineerProgress, medicProgress))
+
+	-- Bleedout: the medic's presence stretches the clock.
+	local position = Stub.v3(0, 3, -30)
+	local withoutMedic = Crew.bleedoutMultiplier(Stub.v3(400, 3, 400))
+	local withMedic = Crew.bleedoutMultiplier(position)
+	assertTrue(withMedic > withoutMedic, "the medic aura did not slow the bleedout")
+	PlayerService.revivePlayer(other, player)
+
+	-- And a downed player left alone really does bleed out.
+	PlayerService.revivePlayer(other, player)
+	Crew.set(player, "Engineer")
+	PlayerService.downed(player, "a test")
+	local state = PlayerService.getState(player)
+	state.bleedProgress = 0.999
+	Stub.advance(2)
+	assertTrue(not PlayerService.getState(player).downed, "the downed player never bled out")
+	assertTrue(PlayerService.getState(player).bleedouts >= 1, "the bleedout was not counted")
+	Stub.removePlayer(other)
+	return true, string.format("medic revive %.2f vs %.2f, bleedout x%.2f", medicProgress, engineerProgress, withMedic)
+end)
+
+-- ============================================================
+-- Scenario 41: a flooded breaker can be reset by hand, but only once it is out of the water
+-- ============================================================
+scenario("a flooded breaker is dead until the water drops, then a hand reset brings it back", function()
+	freshRound(player)
+	local socket = Power.sockets.Pump
+	assertTrue(socket ~= nil, "no pump socket")
+	-- Park a cell in the pump and trip the socket the way the flood does.
+	local cell = forcePower("Pump", "Cell_A")
+	assertTrue(Power.isPowered("Pump"), "the pump did not power up")
+	Power.tripSocket("Pump", "flood")
+	assertTrue(socket.tripped, "the socket did not trip")
+	assertTrue(not Power.isPowered("Pump"), "the pump stayed powered through a trip")
+
+	-- Under water the reset must be refused.
+	Flood.surge(4.0)
+	Stub.advance(0.5)
+	local depth = Flood.depthAt(socket.part.Position)
+	assertTrue(depth > Config.Power.ShortOutDepth, `the test needs the socket submerged, depth={depth}`)
+	local refused, why = Power.resetBreaker(player, "Pump")
+	assertTrue(not refused, "the breaker reset while still underwater")
+	assertTrue(type(why) == "string" and #why > 10, "refusing a reset gave no useful reason")
+
+	-- Dry it out and the same three holds finish the job.
+	Flood.level = 0
+	for index = 1, Config.Water.SectorCount do
+		Flood.sectorLevels[index] = 0
+	end
+	Stub.advance(0.2)
+	local holds = 0
+	for _ = 1, 3 do
+		local ok = Power.resetBreaker(player, "Pump")
+		assertTrue(ok, "a hand reset was refused while dry")
+		holds += 1
+	end
+	assertTrue(not socket.tripped, `the breaker is still tripped after {holds} holds`)
+	assertTrue(Power.breakerCleared >= 1, "the reset was not counted")
+	-- A dry, reset socket takes a cell again.
+	cell.destroyed = false
+	cell.charge = 100
+	cell.socket = nil
+	local carried = Power.pickup(player, cell.id)
+	assertTrue(carried, "could not pick the cell back up")
+	local inserted = Power.insert(player, "Pump")
+	assertTrue(inserted, "the reset socket refused a fresh cell")
+	assertTrue(Power.isPowered("Pump"), "the pump did not come back online")
+	return true, `3 holds to reset, refused at ${string.format("%.1f", depth)}m submerged`
+end)
+
+-- ============================================================
+-- Scenario 42: cranking the outfall pulls the whole district's water down and moves the gate
+-- ============================================================
+scenario("the outfall drains every sector while it is cranked and closes on its own", function()
+	freshRound(player)
+	local wheel = part("OutfallWheel")
+	local gate = part("OutfallGate")
+	assertTrue(Outfall.gate ~= nil, "the outfall service did not adopt the gate")
+	local closedY = gate.Position.Y
+
+	-- Shut at round start and pulling nothing out.
+	assertTrue(Outfall.open == 0, `the sluice started open ({Outfall.open})`)
+	assertTrue(Outfall.drainRate() == 0, "a shut sluice was draining water")
+
+	-- Water in the district, then crank the wheel to the stop.
+	Flood.surge(6.0)
+	Stub.advance(0.5)
+	local before = Flood.level
+	local sectorBefore = Flood.sectorLevels[1]
+	-- Read the openness immediately after each crank: the sluice creeps shut again between holds.
+	local cranks = 0
+	local reached = false
+	local scoreAtOpen = Crew and 0 or 0
+	for _ = 1, 30 do
+		Harness.trigger(wheel, player)
+		cranks += 1
+		if Outfall.open >= 0.999 then
+			reached = true
+			scoreAtOpen = PlayerService.getState(player).score
+			break
+		end
+		Stub.advance(0.5)
+	end
+	assertTrue(reached, `the sluice only reached {math.floor(Outfall.open * 100)}% in {cranks} cranks`)
+	assertTrue(Outfall.opens == 1, `opening the sluice once counted {Outfall.opens} times`)
+	-- Cranking a sluice that is already wide open must not pay twice.
+	Harness.trigger(wheel, player)
+	assertTrue(Outfall.opens == 1, "holding the sluice at the top paid the opening bonus again")
+	assertTrue(PlayerService.getState(player).score <= scoreAtOpen, "the opening bonus was farmed")
+	assertTrue(Outfall.drainRate() > 0, "a wide-open sluice drains nothing")
+	assertTrue(gate.Position.Y < closedY - 1, "the gate plate never moved down")
+
+	-- The water has to actually fall, in the district level and in a storm-hit sector.
+	local mid = Flood.level
+	Stub.advance(6)
+	assertTrue(Flood.level < mid, string.format("water did not fall: %.2f -> %.2f", mid, Flood.level))
+	assertTrue(Flood.sectorLevels[1] < sectorBefore, "the sector level did not fall")
+	assertTrue(Outfall.drained > 0, "no drained total was recorded")
+
+	-- Nobody on the wheel: it swings shut by itself.
+	local openAt = Outfall.open
+	Stub.advance(Config.Outfall.OpenSeconds)
+	assertTrue(Outfall.open < openAt, "the sluice never crept shut")
+	return true, string.format("%d cranks to full: district %.2f -> %.2f, drained %.1f studs, gate dropped %.1fm",
+		cranks, before, Flood.level, Outfall.drained, closedY - gate.Position.Y)
+end)
+
+-- ============================================================
+-- Scenario 43: roles reset between rounds and lock once the round is running
+-- ============================================================
+scenario("roles reset with the round and cannot be swapped mid-flood", function()
+	Round.resetToLobby()
+	Stub.advance(0.2)
+	assertTrue(Crew.set(player, "Rigger"), "could not take the rigger role in the lobby")
+	freshRound(player)
+	Crew.useAbility(player)
+	assertTrue(Crew.cooldownLeft(player) > 0, "the ability did not go on cooldown")
+	local locked, why = Crew.set(player, "Medic")
+	assertTrue(not locked, "the role was swapped while the round was running")
+	assertTrue(why ~= nil, "locking the role gave no reason")
+	Round.resetToLobby()
+	assertTrue(Crew.roleOf(player) == "Rigger", "the lobby reset forgot the player's role")
+	assertTrue(Crew.cooldownLeft(player) == 0, "the ability cooldown survived the round reset")
+	assertTrue(Outfall.open == 0, "the outfall was left open across a reset")
+	local swapped = Crew.set(player, "Medic")
+	assertTrue(swapped, "the role could not be changed in the lobby")
+	assertTrue(Crew.roleOf(player) == "Medic", "the lobby role change did not stick")
+	return true, "role locked in-round, kept across a lobby reset, ability cooldown cleared"
+end)
+
+-- ============================================================
+-- Scenario 44: no survivor starts the round inside a rescue zone
+-- ============================================================
+-- A survivor who spawns on the pad or in the shelter is delivered to the tally for free the moment
+-- the round starts: the quota is met by geometry, not by play.
+scenario("no survivor starts the round already standing in a rescue zone", function()
+	freshRound(player)
+	local safe = part("SafeZone").Position
+	local pad = part("ExtractionPad").Position
+	local offenders = {}
+	for name, survivor in pairs(Rescue.survivors) do
+		local toSafe = (survivor.position - safe).Magnitude
+		local toPad = (survivor.position - pad).Magnitude
+		if toSafe <= 7.5 or toPad <= 6.5 then
+			table.insert(offenders, string.format("%s (safe %.1f, pad %.1f)", name, toSafe, toPad))
+		end
+	end
+	assertTrue(#offenders == 0, "survivors spawn inside a rescue zone: " .. table.concat(offenders, ", "))
+	-- And the proof that matters: three seconds into a running round nobody has been counted yet.
+	Stub.advance(3)
+	assertTrue(Rescue.rescuedCount == 0,
+		`{Rescue.rescuedCount} survivors were rescued before the crew did anything`)
+	return true, `12 spawn points, nearest to the safe zone is outside the 7.5 stud radius`
 end)
 
 -- ============================================================

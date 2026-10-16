@@ -1,19 +1,19 @@
 # FLOODLINE: Last District — verification report
 
-Artifact: `releases/FLOODLINE.rbxlx` — 852,923 bytes, SHA256 `ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba`
-Scripts: 56 compiled (6081 server, 2702 client, 717 shared lines)
-World: 731 parts, 50 proximity prompts, 3 climbable trusses, 4 lift seats
+Artifact: `releases/FLOODLINE.rbxlx` — 909,731 bytes, SHA256 `6e22c896e03429b9c978e8dd210aa933274be9c7a45a06b4d6c80e10ba8917f5`
+Scripts: 60 compiled (6356 server, 2925 client, 810 shared lines)
+World: 750 parts, 51 proximity prompts, 4 climbable trusses, 4 lift seats
 
 ## 1. What was verified, and how
 
 | Stage | Tool | Result |
 |---|---|---|
-| Baked geometry export | `tools/build_game.luau` (Lune + Rojo) | 731 parts, 28 scripts embedded in the place |
-| Place structure | `tools/inspect_place.luau` | 627 named world objects, 0 required hooks missing |
-| Luau compilation | `tools/compile_check.luau` (`luau.compile` on every script, in both the source tree and the shipped place) | 56 checked, 0 failures |
-| Static wiring | `tools/logic_check.py` | 17/17 checks |
-| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 38/38 scenarios |
-| Client interface | `tests/headless/client_smoke.luau` | 12/12 checks |
+| Baked geometry export | `tools/build_game.luau` (Lune + Rojo) | 750 parts, 30 scripts embedded in the place |
+| Place structure | `tools/inspect_place.luau` | 647 named world objects, 0 required hooks missing |
+| Luau compilation | `tools/compile_check.luau` (`luau.compile` on every script, in both the source tree and the shipped place) | 60 checked, 0 failures |
+| Static wiring | `tools/logic_check.py` | 23/23 checks |
+| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 44/44 scenarios |
+| Client interface | `tests/headless/client_smoke.luau` | 13/13 checks |
 
 Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`.
 
@@ -27,9 +27,9 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | relay fuse repair raises capacity and powers the bridge | capacity=3 bridge=true |
 | PASS | flood rises, pump suppresses the rate, surges add water | pumped=0.002/s unpumped=0.008/s surge sector1 2.83->3.33 |
 | PASS | escorting a survivor into the safe zone rescues them | rescued=1/12 (quota 5) after escort |
-| PASS | lift loads survivors, travels and unloads them at the pad | boarded=2, lift at 70%, passengers left=0, pad rescues +2 (total 4) |
+| PASS | lift loads survivors, travels and unloads them at the pad | boarded=2, lift at 100%, passengers left=0, pad rescues +2 (total 2) |
 | PASS | live cables shock and the gas leak is fixable | health 100 -> 64, leak fixed=true |
-| PASS | round reaches a win when the quota is met and the team extracts | outcome=win grade=S score=1636 rescued=5 elapsed=1:11s |
+| PASS | round reaches a win when the quota is met and the team extracts | outcome=win grade=S score=1647 rescued=5 elapsed=1:19s |
 | PASS | results screen rematch vote returns the server to the lobby | reset clean, second round in Prep |
 | PASS | losing every survivor fails the round honestly | outcome=fail reason=every survivor was lost dead=12 |
 | PASS | a second round deploys the full survivor crew again | 12/12 survivors restored and visible |
@@ -37,15 +37,15 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | difficulty modifiers re-scale the round and lock once it starts | storm: rise x1.00, hazards x0.81, prep 90s |
 | PASS | closing a door seals the room and slows its flooding | interior depth open=0.12m closed=0.00m (8 doors wired) |
 | PASS | team pings validate distance, type and cooldown | 4 ping types, 1 broadcasts, validations enforced |
-| PASS | session ledger records rounds, grades and personal bests | rounds=2 wins=1 best=S/1636 rescue=5 history=2 |
-| PASS | telemetry wrote an inspectable round log | 2 round log(s), 7300 bytes in the newest |
-| PASS | skybridge is baked, retracted at round start and walkable when extended | 4 segments, 8 rail members, tucked at (0.0, 0.0, 0.0) |
+| PASS | session ledger records rounds, grades and personal bests | rounds=2 wins=1 best=S/1647 rescue=5 history=2 |
+| PASS | telemetry wrote an inspectable round log | 2 round log(s), 7345 bytes in the newest |
+| PASS | skybridge is baked, retracted at round start and walkable when extended | 4 segments, 8 rail members, tucked at (29.3, 13.9, -12.7) |
 | PASS | a powered winch extends the skybridge without any cranking | extended to 1% in 5.5s on 1 cell, routes=Skybridge |
 | PASS | hand cranking opens the skybridge with the grid dark | 14 turns accepted, 2 refused, span at 1% with zero power |
-| PASS | survivors cross the roof span on route waypoints, not through the air | crossed the span on waypoints: t 0.00 -> 0.46 over 240 ticks |
+| PASS | survivors cross the roof span on route waypoints, not through the air | crossed the span on waypoints: t 0.00 -> 0.45 over 240 ticks |
 | PASS | the service cut opens only after the collapse is dug out | cleared in 3 digs, +20 salvage, routes=ServiceCut |
 | PASS | sealing the service cut slows its flooding (it floods first when open) | cut depth open=2.02m closed=0.00m |
-| PASS | salvage crates pay out once and the bench spends the pool | crate paid 18, pool 20 -> 18, SealKit fitted |
+| PASS | salvage crates pay out once and the bench spends the pool | crate paid 14, pool 20 -> 14, SealKit fitted |
 | PASS | the capacitor upgrade lifts a real brownout | capacity 2 -> 3, brownout cleared without touching the sockets |
 | PASS | impeller and rebreather upgrades change water and air numbers | air 22s -> 31s, 12s of water: 0.10 dry, 0.03 pumped, 0.01 fitted |
 | PASS | the lift servo upgrade speeds travel and adds a passenger slot | 3s of travel: 15% -> 21%, seats 3 -> 4 |
@@ -54,13 +54,19 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | children refuse to wade and are carried instead | child held position in 1.45m water, then rode the carrier (offset 1.0m) |
 | PASS | garage, ferry and the cut expose their content to the simulation | 4 cells, 9 zones, garage roof at 25 studs |
 | PASS | objectives cover both routes and the salvage bench | 9 objectives, skybridge flips to done when the span is out |
-| PASS | route mastery is scored in the round summary | outcome=win routes=Skybridge+ServiceCut score=1713 salvage=165 |
+| PASS | route mastery is scored in the round summary | outcome=win routes=Skybridge+ServiceCut score=1728 salvage=165 |
 | PASS | route and upgrade changes only happen through server-owned paths | no client-side setter exists; unaffordable purchases are refused with a reason |
 | PASS | a rematch restores world items, doors, routes and the salvage pool | radio/fuse/crate/span/cut/salvage all restored; 1 doors resealed, fuse re-collectable |
 | PASS | unclaimed survivors climb to a refuge when the water reaches them | climbed 1.0 -> 9.1 studs (nil), state=Idle |
 | PASS | a surge-forced evacuation still schedules the evac vehicle | surge forced the call at t=870s, vehicle landed, pad accepted the crew |
+| PASS | crew roles change the maths and the ability respects its cooldown | 4 roles, diver air 33s vs engineer 22s, cooldown 70s enforced |
+| PASS | revives are faster for a medic and bleedout is slower with one standing over you | medic revive 2.17 vs 1.50, bleedout x1.40 |
+| PASS | a flooded breaker is dead until the water drops, then a hand reset brings it back | 3 holds to reset, refused at $2.8m submerged |
+| PASS | the outfall drains every sector while it is cranked and closes on its own | 8 cranks to full: district 3.62 -> 2.71, drained 3.2 studs, gate dropped 1.0m |
+| PASS | roles reset with the round and cannot be swapped mid-flood | role locked in-round, kept across a lobby reset, ability cooldown cleared |
+| PASS | no survivor starts the round already standing in a rescue zone | 12 spawn points, nearest to the safe zone is outside the 7.5 stud radius |
 
-The harness loads `FLOODLINE.rbxlx`, mirrors the 731-part district and the shipped
+The harness loads `FLOODLINE.rbxlx`, mirrors the 750-part district and the shipped
 module sources into a stub runtime (Instance tree, Vector3/CFrame math, AABB raycasts, DataModel
 services, virtual clock) and then plays the game: prompts are fired, remotes are used, the clock is
 fast-forwarded through Prep → Rising → Surge → Extraction → Results.
@@ -68,18 +74,18 @@ fast-forwarded through Prep → Rising → Surge → Extraction → Results.
 ## 1.2 Bot playtests (7 timed rounds)
 
 Autonomous bots play complete rounds through the shipped server modules on the virtual clock
-(`tests/headless/playtest.luau`): 5 wins, 2 fails,
+(`tests/headless/playtest.luau`): 4 wins, 3 fails,
 0 unresolved.
 
 | Crew | Modifier | Outcome | Elapsed | Reason | Rescued/Required | Lost | Salvage | Score | Grade |
 |---|---|---|---|---|---|---|---|---|---|
-| 1p | Calm | win | 109.8s | team evacuated with the required survivors | 4/3 | 0 | 140 | 1440 | S |
-| 1p | Standard | win | 302.8s | team evacuated with the required survivors | 7/5 | 1 | 215 | 1843 | S |
-| 1p | Storm | win | 695.3s | team evacuated with the required survivors | 8/6 | 1 | 264 | 1780 | S |
-| 2p | Standard | win | 102s | team evacuated with the required survivors | 8/6 | 0 | 240 | 2249 | S |
-| 2p | Storm | win | 570.9s | extraction window closed with the quota met | 7/7 | 5 | 129 | 2225 | S |
-| 4p | Standard | fail | 643s | the district drowned | 6/7 | 5 | 224 | 2560 | S |
-| 4p | Catastrophe | fail | 264.8s | not enough survivors can still be saved | 3/9 | 4 | 133 | 1059 | B |
+| 1p | Calm | win | 970.2s | team evacuated with the required survivors | 3/3 | 4 | 159 | 745 | C |
+| 1p | Standard | fail | 909.9s | every survivor was lost | 4/5 | 9 | 184 | 1065 | B |
+| 1p | Storm | win | 1005s | extraction window closed with the quota met | 7/6 | 5 | 259 | 1570 | S |
+| 2p | Standard | win | 852s | extraction window closed with the quota met | 9/6 | 3 | 309 | 1985 | S |
+| 2p | Storm | win | 200.3s | team evacuated with the required survivors | 9/7 | 1 | 265 | 2376 | S |
+| 4p | Standard | fail | 737.9s | not enough survivors can still be saved | 4/7 | 5 | 174 | 1305 | A |
+| 4p | Catastrophe | fail | 276.9s | not enough survivors can still be saved | 7/9 | 4 | 243 | 1911 | S |
 
 What this does **not** measure:
 
@@ -103,6 +109,7 @@ and they are not player telemetry.
 | PASS | world markers bind to survivors and the active objective | markers=3, objective anchor=true |
 | PASS | minimap builds the district plan and tracks live state | 18 map layers, 5 live dots (cells/sockets/objective/survivors), 2 hidden, span line solid, ping fade + M toggle verified |
 | PASS | systems board shows both routes and buys an upgrade through the server | routes Lift/Skybridge/Cut + 6 upgrade rows, purchase of SealKit forwarded to the server, B toggle verified |
+| PASS | crew board picks a role, shows the ability cooldown and drives the outfall gauge | 4 role rows, 4 teammates listed, ability cooldown + READY states, role/ability remotes fired, outfall gauge wired |
 | PASS | results screen renders a real round summary and votes for a rematch | summary rendered, rematch vote path armed |
 | PASS | ping markers render and expire, and the modifier selector reacts | modifier selector, session line and 1 ping marker(s) verified |
 | PASS | effects respond to submersion, drowning and downed states | underwater tint, blur and downed grading all applied |
@@ -114,11 +121,11 @@ and they are not player telemetry.
 |---|---|---|
 | PASS | services reference only existing geometry | 23 named hooks present in the place |
 | PASS | every socket maps to a configured consumer | sockets=['Socket_Bridge', 'Socket_Lift', 'Socket_Pump', 'Socket_Winch'] consumers=['Bridge', 'Lift', 'Pump', 'Relay', 'Winch'] |
-| PASS | all remote usages are declared | 27 remotes used, all declared |
-| PASS | bootstrap modules exported | 17 modules required, all present |
+| PASS | all remote usages are declared | 31 remotes used, all declared |
+| PASS | bootstrap modules exported | 19 modules required, all present |
 | PASS | client modules exported | 6 modules required, all present |
 | PASS | shared modules exported | 3 shared modules required, all present |
-| PASS | survivor rigs and prompts match Config.Survivors.Total | models=12 survivorPrompts=12 config=12 (all prompts=50) |
+| PASS | survivor rigs and prompts match Config.Survivors.Total | models=12 survivorPrompts=12 config=12 (all prompts=51) |
 | PASS | lift cabin has four seats | seats=4 |
 | PASS | power cell count matches config | geometry=4 config=4 |
 | PASS | no loadstring / http code / external asset ids | {} |
@@ -129,6 +136,12 @@ and they are not player telemetry.
 | PASS | new landmarks registered as world zones | zones=['ApartmentBlock', 'Clinic', 'FerryTerminal', 'Mid', 'North', 'ParkingGarage', 'PumpHouse', 'RelayTower', 'ServiceCut', 'South', 'Terminal', 'Workshop'] |
 | PASS | upgrade catalog is complete and consumed | order=['Impeller', 'Rebreather', 'Capacitor', 'SealKit', 'FieldHospital', 'LiftServo'] unreadEffects=[] |
 | PASS | survivor role effects are implemented | roles=['Child', 'Engineer', 'Medic'] missing=[] |
+| PASS | crew roles and abilities are complete and ordered | order=['Diver', 'Engineer', 'Medic', 'Rigger'] roles=['Diver', 'Engineer', 'Medic', 'Rigger'] abilities=['SecondWind', 'SocketJumper', 'Triage', 'RopeLine'] unhandled=[] |
+| PASS | outfall sluice is baked and adopted by the server | parts=['OutfallHouse', 'OutfallLintel', 'OutfallGate', 'OutfallFrameE', 'OutfallFrameW', 'OutfallGrate', 'OutfallPost', 'OutfallWheel', 'OutfallWheelHub', 'OutfallWalkway', 'OutfallWalkRail', 'OutfallLamp', 'OutfallSign', 'OutfallRung'] missing=[] |
+| PASS | outfall drain is subtracted from the district water level | FloodService applies the outfall pull each tick: True |
+| PASS | tripped breakers can be reset by hand and re-wire their prompt | resetBreaker + prompt text + config hold present |
+| PASS | client ships a crew board with role rows, an ability button and the outfall gauge | crew board widgets + role/ability remotes present in the client |
+| PASS | client remotes exist and every server service is registered in the lifecycle | undeclared=[] lifecycle=CrewService/OutfallService |
 
 ## 2. Bugs this process actually found and fixed
 
@@ -151,7 +164,7 @@ These are not hypothetical; each was caught by a check and then fixed in the shi
 - **The stub is a test double, not an engine.** Its raycasts are AABB-only, its CFrame maths is simplified, and it has no collision response — so NPC routing that works headless may still need tuning in Studio.
 - **Balance is measured with bots, not players.** The round timings in §1.2 come from scripted bots walking straight lines at the server-set speed; they bound pacing from below and say nothing about difficulty for a real crew, let alone for a crew of four people talking to each other.
 - **Art and audio are procedural primitives.** No external asset IDs are used anywhere, but that also means no custom meshes, textures or sound design.
-- **Performance is unmeasured.** Part count (731) is modest, but draw calls, lighting cost, and script activity under load have not been profiled.
+- **Performance is unmeasured.** Part count (750) is modest, but draw calls, lighting cost, and script activity under load have not been profiled.
 
 ## 4. Reproduction
 

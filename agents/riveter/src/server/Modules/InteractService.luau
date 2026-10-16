@@ -56,6 +56,16 @@ end
 
 -- ===================== action implementations =====================
 
+-- Engineer passive: hands-on work lands harder. Applied to the actions that count discrete
+-- "turns" of work rather than a single one-shot trigger.
+local function workUnits(player: Player): number
+	local crew = ctx.crew
+	if not crew then
+		return 1
+	end
+	return crew.holdMultiplier(player)
+end
+
 local function valveAction(player: Player, part: BasePart): (boolean, string?)
 	if ctx.hazard.isLeakFixed() then
 		return false, "The gas line is already capped."
@@ -65,9 +75,9 @@ local function valveAction(player: Player, part: BasePart): (boolean, string?)
 		needs = 1
 	end
 	local progress = part:GetAttribute("TurnProgress") or 0
-	progress = progress + 1
+	progress += workUnits(player)
 	part:SetAttribute("TurnProgress", progress)
-	ctx.notifyPlayer(player, `Valve turning… ({progress}/3)`, "warn")
+	ctx.notifyPlayer(player, `Valve turning… ({math.min(3, math.floor(progress))}/3)`, "warn")
 	if progress >= 3 then
 		ctx.hazard.fixLeak(player)
 		part:SetAttribute("TurnProgress", 0)

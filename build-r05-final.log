@@ -1,0 +1,170 @@
+==============================================================
+ FLOODLINE build + verification pipeline
+ repo:   /home/user/floodline
+ tools:  /home/user/.cache/floodline-tools/bin
+==============================================================
+
+--- 1/6 generate baked district + build place ---
+built /home/user/floodline//agents/riveter/releases/FLOODLINE.rbxlx
+bytes=852923 serverLines=6081 clientLines=2702 sharedLines=717
+
+--- 2/6 inspect the exported place (structure + geometry hooks) ---
+scripts: 28
+  ModuleScript    438 lines  ReplicatedStorage.Shared.Config
+  ModuleScript    114 lines  ReplicatedStorage.Shared.Net
+  ModuleScript    168 lines  ReplicatedStorage.Shared.Util
+  Script          404 lines  ServerScriptService.Bootstrap
+  ModuleScript    125 lines  ServerScriptService.Modules.CommsService
+  ModuleScript    178 lines  ServerScriptService.Modules.DoorService
+  ModuleScript    221 lines  ServerScriptService.Modules.FloodService
+  ModuleScript    292 lines  ServerScriptService.Modules.HazardService
+  ModuleScript    244 lines  ServerScriptService.Modules.InteractService
+  ModuleScript    375 lines  ServerScriptService.Modules.LiftService
+  ModuleScript    252 lines  ServerScriptService.Modules.ObjectiveService
+  ModuleScript    409 lines  ServerScriptService.Modules.PlayerService
+  ModuleScript    574 lines  ServerScriptService.Modules.PowerService
+  ModuleScript   1026 lines  ServerScriptService.Modules.RescueService
+  ModuleScript    527 lines  ServerScriptService.Modules.RoundService
+  ModuleScript    444 lines  ServerScriptService.Modules.RouteService
+  ModuleScript    121 lines  ServerScriptService.Modules.ScoringService
+  ModuleScript    161 lines  ServerScriptService.Modules.SessionService
+  ModuleScript     99 lines  ServerScriptService.Modules.Telemetry
+  ModuleScript    338 lines  ServerScriptService.Modules.UpgradeService
+  ModuleScript    309 lines  ServerScriptService.Modules.WorldService
+  LocalScript     500 lines  StarterPlayer.StarterPlayerScripts.Client
+  ModuleScript    123 lines  StarterPlayer.StarterPlayerScripts.Modules.Effects
+  ModuleScript    769 lines  StarterPlayer.StarterPlayerScripts.Modules.Hud
+  ModuleScript    337 lines  StarterPlayer.StarterPlayerScripts.Modules.Markers
+  ModuleScript    437 lines  StarterPlayer.StarterPlayerScripts.Modules.Minimap
+  ModuleScript    272 lines  StarterPlayer.StarterPlayerScripts.Modules.Results
+  ModuleScript    271 lines  StarterPlayer.StarterPlayerScripts.Modules.Systems
+structure OK
+
+--- 3/6 compile every script (source tree and shipped place) ---
+[OK  ] /home/user/floodline//agents/riveter/src/server/Modules/WorldService.luau  309 lines (source-tree)
+[OK  ] /home/user/floodline//agents/riveter/src/shared/Config.luau  438 lines (source-tree)
+[OK  ] /home/user/floodline//agents/riveter/src/shared/Net.luau    114 lines (source-tree)
+[OK  ] /home/user/floodline//agents/riveter/src/shared/Util.luau   168 lines (source-tree)
+compiled 56 scripts, 0 failures
+
+--- 4/6 static cross-reference checks (script <-> geometry <-> remotes) ---
+[PASS] services reference only existing geometry
+        23 named hooks present in the place
+[PASS] every socket maps to a configured consumer
+        sockets=['Socket_Bridge', 'Socket_Lift', 'Socket_Pump', 'Socket_Winch'] consumers=['Bridge', 'Lift', 'Pump', 'Relay', 'Winch']
+[PASS] all remote usages are declared
+        27 remotes used, all declared
+[PASS] bootstrap modules exported
+        17 modules required, all present
+[PASS] client modules exported
+        6 modules required, all present
+[PASS] shared modules exported
+        3 shared modules required, all present
+[PASS] survivor rigs and prompts match Config.Survivors.Total
+        models=12 survivorPrompts=12 config=12 (all prompts=50)
+[PASS] lift cabin has four seats
+        seats=4
+[PASS] power cell count matches config
+        geometry=4 config=4
+[PASS] no loadstring / http code / external asset ids
+        {}
+[PASS] numeric client input is constrained
+        client-sent scalars: [('sprinting', 'boolean')]
+[PASS] audio uses only bundled engine sounds
+        only rbxasset:// engine sounds
+[PASS] skybridge span is baked in the place
+        decks=['BridgeDeck_A', 'BridgeDeck_B', 'BridgeDeck_C', 'BridgeDeck_D'] rails=8 cranks=['BridgeCrank_Far', 'BridgeCrank_Near'] nearest deck to NearJoint=4.07 studs
+[PASS] second-route geometry is present
+        missing=[] crates=['SupplyCrate_1', 'SupplyCrate_2', 'SupplyCrate_3', 'SupplyCrate_4']
+[PASS] new landmarks registered as world zones
+        zones=['ApartmentBlock', 'Clinic', 'FerryTerminal', 'Mid', 'North', 'ParkingGarage', 'PumpHouse', 'RelayTower', 'ServiceCut', 'South', 'Terminal', 'Workshop']
+[PASS] upgrade catalog is complete and consumed
+        order=['Impeller', 'Rebreather', 'Capacitor', 'SealKit', 'FieldHospital', 'LiftServo'] unreadEffects=[]
+[PASS] survivor role effects are implemented
+        roles=['Child', 'Engineer', 'Medic'] missing=[]
+
+17/17 logic checks passed
+
+--- 5/6 headless gameplay simulation of the shipped place ---
+        climbed 1.0 -> 9.1 studs (nil), state=Idle
+[Flood] phase=Lobby rise=0/s
+[Power] reset with 4 cells (adopted from baked geometry)
+[Rescue] 12 survivors deployed (12 spawn points known)
+[Hazard] 6 live cable runs armed
+[Round] state=Lobby duration=nil
+[Flood] phase=Prep rise=0.0082/s
+[Power] reset with 4 cells (adopted from baked geometry)
+[Rescue] 12 survivors deployed (12 spawn points known)
+[Hazard] 6 live cable runs armed
+[Round] state=Prep duration=100
+[Upgrade] +25 salvage (survivor)
+[Upgrade] +25 salvage (survivor)
+[Upgrade] +25 salvage (survivor)
+[Upgrade] +25 salvage (survivor)
+[Upgrade] +25 salvage (survivor)
+[Upgrade] +25 salvage (survivor)
+[Upgrade] +25 salvage (survivor)
+[Upgrade] +10 salvage (Pump online)
+[Flood] phase=Rising rise=0.0451/s
+[Round] state=Rising duration=175
+[Upgrade] +8 salvage (phase 2)
+[Upgrade] +8 salvage (phase 3)
+[Upgrade] +8 salvage (phase 4)
+[Flood] phase=Surge rise=0.123/s
+[Round] state=Surge duration=95
+[Flood] phase=Extraction rise=0.0164/s
+[Round] state=Extraction duration=120
+[Upgrade] +25 salvage (survivor)
+[Score] Riveter +50 (extracted)
+[Round] state=Results duration=30
+[PASS] a surge-forced evacuation still schedules the evac vehicle
+        surge forced the call at t=870s, vehicle landed, pad accepted the crew
+
+38/38 scenarios passed
+
+--- 6/6 client interface smoke test ---
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[WARN]
+[stub] signal handler error: [string "StarterPlayer.StarterPlayerScripts.Modules.Markers"]:328: attempt to perform arithmetic (mul) on table and number
+[PASS] client bootstrap runs end to end on live payload shapes
+        client ticked 3s of live payloads: banner=SURGE, map built, route board=Skybridge — walkable (roof route)
+
+12/12 client checks passed
+
+--- evidence ---
+total 160
+drwxr-xr-x 2 user user  4096 Oct 16 06:13 .
+drwxr-xr-x 8 user user  4096 Oct 16 06:14 ..
+-rw-r--r-- 1 user user   228 Oct 16 06:13 VALIDATION.json
+-rw-r--r-- 1 user user  8741 Oct 16 06:13 VERIFICATION.md
+-rw-r--r-- 1 user user   166 Oct 16 06:14 build-stats.json
+-rw-r--r-- 1 user user  2076 Oct 16 06:15 client-smoke-report.json
+-rw-r--r-- 1 user user  7560 Oct 16 06:14 compile-report.json
+-rw-r--r-- 1 user user  5979 Oct 16 06:15 headless-report.json
+-rw-r--r-- 1 user user  4125 Oct 16 06:14 logic-report.json
+-rw-r--r-- 1 user user 18106 Oct 16 06:14 place-structure.json
+-rw-r--r-- 1 user user 63370 Oct 16 06:13 playtest-report.json
+-rw-r--r-- 1 user user  1774 Oct 16 06:13 r01-publication.json
+-rw-r--r-- 1 user user  1774 Oct 16 06:13 r02-publication.json
+-rw-r--r-- 1 user user  4248 Oct 16 06:13 r03-publication.json
+-rw-r--r-- 1 user user  3426 Oct 16 06:13 r04-publication.json
+
+pipeline OK

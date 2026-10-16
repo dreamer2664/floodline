@@ -39,6 +39,12 @@ end
 local Config = Harness.require(Harness.replicated():FindFirstChild("Shared"):FindFirstChild("Config"))
 local Round = module("RoundService")
 local Power = module("PowerService")
+local Crew = module("CrewService")
+-- Module scope: BOT:targets is defined at this level, so anything it mutates must live here.
+local outfallCranks = 0
+-- Prompt hold durations the bots have to respect (read from the baked Config at boot).
+local Holds = { outfallHold = Config.Outfall.HoldSeconds, socketHold = 1.0 }
+local Outfall = module("OutfallService")
 local Flood = module("FloodService")
 local Rescue = module("RescueService")
 local Lift = module("LiftService")
@@ -67,7 +73,7 @@ BOT.__index = BOT
 
 local TICK = 0.25          -- virtual seconds per policy step
 local REACH = 4.2          -- how close a bot has to be to use something
-local RUN_LIMIT = 900      -- give up on a round after 15 virtual minutes
+local RUN_LIMIT = 1200     -- give up on a round after 20 virtual minutes
 local SWIM_FACTOR = 0.55   -- stand-in for water drag (documented above)
 
 -- Salvage priority: keep the pump ahead of the water, then safety, then throughput.
@@ -327,6 +333,31 @@ function BOT:targets()
 		return { goal = dry.Position + v3(0, 6, 0), label = "leaving water", arrive = 7, act = function() end }
 	end
 
+	-- 1b. The outfall. Once the water is up around the low sector's doorsteps, one hand drops
+	--     everything for the wheel: draining the district beats any single escort. The job is sticky
+	--     (it stays until the sluice is wide open) so a crew does not spend the round walking to the
+	--     outfall and back.
+	local crewSize = #Players:GetPlayers()
+	if (crewSize == 1 or self.index == crewSize) and not Outfall.isOpen() then
+		if Outfall.open > 0.05 or Flood.level > 3.5 then
+			local wheel = part("OutfallWheel")
+			if wheel then
+				-- arrive must stay inside the bot's reach, or it "arrives" 12 studs out and every use fails.
+			return { goal = wheel.Position, label = "crank outfall", arrive = 6, act = function(bot)
+					-- One crank per hold: the prompt has to be held down, so a bot that could spin the
+					-- wheel every 0.25 s tick would be measuring the harness, not the game.
+					if (bot.nextCrankAt or 0) > clock() then
+						return
+					end
+					if bot:use(wheel) then
+						outfallCranks += 1
+						bot.nextCrankAt = clock() + Holds.outfallHold
+					end
+				end }
+			end
+		end
+	end
+
 	-- 2. Cells and sockets: the conductor's job.
 	if conductor then
 		if carrying then
@@ -456,6 +487,14 @@ local function runRound(crew: number, modifier: string)
 
 	Round.resetToLobby()
 	local okModifier = Session_setModifier(modifier)
+	-- Crew roles are picked in the lobby, one per bot, so every round exercises the passives:
+	-- bot 1 drives the grid, bot 2 hauls, bot 3 patches and bot 4 rigs.
+	local roleOrder = { "Engineer", "Diver", "Medic", "Rigger" }
+	for index, bot in ipairs(bots) do
+		local role = roleOrder[((index - 1) % #roleOrder) + 1]
+		Crew.set(bot.player, role)
+		bot.role = role
+	end
 	Round.requestStart(lead.player)
 	local started = clock()
 	local record = {
@@ -481,11 +520,23 @@ local function runRound(crew: number, modifier: string)
 		padAt = nil,
 		waterPeak = 0,
 		playerDowns = 0,
+		roles = {},
+		casualties = {},
+		survivorDowns = 0,
+		abilitiesUsed = 0,
+		outfallOpens = 0,
+		outfallCranks = 0,
 		waterCurve = {},
 		log = {},
 		modifierApplied = okModifier,
 	}
 
+	local abilitiesUsed = 0
+	local casualties = {}
+	local seenNotes = {}
+	local downs = 0
+	outfallCranks = 0
+	local crankTarget = nil
 	local lastSample = 0
 	local firstPowerSeen = false
 	local quotaSeen = false
@@ -500,8 +551,58 @@ local function runRound(crew: number, modifier: string)
 		for _, bot in ipairs(bots) do
 			bot:step(TICK)
 		end
+		-- Abilities are spent at the moment the crew would want them.
+		for _, bot in ipairs(bots) do
+			local state = PlayerService.getState(bot.player)
+			if state and not state.downed and Crew.abilityReady(bot.player) then
+				local role = Crew.roleOf(bot.player)
+				local want = false
+				if role == "Engineer" then
+					for _, socket in pairs(Power.sockets) do
+						want = want or socket.tripped
+					end
+				elseif role == "Medic" then
+					want = PlayerService.downedCount > (bot.spentDowns or 0)
+					bot.spentDowns = PlayerService.downedCount
+				elseif role == "Diver" then
+					want = bot:depth() > 2.5
+				elseif role == "Rigger" then
+					want = bot:carryingCell() or bot:holding()
+				end
+				if want and Crew.useAbility(bot.player) then
+					abilitiesUsed += 1
+					bot:note(`ability {role}`)
+				end
+			end
+		end
+		if Outfall.opens > record.outfallOpens then
+			record.outfallOpens = Outfall.opens
+			lead:note(`outfall opened (${math.floor(Outfall.open * 100)}%)`)
+		end
 		Stub.advance(TICK)
 		local elapsed = clock() - started
+
+		-- Casualties: who died, when, and what killed them. Without this the report only carries a
+		-- count, and a round where nine people drown in three minutes looks like bad luck.
+		for _, survivor in ipairs(Rescue.order) do
+			local notes = #survivor.notes
+			if notes > (seenNotes[survivor.name] or 0) then
+				seenNotes[survivor.name] = notes
+				-- Only death is a casualty: being knocked down and picked up again is a rescue the
+				-- crew made, and reporting it as a loss would misread a good round.
+				if survivor.state == "Dead" then
+					table.insert(casualties, {
+						t = math.floor(elapsed * 10) / 10,
+						name = survivor.name,
+						cause = tostring(survivor.notes[notes]),
+						level = math.floor(Flood.level * 100) / 100,
+						depth = math.floor(Flood.depthAt(survivor.position) * 100) / 100,
+					})
+				else
+					downs += 1
+				end
+			end
+		end
 
 		if not firstPowerSeen and (Power.isPowered("Pump") or Power.isPowered("Lift")) then
 			firstPowerSeen = true
@@ -570,6 +671,14 @@ local function runRound(crew: number, modifier: string)
 	if record.waterCurve[#record.waterCurve] == nil or record.waterCurve[#record.waterCurve].t ~= math.floor(record.elapsedSeconds) then
 		table.insert(record.waterCurve, { t = math.floor(record.elapsedSeconds), level = math.floor(Flood.level * 100) / 100 })
 	end
+	record.casualties = casualties
+	record.survivorDowns = downs
+	record.abilitiesUsed = abilitiesUsed
+	record.outfallCranks = outfallCranks
+	record.roles = {}
+	for _, bot in ipairs(bots) do
+		table.insert(record.roles, { name = bot.name, role = Crew.roleOf(bot.player) })
+	end
 	-- The lead bot's story is the most useful debugging artefact.
 	record.log = lead.log
 	record.botLogs = {}
@@ -600,7 +709,12 @@ local plan = {
 	{ crew = 4, modifier = "Catastrophe" },
 }
 
+local filter = process.env.FLOODLINE_PLAN
 for _, entry in ipairs(plan) do
+	local label = `{entry.crew}p-{entry.modifier}`
+	if filter and filter ~= "" and not string.find(label, filter, 1, true) then
+		continue
+	end
 	local record = runRound(entry.crew, entry.modifier)
 	table.insert(runs, record)
 	print(string.format("[%s] crew=%d %-12s %-25s %5.1fs rescued=%d/%d lost=%d routes=%s score=%d grade=%s",

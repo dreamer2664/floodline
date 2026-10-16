@@ -425,6 +425,29 @@ copyModel("World", function(world)
 		SEAT(lift, "LiftSeat" .. i, V3.new(1.6, 0.4, 1.6), V3.new(column * 2.6 - 1.3, 1.55, row * 2.6 - 1.3), C3.fromRGB(60, 90, 120))
 	end
 
+	-- ================= OUTFALL (canal water control) =================
+	-- A sluice house straddling the canal: the gate plate is a real part that the server slides
+	-- down as the sluice opens, so "is the outfall open?" is answerable by looking at it.
+	local outfall = M(world, "Outfall")
+	P(outfall, "OutfallHouse", V3.new(10, 4.2, 3.2), V3.new(20, 1.2, 6), C3.fromRGB(74, 78, 88), CONC, true, true, 0)
+	P(outfall, "OutfallLintel", V3.new(10, 0.8, 3.6), V3.new(20, 3.7, 6), C3.fromRGB(88, 92, 102), CONC, true, true, 0)
+	P(outfall, "OutfallGate", V3.new(7.4, 2.8, 0.7), V3.new(20, 0.9, 6), C3.fromRGB(96, 132, 148), METAL, true, true, 0)
+	P(outfall, "OutfallFrameE", V3.new(0.8, 3.2, 0.9), V3.new(23.9, 0.7, 6), C3.fromRGB(66, 70, 80), METAL, true, true, 0)
+	P(outfall, "OutfallFrameW", V3.new(0.8, 3.2, 0.9), V3.new(16.1, 0.7, 6), C3.fromRGB(66, 70, 80), METAL, true, true, 0)
+	P(outfall, "OutfallGrate", V3.new(6.4, 0.4, 1.2), V3.new(20, -0.2, 4.4), C3.fromRGB(52, 58, 68), METAL, true, false, 0.15)
+	P(outfall, "OutfallPost", V3.new(1, 2.8, 1), V3.new(15.2, 1.4, 7.2), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
+	P(outfall, "OutfallWheel", V3.new(2.6, 2.6, 0.4), V3.new(15.2, 3.1, 7.2), C3.fromRGB(198, 148, 62), METAL, true, true, 0)
+	P(outfall, "OutfallWheelHub", V3.new(0.5, 0.5, 0.8), V3.new(15.2, 3.1, 7.2), C3.fromRGB(120, 124, 134), METAL, true, true, 0)
+	P(outfall, "OutfallWalkway", V3.new(7, 0.4, 1.8), V3.new(19, 1.6, 8.4), C3.fromRGB(84, 88, 98), METAL, true, true, 0)
+	P(outfall, "OutfallWalkRail", V3.new(7, 0.9, 0.2), V3.new(19, 2.2, 9.2), C3.fromRGB(118, 126, 136), METAL, true, true, 0)
+	P(outfall, "OutfallLamp", V3.new(1.2, 1.2, 1.2), V3.new(15.2, 5.2, 7.2), C3.fromRGB(255, 214, 150), NEON, true, false, 0.2)
+	P(outfall, "OutfallSign", V3.new(4.4, 1.2, 0.3), V3.new(15.2, 4.6, 8.6), C3.fromRGB(232, 190, 74), NEON, true, true, 0)
+	for i = 0, 4 do
+		P(outfall, "OutfallRung" .. i, V3.new(1.2, 0.18, 0.18), V3.new(15.2, 0.6 + i * 0.55, 7.6), C3.fromRGB(150, 156, 166), METAL, true, false, 0)
+	end
+	prompt(outfall.OutfallWheel, "Crank Sluice", "District Outfall", 1.4)
+	TR(outfall, "OutfallLadder", V3.new(1.2, 6, 1.2), V3.new(13.4, 3, 8.6), C3.fromRGB(126, 134, 144))
+
 	-- ================= DOCKS (canal side content) =================
 	local docks = M(world, "Docks")
 	P(docks, "Quay", V3.new(26, 0.6, 34), V3.new(30, 0.35, 20), C3.fromRGB(70, 72, 80), CONC, true, true, 0)
@@ -780,14 +803,17 @@ copyModel("World", function(world)
 		return m
 	end
 	-- Placement is a deliberate route puzzle: two shells need the bridge, one needs the tower.
-	survivor("Survivor1", V3.new(-9, 1.2, -12)) -- terminal forecourt (easy)
+	-- Nobody spawns inside a rescue zone: a person who is already standing on the pad or in the
+	-- shelter would be delivered to the tally for free the moment the round starts. Both spawn
+	-- points below are outside the 7.5-stud safe radius and the 6.5-stud pad radius.
+	survivor("Survivor1", V3.new(-13.5, 1.2, -4)) -- terminal forecourt (easy)
 	survivor("Survivor2", V3.new(-33, 1.2, -18)) -- pump house pit (with cell 1)
 	survivor("Survivor3", V3.new(24, 1.4, 27)) -- clinic ward
 	survivor("Survivor4", V3.new(-18, 1.4, 30)) -- workshop
 	survivor("Survivor5", V3.new(33, 7.6, -11.4)) -- apartment 2nd floor (needs stairwell)
 	survivor("Survivor6", V3.new(-2, 1.2, 12)) -- street by the shelter
 	survivor("Survivor7", V3.new(40, 1.6, -1)) -- apartment ground floor
-	survivor("Survivor8", V3.new(0, 16.6, -40)) -- tower platform (lift route or ladder)
+	survivor("Survivor8", V3.new(11, 16.6, -41)) -- tower platform (lift route or ladder)
 survivor("Survivor9", V3.new(-70, 6.6, -8)) -- parking garage first deck (medic)
 survivor("Survivor10", V3.new(56, 1.6, 26)) -- ferry hall waiting room (engineer)
 survivor("Survivor11", V3.new(-22.5, 1.6, -22.5)) -- service cut, behind the collapse
@@ -865,12 +891,14 @@ local project = [[{
       "Modules": {
         "$className": "Folder",
         "CommsService": { "$path": "src/server/Modules/CommsService.luau" },
+        "CrewService": { "$path": "src/server/Modules/CrewService.luau" },
         "DoorService": { "$path": "src/server/Modules/DoorService.luau" },
         "FloodService": { "$path": "src/server/Modules/FloodService.luau" },
         "HazardService": { "$path": "src/server/Modules/HazardService.luau" },
         "InteractService": { "$path": "src/server/Modules/InteractService.luau" },
         "LiftService": { "$path": "src/server/Modules/LiftService.luau" },
         "ObjectiveService": { "$path": "src/server/Modules/ObjectiveService.luau" },
+        "OutfallService": { "$path": "src/server/Modules/OutfallService.luau" },
         "PlayerService": { "$path": "src/server/Modules/PlayerService.luau" },
         "PowerService": { "$path": "src/server/Modules/PowerService.luau" },
         "RescueService": { "$path": "src/server/Modules/RescueService.luau" },

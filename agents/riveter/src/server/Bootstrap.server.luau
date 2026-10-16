@@ -30,6 +30,8 @@ local RouteService = require(Modules:WaitForChild("RouteService"))
 local UpgradeService = require(Modules:WaitForChild("UpgradeService"))
 local CommsService = require(Modules:WaitForChild("CommsService"))
 local SessionService = require(Modules:WaitForChild("SessionService"))
+local CrewService = require(Modules:WaitForChild("CrewService"))
+local OutfallService = require(Modules:WaitForChild("OutfallService"))
 
 local remotes = Net.serverInit()
 
@@ -66,6 +68,8 @@ local ctx: any = {
 	upgrade = UpgradeService,
 	comms = CommsService,
 	session = SessionService,
+	crew = CrewService,
+	outfall = OutfallService,
 	world = WorldService,
 }
 
@@ -197,6 +201,8 @@ local services = {
 	{ name = "Rescue", service = RescueService },
 	{ name = "Lift", service = LiftService },
 	{ name = "Route", service = RouteService },
+	{ name = "Outfall", service = OutfallService },
+	{ name = "Crew", service = CrewService },
 	{ name = "Hazard", service = HazardService },
 	{ name = "Interact", service = InteractService },
 	{ name = "Player", service = PlayerService },
@@ -336,6 +342,25 @@ remotes.RequestModifier.OnServerEvent:Connect(function(player: Player, modifierN
 	ctx.requestModifier(player, modifierName)
 end)
 
+remotes.RequestRole.OnServerEvent:Connect(function(player: Player, roleName: string)
+	if type(roleName) ~= "string" then
+		return
+	end
+	local ok, reason = CrewService.set(player, roleName)
+	if not ok and reason then
+		ctx.notifyPlayer(player, reason, "warn")
+	end
+end)
+
+remotes.RequestAbility.OnServerEvent:Connect(function(player: Player)
+	local ok, reason = CrewService.useAbility(player)
+	if not ok and reason then
+		ctx.notifyPlayer(player, reason, "warn")
+	elseif ok and reason then
+		ctx.notifyPlayer(player, reason, "good")
+	end
+end)
+
 remotes.RequestUpgrade.OnServerEvent:Connect(function(player: Player, upgradeId: string)
 	if type(upgradeId) ~= "string" then
 		return
@@ -363,6 +388,8 @@ remotes.GetSnapshot.OnServerInvoke = function(player: Player)
 		lift = LiftService.snapshot(),
 		route = RouteService.snapshot(),
 		upgrades = UpgradeService.snapshot(),
+		crew = CrewService.snapshot(),
+		outfall = OutfallService.snapshot(),
 		objectives = ObjectiveService.list,
 		scaling = ctx.scaling(),
 		modifier = SessionService.snapshot(),

@@ -340,6 +340,94 @@ check("systems board shows both routes and buys an upgrade through the server", 
 		(function() local n = 0 for _ in pairs(Systems.rows) do n += 1 end return n end)(), fired[1][1])
 end)
 
+check("crew board picks a role, shows the ability cooldown and drives the outfall gauge", function()
+	local hudGui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
+	local remotes = {}
+	for _, name in ipairs({ "RequestRole", "RequestAbility", "RequestUpgrade", "RequestCrank" }) do
+		remotes[name] = netFolder:FindFirstChild(name)
+	end
+	assert(remotes.RequestRole ~= nil and remotes.RequestAbility ~= nil,
+		"the role/ability remotes are missing from the shipped net folder")
+	Systems.Init(hudGui, remotes)
+	local crew = hudGui:FindFirstChild("Crew")
+	assert(crew ~= nil, "the crew board is missing from the HUD")
+	for _, role in ipairs(Config.Crew.Order) do
+		assert(Systems.crewRows[role] ~= nil, "crew row missing: " .. role)
+	end
+
+	Systems.setState({
+		crew = {
+			roles = Config.Crew.Order,
+			players = {
+				[player.Name] = {
+					role = "Rigger", label = "Rigger", blurb = "x",
+					ability = "Rope Line", abilityDesc = "y", cooldown = 65, readyIn = 12, uses = 0,
+				},
+				Teammate = {
+					role = "Medic", label = "Medic", blurb = "x",
+					ability = "Triage", abilityDesc = "y", cooldown = 75, readyIn = 0, uses = 1,
+				},
+			},
+		},
+		outfall = { open = 62, percent = 62, drainPerSecond = 0.0465, opens = 1, drained = 4.2, openSeconds = 14 },
+	})
+
+	-- The player's own role is highlighted and the ability shows its remaining cooldown.
+	-- The player's own row reads as "mine" (green) while the others stay neutral.
+	local picked = Systems.crewRows.Rigger.button.BackgroundColor3
+	local otherRow = Systems.crewRows.Diver.button.BackgroundColor3
+	assert(picked.G > picked.R and picked.G > picked.B,
+		"the player's own role is not highlighted on the board")
+	assert(otherRow.G ~= picked.G or otherRow.R ~= picked.R,
+		"every role row is drawn as if it were the player's own")
+	assert(string.find(Systems.abilityLabel.Text, "Rope Line", 1, true) ~= nil,
+		"the ability name is missing: " .. Systems.abilityLabel.Text)
+	assert(string.find(Systems.abilityLabel.Text, "12s", 1, true) ~= nil,
+		"the ability cooldown is not shown: " .. Systems.abilityLabel.Text)
+	assert(string.find(Systems.crewRows.Rigger.who.Text, player.Name, 1, true) ~= nil,
+		"the board does not name who holds the role: " .. Systems.crewRows.Rigger.who.Text)
+	assert(string.find(Systems.outfallLabel.Text, "62% open", 1, true) ~= nil,
+		"the outfall gauge does not report its opening: " .. Systems.outfallLabel.Text)
+
+	-- Ready again: the button must invite the key press.
+	Systems.setState({ crew = {
+		roles = Config.Crew.Order,
+		players = { [player.Name] = {
+			role = "Rigger", label = "Rigger", blurb = "x",
+			ability = "Rope Line", abilityDesc = "y", cooldown = 65, readyIn = 0, uses = 1,
+		} },
+	} })
+	assert(string.find(Systems.abilityLabel.Text, "READY", 1, true) ~= nil,
+		"a ready ability is not advertised: " .. Systems.abilityLabel.Text)
+
+	-- Clicking a role row and the ability button must each go out over their own remote.
+	local roleCalls, abilityCalls = {}, {}
+	local originalRole, originalAbility = remotes.RequestRole.FireServer, remotes.RequestAbility.FireServer
+	remotes.RequestRole.FireServer = function(_, ...)
+		table.insert(roleCalls, { ... })
+	end
+	remotes.RequestAbility.FireServer = function(_, ...)
+		table.insert(abilityCalls, { ... })
+	end
+	Systems.crewRows.Engineer.button.MouseButton1Click:Fire()
+	Systems.abilityButton.MouseButton1Click:Fire()
+	remotes.RequestRole.FireServer = originalRole
+	remotes.RequestAbility.FireServer = originalAbility
+	assert(#roleCalls == 1 and roleCalls[1][1] == "Engineer",
+		"picking a crew role did not reach the server remote")
+	assert(#abilityCalls == 1, "the ability button did not reach the server remote")
+
+	-- A shut sluice reads as shut, not as "0% open".
+	Systems.setState({ outfall = { open = 0, drainPerSecond = 0, opens = 0, drained = 0 } })
+	assert(string.find(Systems.outfallLabel.Text, "shut", 1, true) ~= nil,
+		"a shut outfall is not described as shut: " .. Systems.outfallLabel.Text)
+	local snap = Systems.snapshot()
+	assert(snap.crew[player.Name] ~= nil and snap.crew[player.Name].role == "Rigger",
+		"the systems snapshot lost the crew board")
+	return true, string.format("4 role rows, %d teammates listed, ability cooldown + READY states, role/ability remotes fired, outfall gauge wired",
+		#Config.Crew.Order)
+end)
+
 check("results screen renders a real round summary and votes for a rematch", function()
 	local remotes = {}
 	for _, name in ipairs({ "RequestRematch", "RoundEvent", "RoundSummary" }) do
@@ -403,6 +491,7 @@ check("ping markers render and expire, and the modifier selector reacts", functi
 		end
 	end
 	assert(remaining == 0, "ping marker did not expire")
+
 	return true, string.format("modifier selector, session line and %d ping marker(s) verified", pingTags)
 end)
 
@@ -465,6 +554,19 @@ check("client bootstrap runs end to end on live payload shapes", function()
 	assert(stateLabel.Text == "SURGE", "banner did not follow the round state: " .. stateLabel.Text)
 	assert(mapGui ~= nil and mapGui:FindFirstChild("Canvas") ~= nil, "the minimap was not created by the real client bootstrap")
 	local skyText = Systems.routeRows.Skybridge.Text
+	-- The off-screen compass arrow: it is created by this bootstrap (Markers.makeArrow(Hud.gui)),
+	-- and its placement is pure Vector2 maths that used to die silently inside a signal handler.
+	local arrow = gui:FindFirstChild("ObjectiveArrow")
+	assert(arrow, "the client bootstrap did not create the objective arrow")
+	Stub.attachCamera(1280, 720)
+	Markers.setObjective({ id = "tower", title = "Reach the tower", status = "active", target = Stub.v3(0, 16.6, -41) })
+	Markers.update()
+	assert(arrow.Visible, "the off-screen objective arrow was not shown")
+	local offset = arrow.Position
+	local radius = math.sqrt((offset.X.Offset - 640) ^ 2 + (offset.Y.Offset - 360) ^ 2)
+	assert(math.abs(radius - 720 * 0.32) < 2,
+		string.format("the arrow did not sit on the viewport ring (radius %.1f, expected %.1f)", radius, 720 * 0.32))
+
 	assert(string.find(skyText, "walkable", 1, true) ~= nil,
 		"the systems board did not follow RouteSync: " .. skyText)
 	assert(Systems.salvageLabel.Text == "Salvage: 58",

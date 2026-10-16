@@ -88,6 +88,8 @@ function Round.resetToLobby()
 	ctx.upgrade.reset()
 	ctx.interact.reset()
 	ctx.doors.reset()
+	ctx.outfall.reset()
+	ctx.crew.reset()
 	setState("Lobby", nil)
 	Round.lobbyCountdown = nil
 	ctx.notify("Lobby open. Step onto the terminal pad to start when ready.", "info")
@@ -115,6 +117,8 @@ local function beginPrep()
 	ctx.interact.reset()
 	ctx.doors.reset()
 	ctx.upgrade.reset()
+	ctx.outfall.reset()
+	ctx.crew.reset()
 	local prep = ctx.scaling().PrepSeconds
 	Round.phaseEndsAt = os.clock() + prep
 	setState("Prep", prep)

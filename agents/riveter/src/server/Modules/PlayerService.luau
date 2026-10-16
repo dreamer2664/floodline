@@ -19,6 +19,8 @@ export type PlayerState = {
 	items: { [string]: number },
 	downed: boolean,
 	downedAt: number?,
+	bleedProgress: number,
+	bleedouts: number,
 	reviveProgress: number,
 	revives: number,
 	damageTaken: number,
@@ -45,6 +47,8 @@ local function state(player: Player): PlayerState
 			items = {},
 			downed = false,
 			downedAt = nil,
+			bleedProgress = 0,
+			bleedouts = 0,
 			reviveProgress = 0,
 			revives = 0,
 			damageTaken = 0,
@@ -70,12 +74,23 @@ end
 function PlayerService.walkSpeed(player: Player): number
 	local entry = state(player)
 	if entry.carrying then
-		return ctx.config.Player.CarryWalkSpeed
+		-- Rigger/Diver hauling passives: carrying is slow on purpose, but a role built around it
+		-- should feel like it.
+		local bonus = ctx.crew and ctx.crew.carryBonus(player) or 0
+		local speed = ctx.config.Player.CarryWalkSpeed + bonus
+		if ctx.crew then
+			speed *= ctx.crew.speedMultiplierAt(entry.lastPosition)
+		end
+		return speed
 	end
 	if entry.sprinting and entry.stamina > 5 then
 		return ctx.config.Player.SprintSpeed
 	end
-	return ctx.config.Player.WalkSpeed
+	local speed = ctx.config.Player.WalkSpeed
+	if ctx.crew then
+		speed *= ctx.crew.speedMultiplierAt(entry.lastPosition)
+	end
+	return speed
 end
 
 function PlayerService.addItem(player: Player, itemType: string)
@@ -142,6 +157,7 @@ function PlayerService.downed(player: Player, cause: string)
 	end
 	entry.downed = true
 	entry.downedAt = os.clock()
+	entry.bleedProgress = 0
 	entry.reviveProgress = 0
 	entry.deaths += 1
 	PlayerService.downedCount += 1
@@ -173,6 +189,7 @@ function PlayerService.revivePlayer(player: Player, byWhom: Player?)
 	end
 	entry.downed = false
 	entry.downedAt = nil
+	entry.bleedProgress = 0
 	entry.reviveProgress = 0
 	entry.stamina = ctx.config.Player.StaminaMax
 	entry.spectating = false
@@ -199,6 +216,36 @@ function PlayerService.revivePlayer(player: Player, byWhom: Player?)
 	return true
 end
 
+-- A downed player who was never reached. They are hauled back to the safe zone and come back
+-- with a penalty: the run continues, but the crew felt it.
+function PlayerService.bleedOut(player: Player)
+	local entry = state(player)
+	if not entry.downed then
+		return
+	end
+	entry.bleedouts += 1
+	entry.bleedProgress = 0
+	entry.downed = false
+	entry.downedAt = nil
+	entry.reviveProgress = 0
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local spawn = ctx.world.spawnLocation or ctx.padPart and ctx.padPart()
+	if humanoid then
+		humanoid.Health = math.max(1, ctx.config.Player.BleedoutRespawnHealth)
+		humanoid.WalkSpeed = PlayerService.walkSpeed(player)
+		humanoid.UseJumpPower = true
+		humanoid.JumpPower = 50
+	end
+	if character and spawn then
+		character:PivotTo(CFrame.new((spawn :: BasePart).Position + Vector3.new(0, 4, 0)))
+	end
+	ctx.notify(`{player.Name} bled out and was dragged back to the safe zone.`, "bad")
+	ctx.sendPlayerEvent(player, "bledout", {})
+	ctx.telemetry.note("player", `{player.Name} bled out`)
+	return true
+end
+
 function PlayerService.progressRevive(player: Player, target: Player, dt: number): boolean
 	local targetState = state(target)
 	if not targetState.downed then
@@ -214,6 +261,9 @@ function PlayerService.progressRevive(player: Player, target: Player, dt: number
 		return false
 	end
 	local speed = ctx.upgrade and ctx.upgrade.reviveSpeed() or 1
+	if ctx.crew then
+		speed *= ctx.crew.reviveMultiplier(player)
+	end
 	if PlayerService.hasItem(player, "Medkit") then
 		speed *= 1.9
 	end
@@ -276,6 +326,15 @@ function PlayerService.update(dt: number)
 				humanoid.JumpPower = 0
 				-- Self-recovery countdown for solo players is handled at down time.
 			end
+			-- Bleeding out. A medic standing over you stretches the clock; nothing else does.
+			local bleedout = ctx.config.Player.DownedBleedoutSeconds
+			if ctx.crew then
+				bleedout *= ctx.crew.bleedoutMultiplier(entry.lastPosition)
+			end
+			entry.bleedProgress = (entry.bleedProgress or 0) + dt / bleedout
+			if entry.bleedProgress >= 1 then
+				PlayerService.bleedOut(player)
+			end
 			continue
 		end
 
@@ -319,6 +378,8 @@ function PlayerService.pushSync()
 			carrying = entry.carrying,
 			items = entry.items,
 			downed = entry.downed,
+			bleedProgress = Util.round(entry.bleedProgress or 0, 2),
+			bleedouts = entry.bleedouts or 0,
 			reviveProgress = Util.round(entry.reviveProgress, 2),
 			score = entry.score,
 			waterSeconds = Util.round(entry.waterSeconds, 0),
@@ -334,6 +395,8 @@ function PlayerService.reset()
 		local entry = state(player)
 		entry.downed = false
 		entry.downedAt = nil
+		entry.bleedProgress = 0
+		entry.bleedouts = 0
 		entry.reviveProgress = 0
 		entry.score = 0
 		entry.deaths = 0
@@ -401,6 +464,13 @@ function PlayerService.Start(context)
 		ctx.round.onPlayerLeft(player)
 		if ctx.playerCount() == 0 then
 			ctx.round.resetToLobby()
+		end
+	end)
+	-- Per-frame bookkeeping: sprint stamina, fall damage, water exposure and the downed bleedout
+	-- clock. This used to be defined but never connected, so none of it ticked.
+	RunService.Heartbeat:Connect(function(dt)
+		if ctx.booted then
+			PlayerService.update(math.min(dt, 0.25))
 		end
 	end)
 end

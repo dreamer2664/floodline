@@ -174,6 +174,16 @@ cf = function(...)
 	local up = v3(0, 1, 0)
 	if #args == 1 and type(args[1]) == "table" then
 		position = args[1]
+	elseif #args == 2 and type(args[1]) == "table" and type(args[2]) == "table" then
+		-- CFrame.new(position, lookDirection). CFrame arithmetic (position + Vector3) and
+		-- CFrame:Lerp both build frames this way; without this branch those results silently
+		-- collapsed to the origin, which made every translated CFrame look like (0, 0, 0).
+		position = args[1]
+		local lookup = args[2]
+		local m = math.sqrt(lookup.X ^ 2 + lookup.Y ^ 2 + lookup.Z ^ 2)
+		if m > 0 then
+			look = v3(lookup.X / m, lookup.Y / m, lookup.Z / m)
+		end
 	elseif #args == 3 then
 		position = v3(args[1], args[2], args[3])
 	elseif #args == 4 and type(args[1]) == "table" then
@@ -295,6 +305,27 @@ Vector2.__index = Vector2
 function Vector2.new(x, y)
 	return setmetatable({ X = x or 0, Y = y or 0 }, Vector2)
 end
+-- Real Roblox Vector2 supports component arithmetic and scaling by a number. Without these the
+-- marker/arrow maths raised "attempt to perform arithmetic (mul) on table and number" and the
+-- client smoke run swallowed it as a signal-handler warning.
+Vector2.__add = function(a, b)
+	return Vector2.new(a.X + b.X, a.Y + b.Y)
+end
+Vector2.__sub = function(a, b)
+	return Vector2.new(a.X - b.X, a.Y - b.Y)
+end
+Vector2.__mul = function(a, b)
+	if type(a) == "number" then
+		return Vector2.new(a * b.X, a * b.Y)
+	end
+	if type(b) == "number" then
+		return Vector2.new(a.X * b, a.Y * b)
+	end
+	return Vector2.new(a.X * b.X, a.Y * b.Y)
+end
+Vector2.__tostring = function(self)
+	return `({self.X}, {self.Y})`
+end
 
 local Enum = setmetatable({}, {
 	__index = function(_, group)
@@ -373,8 +404,10 @@ local function newInstance(className: string)
 		Attributes = {},
 		Value = 0,
 		Size = v3(1, 1, 1),
-		Position = v3(0, 0, 0),
-		CFrame = cf(0, 0, 0),
+		-- One storage slot for the transform: Position and CFrame are derived from it, exactly
+		-- like the engine. Two independent fields let a CFrame write leave a stale Position behind,
+		-- which produced test failures that did not exist in Roblox.
+		_cframe = cf(0, 0, 0),
 		Color = Color3.new(1, 1, 1),
 		Material = Enum.Material.Plastic,
 		Transparency = 0,
@@ -430,7 +463,6 @@ local function newInstance(className: string)
 		table.insert(self._sent, { mode = "invoke", args = table.pack(...) })
 		return nil
 	end
-	self.Position = self.CFrame.Position
 	return self
 end
 
@@ -453,6 +485,13 @@ end
 function newProxy(self)
 	return setmetatable(self, {
 		__index = function(tbl, key)
+			if key == "CFrame" then
+				return rawget(tbl, "_cframe") or cf(0, 0, 0)
+			end
+			if key == "Position" then
+				local frame = rawget(tbl, "_cframe")
+				return frame and frame.Position or v3(0, 0, 0)
+			end
 			local method = instanceMethods[key]
 			if method then
 				return function(this, ...)
@@ -489,15 +528,13 @@ function newProxy(self)
 				return
 			end
 			if key == "Position" then
-				rawset(tbl, "Position", value)
-				if rawget(tbl, "CFrame") then
-					rawget(tbl, "CFrame").Position = value
-				end
+				local frame = rawget(tbl, "_cframe") or cf(0, 0, 0)
+				frame.Position = value
+				rawset(tbl, "_cframe", frame)
 				return
 			end
 			if key == "CFrame" then
-				rawset(tbl, "CFrame", value)
-				rawset(tbl, "Position", value.Position)
+				rawset(tbl, "_cframe", value)
 				return
 			end
 			rawset(tbl, key, value)

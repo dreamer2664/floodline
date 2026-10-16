@@ -1,6 +1,6 @@
 {
-  "checks": 12,
-  "passed": 12,
+  "checks": 13,
+  "passed": 13,
   "failed": 0,
   "note": "Client UI construction and remote reaction only. No rendering, layout, device or latency validation.",
   "results": [
@@ -12,6 +12,7 @@
     { "name": "world markers bind to survivors and the active objective", "ok": true, "detail": "markers=3, objective anchor=true" },
     { "name": "minimap builds the district plan and tracks live state", "ok": true, "detail": "18 map layers, 5 live dots (cells/sockets/objective/survivors), 2 hidden, span line solid, ping fade + M toggle verified" },
     { "name": "systems board shows both routes and buys an upgrade through the server", "ok": true, "detail": "routes Lift/Skybridge/Cut + 6 upgrade rows, purchase of SealKit forwarded to the server, B toggle verified" },
+    { "name": "crew board picks a role, shows the ability cooldown and drives the outfall gauge", "ok": true, "detail": "4 role rows, 4 teammates listed, ability cooldown + READY states, role/ability remotes fired, outfall gauge wired" },
     { "name": "results screen renders a real round summary and votes for a rematch", "ok": true, "detail": "summary rendered, rematch vote path armed" },
     { "name": "ping markers render and expire, and the modifier selector reacts", "ok": true, "detail": "modifier selector, session line and 1 ping marker(s) verified" },
     { "name": "effects respond to submersion, drowning and downed states", "ok": true, "detail": "underwater tint, blur and downed grading all applied" },

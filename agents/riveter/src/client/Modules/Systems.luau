@@ -1,9 +1,13 @@
 --!strict
--- Systems: the routes + salvage board.
+-- Systems: the routes + salvage board, the crew board and the outfall gauge.
 --
 -- Left column, under the objectives: the state of both extraction routes (lift / skybridge /
 -- service cut) and the salvage bench shop. Purchases go straight out over the RequestUpgrade
 -- remote; the server owns the money and the effects.
+--
+-- Beside it sits the crew board: your role, everyone else's role, and the one ability button.
+-- Roles change over RequestRole while the lobby is open; the ability fires RequestAbility and the
+-- server decides whether it is ready.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,7 +27,12 @@ Systems.routeRows = {} :: { [string]: TextLabel }
 Systems.salvageLabel = nil :: TextLabel
 Systems.hintLabel = nil :: TextLabel
 Systems.visible = true
-Systems.state = { route = nil, upgrades = nil, lift = nil }
+Systems.state = { route = nil, upgrades = nil, lift = nil, crew = nil, outfall = nil }
+Systems.crewRows = {} :: { [string]: { button: TextButton, label: TextLabel, who: TextLabel } }
+Systems.crewPanel = nil :: Frame?
+Systems.abilityButton = nil :: TextButton?
+Systems.abilityLabel = nil :: TextLabel?
+Systems.outfallLabel = nil :: TextLabel?
 Systems.lastRouteText = ""
 
 local function new(className: string, props: { [string]: any }, children: { Instance }?): Instance
@@ -158,6 +167,102 @@ function Systems.build(parentGui: Instance, remotes: { [string]: Instance }): Fr
 		upgradeRow(id, Config.Upgrades[id], y, panel)
 		y += 24
 	end
+	-- ---------- crew board ----------
+	local crew = new("Frame", {
+		Name = "Crew",
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.new(0, 296, 1, -658),
+		Size = UDim2.fromOffset(228, 236),
+		BackgroundColor3 = C.Panel,
+		BackgroundTransparency = 0.12,
+		BorderSizePixel = 0,
+		ZIndex = 4,
+	}, {
+		new("UICorner", { CornerRadius = UDim.new(0, 10) }),
+		new("UIStroke", { Color = C.PanelLight, Thickness = 1, Transparency = 0.55, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+	}) :: Frame
+	crew.Parent = parentGui
+	local crewTitle = label("CREW", 13, C.Accent, Config.Ui.FontBold)
+	crewTitle.Name = "Title"
+	crewTitle.Position = UDim2.fromOffset(14, 8)
+	crewTitle.Size = UDim2.fromOffset(120, 18)
+	crewTitle.Parent = crew
+	local crewHint = label("pick a role while the lobby is open", 10, C.TextDim)
+	crewHint.Name = "RoleHint"
+	crewHint.Position = UDim2.fromOffset(14, 24)
+	crewHint.Size = UDim2.fromOffset(200, 14)
+	crewHint.Parent = crew
+	local y = 42
+	for _, role in ipairs(Config.Crew.Order) do
+		local def = Config.Crew[role]
+		local frame = row("Role_" .. role, y, crew)
+		local button = new("TextButton", {
+			Name = "Pick",
+			Text = "",
+			AutoButtonColor = false,
+			BackgroundColor3 = C.PanelLight,
+			BackgroundTransparency = 0.3,
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1),
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, { new("UICorner", { CornerRadius = UDim.new(0, 6) }) }) :: TextButton
+		button.Parent = frame
+		local name = label(def.Label, 12, C.Text, Config.Ui.FontBold)
+		name.Name = "Name"
+		name.Position = UDim2.fromOffset(8, 0)
+		name.Size = UDim2.new(1, -78, 1, 0)
+		name.Parent = button
+		local who = label("", 11, C.TextDim)
+		who.Name = "Who"
+		who.Position = UDim2.fromOffset(-74, 0)
+		who.Size = UDim2.fromOffset(66, 22)
+		who.TextXAlignment = Enum.TextXAlignment.Right
+		who.Parent = button
+		button.MouseButton1Click:Connect(function()
+			local remotes = Systems.remotes
+			if remotes and remotes.RequestRole then
+				remotes.RequestRole:FireServer(role)
+			end
+		end)
+		Systems.crewRows[role] = { button = button, label = name, who = who }
+		y += 24
+	end
+	local ability = new("TextButton", {
+		Name = "Ability",
+		Text = "",
+		AutoButtonColor = false,
+		BackgroundColor3 = C.PanelLight,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, -24, 0, 30),
+		Position = UDim2.fromOffset(12, 148),
+	}, { new("UICorner", { CornerRadius = UDim.new(0, 6) }) }) :: TextButton
+	ability.Parent = crew
+	local abilityLabel = label("ABILITY — V", 12, C.Text, Config.Ui.FontBold)
+	abilityLabel.Name = "Text"
+	abilityLabel.Position = UDim2.fromOffset(8, 0)
+	abilityLabel.Size = UDim2.new(1, -16, 1, 0)
+	abilityLabel.Parent = ability
+	ability.MouseButton1Click:Connect(function()
+		local remotes = Systems.remotes
+		if remotes and remotes.RequestAbility then
+			remotes.RequestAbility:FireServer()
+		end
+	end)
+	local outfall = label("Outfall: shut", 11, C.Water)
+	outfall.Name = "Outfall"
+	outfall.Position = UDim2.fromOffset(14, 184)
+	outfall.Size = UDim2.fromOffset(200, 14)
+	outfall.Parent = crew
+	local crewNote = label("Roles lock when the water starts moving.", 10, C.TextDim)
+	crewNote.Name = "Note"
+	crewNote.Position = UDim2.fromOffset(14, 200)
+	crewNote.Size = UDim2.fromOffset(200, 14)
+	crewNote.Parent = crew
+	Systems.crewPanel = crew
+	Systems.abilityButton = ability
+	Systems.abilityLabel = abilityLabel
+	Systems.outfallLabel = outfall
+
 	Systems.gui = panel
 	return panel
 end
@@ -176,6 +281,7 @@ function Systems.setState(patch: { [string]: any })
 		Systems.state[key] = value
 	end
 	Systems.refresh()
+	Systems.refreshCrew()
 end
 
 function Systems.refresh()
@@ -231,6 +337,56 @@ function Systems.refresh()
 	end
 end
 
+function Systems.refreshCrew()
+	local crew = Systems.state.crew
+	if not (crew and Systems.abilityButton) then
+		return
+	end
+	local mine = crew.players and crew.players[player.Name] or nil
+	local taken = {}
+	for _, entry in pairs(crew.players or {}) do
+		taken[entry.role] = (taken[entry.role] or 0) + 1
+	end
+	for _, role in ipairs(Config.Crew.Order) do
+		local def = Config.Crew[role]
+		local entry = Systems.crewRows[role]
+		if entry then
+			local mineHere = mine and mine.role == role
+			entry.button.BackgroundColor3 = mineHere and Color3.fromRGB(44, 62, 44) or C.PanelLight
+			entry.label.TextColor3 = mineHere and C.Good or C.Text
+			local holders = {}
+			for who, row in pairs(crew.players or {}) do
+				if row.role == role then
+					table.insert(holders, who)
+				end
+			end
+			entry.who.Text = #holders > 0 and table.concat(holders, ", ") or def and "" or ""
+		end
+	end
+	local readyIn = mine and mine.readyIn or 0
+	local abilityName = mine and mine.ability or "Ability"
+	if readyIn > 0 then
+		Systems.abilityButton.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
+		Systems.abilityLabel.Text = `{abilityName} — {readyIn}s`
+		Systems.abilityLabel.TextColor3 = C.TextDim
+	else
+		Systems.abilityButton.BackgroundColor3 = Color3.fromRGB(52, 74, 96)
+		Systems.abilityLabel.Text = `{abilityName} — READY (V)`
+		Systems.abilityLabel.TextColor3 = C.Text
+	end
+	local outfall = Systems.state.outfall
+	if outfall and Systems.outfallLabel then
+		local percent = outfall.open or 0
+		if percent <= 5 then
+			Systems.outfallLabel.Text = "Outfall: shut — crank the wheel on the canal"
+			Systems.outfallLabel.TextColor3 = C.TextDim
+		else
+			Systems.outfallLabel.Text = `Outfall: {percent}% open, draining {outfall.drainPerSecond}/s`
+			Systems.outfallLabel.TextColor3 = C.Water
+		end
+	end
+end
+
 function Systems.toggle(): boolean
 	Systems.visible = not Systems.visible
 	if Systems.gui then
@@ -251,6 +407,16 @@ function Systems.snapshot()
 			end
 			return out
 		end)(),
+		crew = (function()
+			local out: { [string]: { role: string, readyIn: number, ability: string } } = {}
+			local source = Systems.state.crew and Systems.state.crew.players or {}
+			for name, entry in pairs(source) do
+				out[name] = { role = entry.role, readyIn = entry.readyIn, ability = entry.ability }
+			end
+			return out
+		end)(),
+		ability = Systems.abilityLabel and Systems.abilityLabel.Text or "",
+		outfall = Systems.outfallLabel and Systems.outfallLabel.Text or "",
 		rows = (function()
 			local count = 0
 			for _ in pairs(Systems.rows) do

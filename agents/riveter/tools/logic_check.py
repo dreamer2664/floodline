@@ -164,8 +164,12 @@ def main() -> int:
 
     # ---- 16. upgrade catalog is wired end to end ----
     upgrade_src = read(SRC / "server" / "Modules" / "UpgradeService.luau")
-    catalog = re.findall(r"^\t(\w+) = \{\n\t\tLabel", config_text, re.M)
-    order = re.search(r"Order = \{ ([^}]+) \}", config_text)
+    # Scoped to the Upgrades block: Config.Crew also has an Order list, and an unscoped regex
+    # silently started validating the crew roles as if they were salvage upgrades.
+    upgrades_block = re.search(r"Config\.Upgrades = \{(.*?)\n\}\n", config_text, re.S)
+    upgrades_text = upgrades_block.group(1) if upgrades_block else ""
+    catalog = re.findall(r"^\t(\w+) = \{\n\t\tLabel", upgrades_text, re.M)
+    order = re.search(r"Order = \{ ([^}]+) \}", upgrades_text)
     order_ids = re.findall(r'"(\w+)"', order.group(1)) if order else []
     kinds = set(re.findall(r'Kind = "(\w+)"', config_text))
     readers = {
@@ -191,6 +195,60 @@ def main() -> int:
     missing_roles = [r for r in roles if role_hooks.get(r) and role_hooks[r] not in all_src]
     check("survivor role effects are implemented", not missing_roles,
           f"roles={sorted(roles)} missing={missing_roles}")
+
+    # ---- 18. crew roles are complete, wired, and every passive is read somewhere ----
+    crew_block = re.search(r"Config\.Crew = \{(.*?)\n\}\n", config_text, re.S)
+    crew_roles = re.findall(r"\n\t(\w+) = \{\n\t\tLabel = \"(\w+)\"", crew_block.group(1) if crew_block else "")
+    crew_ids = [name for name, _ in crew_roles]
+    crew_order = re.search(r"Order = \{ ([^}]+) \}", crew_block.group(1) if crew_block else "")
+    ordered = re.findall(r'"(\w+)"', crew_order.group(1)) if crew_order else []
+    abilities = re.findall(r"Id = \"(\w+)\"", crew_block.group(1) if crew_block else "")
+    crew_service = read(SRC / "server" / "Modules" / "CrewService.luau")
+    # Every ability must have a handler in the ABILITIES table, and every role an order entry.
+    unhandled = [a for a in abilities if f"ABILITIES.{a}" not in crew_service]
+    check("crew roles and abilities are complete and ordered",
+          ordered == crew_ids and len(abilities) == len(crew_ids) and not unhandled,
+          f"order={ordered} roles={crew_ids} abilities={abilities} unhandled={unhandled}")
+
+    # ---- 19. outfall geometry, prompt and model wiring exist in the place ----
+    outfall_names = re.findall(r'P\(outfall, "(\w+)"', read(ROOT / "tools" / "build_game.luau"))
+    outfall_service = read(SRC / "server" / "Modules" / "OutfallService.luau")
+    missing_outfall = [n for n in ("OutfallGate", "OutfallWheel") if n not in names or n not in outfall_names]
+    check("outfall sluice is baked and adopted by the server",
+          not missing_outfall and "Wheel = \"OutfallWheel\"" in config_text and "Outfall.gate" in outfall_service,
+          f"parts={outfall_names} missing={missing_outfall}")
+
+    # ---- 20. the outfall actually moves the water, and the breaker has a hand reset ----
+    flood_service = read(SRC / "server" / "Modules" / "FloodService.luau")
+    power_service = read(SRC / "server" / "Modules" / "PowerService.luau")
+    check("outfall drain is subtracted from the district water level",
+          "ctx.outfall" in flood_service and "drainRate" in flood_service,
+          "FloodService applies the outfall pull each tick: " + str("ctx.outfall" in flood_service))
+    check("tripped breakers can be reset by hand and re-wire their prompt",
+          "function Power.resetBreaker" in power_service and "Reset Breaker" in power_service
+          and "BreakerResetSeconds" in config_text,
+          "resetBreaker + prompt text + config hold present")
+
+    # ---- 21. the client exposes the crew board and its inputs ----
+    systems_client = read(SRC / "client" / "Modules" / "Systems.luau")
+    client_src = read(SRC / "client" / "Client.client.luau")
+    check("client ships a crew board with role rows, an ability button and the outfall gauge",
+          all(token in systems_client for token in ("Systems.crewRows", "Systems.abilityButton", "Systems.outfallLabel"))
+          and "RequestRole" in client_src and "RequestAbility" in client_src,
+          "crew board widgets + role/ability remotes present in the client")
+
+    # ---- 22. every remote the client uses is declared by Net and created by the server ----
+    declared = set(re.findall(r"\n\t(\w+) = \"Remote(?:Event|Function)\"", read(SRC / "shared" / "Net.luau")))
+    used = set(re.findall(r"remotes\.(\w+)", client_src + read(SRC / "client" / "Modules" / "Systems.luau")))
+    bootstrap = read(SRC / "server" / "Bootstrap.server.luau")
+    server_services = set(re.findall(r'require\(Modules:WaitForChild\("(\w+)"\)\)', bootstrap))
+    world_modules = dict(re.findall(r'\{ name = "(\w+)", service = (\w+) \}', bootstrap))
+    check("client remotes exist and every server service is registered in the lifecycle",
+          used <= declared
+          and world_modules.get("Crew") == "CrewService"
+          and world_modules.get("Outfall") == "OutfallService"
+          and {"CrewService", "OutfallService"} <= server_services,
+          f"undeclared={sorted(used - declared)} lifecycle={world_modules.get('Crew')}/{world_modules.get('Outfall')}")
 
     failures = [c for c in checks if not c["ok"]]
     report = {

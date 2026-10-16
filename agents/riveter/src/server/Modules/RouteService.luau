@@ -241,6 +241,10 @@ function Route.crank(player: Player, seconds: number?): (boolean, string?)
 	end
 	state.lastCrankAt = now
 	local work = seconds or cfg.CrankPromptHold
+	-- The rigger's role passive turns the crank faster; the winch is the rigger's job.
+	if ctx.crew then
+		work *= ctx.crew.crankMultiplier(player)
+	end
 	local engineer = ctx.rescue.engineerNear(player, 26)
 	if engineer then
 		work *= ctx.config.Survivors.Roles.Engineer.HoldSpeedup

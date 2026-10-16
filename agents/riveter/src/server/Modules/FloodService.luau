@@ -92,9 +92,14 @@ local function pumpMitigation(dt: number)
 	return (1 - removal), drain
 end
 
--- Air budget for a dive: player-count scaling plus the Rebreather upgrade.
-function Flood.oxygenTarget(): number
-	return ctx.scaling().OxygenSeconds + (ctx.upgrade and ctx.upgrade.oxygenBonus() or 0)
+-- Air budget for a dive: player-count scaling, the Rebreather upgrade, and the diver's role.
+-- Called with no player (HUD-wide reads) it returns the crew-wide base budget.
+function Flood.oxygenTarget(player: Player?): number
+	local base = ctx.scaling().OxygenSeconds + (ctx.upgrade and ctx.upgrade.oxygenBonus() or 0)
+	if player and ctx.crew then
+		base *= ctx.crew.oxygenMultiplier(player)
+	end
+	return base
 end
 
 function Flood.update(dt: number)
@@ -104,11 +109,18 @@ function Flood.update(dt: number)
 	end
 	local suppression, drain = pumpMitigation(dt)
 	local rise = Flood.riseRate * suppression * dt
+	-- The outfall pulls water out of every sector while somebody is cranking it. It is the one
+	-- water-control tool that costs a body instead of a cell, so it stacks with the pump.
+	local outfall = ctx.outfall and ctx.outfall.drainRate() or 0
+	local pull = outfall * dt
+	if pull > 0 then
+		ctx.outfall.drained = (ctx.outfall.drained or 0) + pull * ctx.config.Water.SectorCount
+	end
 	for index = 1, ctx.config.Water.SectorCount do
-		local next = (Flood.sectorLevels[index] or 0) + rise - drain - drain * 0.5
+		local next = (Flood.sectorLevels[index] or 0) + rise - drain - drain * 0.5 - pull
 		Flood.sectorLevels[index] = math.clamp(next, 0, ctx.config.Water.MaxLevel)
 	end
-	Flood.level = math.clamp(Flood.level + rise - drain, 0, ctx.config.Water.MaxLevel)
+	Flood.level = math.clamp(Flood.level + rise - drain - pull, 0, ctx.config.Water.MaxLevel)
 
 	if os.clock() >= Flood.nextSurgeAt and (Flood.phase == "Rising" or Flood.phase == "Surge") then
 		Flood.nextSurgeAt = os.clock() + (Flood.phase == "Surge" and 16 or 26)
@@ -126,7 +138,7 @@ end
 local function characterOxygen(player: Player): { value: number, submerged: boolean }
 	local entry = Flood.oxygen[player]
 	if not entry then
-		entry = { value = Flood.oxygenTarget(), submerged = false }
+		entry = { value = Flood.oxygenTarget(player), submerged = false }
 		Flood.oxygen[player] = entry
 	end
 	return entry
@@ -156,7 +168,8 @@ function Flood.updateCharacters(dt: number)
 				rootPart.AssemblyLinearVelocity.Z
 			)
 			local baseSpeed = ctx.playerWalkSpeed(player)
-			local speed = baseSpeed * math.clamp(1 - depth * 0.16, 0.35, 1) * ctx.config.Player.WaterDragMultiplier + 4
+			local swim = ctx.crew and ctx.crew.swimMultiplier(player) or 1
+			local speed = baseSpeed * math.clamp(1 - depth * 0.16, 0.35, 1) * ctx.config.Player.WaterDragMultiplier * swim + 4
 			humanoid.WalkSpeed = math.max(4, speed)
 			humanoid.JumpPower = if depth > 3 then 0 else humanoid.JumpPower
 			humanoid.UseJumpPower = true
@@ -180,13 +193,25 @@ function Flood.updateCharacters(dt: number)
 			end
 		else
 			entry.submerged = false
-			entry.value = math.min(Flood.oxygenTarget(), entry.value + ctx.config.Water.OxygenRecoverPerSecond * dt)
+			entry.value = math.min(Flood.oxygenTarget(player), entry.value + ctx.config.Water.OxygenRecoverPerSecond * dt)
 		end
 	end
 end
 
 function Flood.oxygenFor(player: Player): { value: number, submerged: boolean }
 	return characterOxygen(player)
+end
+-- Second Wind: top every diver's air back up (crew ability). Defined here because it needs the
+-- per-character oxygen table that lives just above.
+function Flood.refillOxygen(player: Player?)
+	if player then
+		local entry = characterOxygen(player)
+		entry.value = Flood.oxygenTarget(player)
+		return
+	end
+	for other in pairs(Flood.oxygen) do
+		Flood.oxygen[other].value = Flood.oxygenTarget(other)
+	end
 end
 
 function Flood.snapshot()

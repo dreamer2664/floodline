@@ -38,6 +38,8 @@ local state = {
 	objectives = {},
 	route = nil,
 	upgrades = nil,
+	crew = nil,
+	outfall = nil,
 	myDepth = 0,
 	submerged = false,
 	downed = false,
@@ -153,6 +155,23 @@ local function wireRemotes()
 		end)
 	end
 
+	if remotes.CrewSync then
+		remotes.CrewSync.OnClientEvent:Connect(function(snapshot: any)
+			state.crew = snapshot
+			Systems.setState({ crew = snapshot })
+		end)
+	end
+
+	if remotes.OutfallSync then
+		remotes.OutfallSync.OnClientEvent:Connect(function(snapshot: any)
+			state.outfall = snapshot
+			Systems.setState({ outfall = snapshot })
+			if snapshot.state == "open" then
+				Hud.notify({ text = "The outfall is draining the district.", tone = "good" })
+			end
+		end)
+	end
+
 	if remotes.StateSync then
 		remotes.StateSync.OnClientEvent:Connect(function(payload: any)
 			state.status = payload
@@ -198,6 +217,9 @@ local function wireRemotes()
 				Hud.showCentrePrompt("DOWN — wait for a revive", "bad")
 			elseif kind == "revived" then
 				Hud.notify({ text = "Back on your feet.", tone = "good", personal = true })
+			elseif kind == "bledout" then
+				Hud.notify({ text = "You bled out and woke up at the safe zone. Don't get left again.", tone = "bad", personal = true })
+				Hud.showCentrePrompt("BLED OUT — back at the safe zone", "bad")
 			end
 		end)
 	end
@@ -387,6 +409,35 @@ local function bindInput()
 		end, false, key)
 	end
 
+	-- V spends the crew ability. The server owns the cooldown; this only asks.
+	ContextActionService:BindAction("FloodlineAbility", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			remotes.RequestAbility:FireServer()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.V)
+
+	-- Lobby role picking without the mouse: N cycles your role while the water is still calm.
+	ContextActionService:BindAction("FloodlineCycleRole", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			local order = Config.Crew.Order
+			local current = nil
+			if state.crew and state.crew.players then
+				local mine = state.crew.players[player.Name]
+				current = mine and mine.role or nil
+			end
+			local index = 1
+			for position, key in ipairs(order) do
+				if key == current then
+					index = position
+					break
+				end
+			end
+			remotes.RequestRole:FireServer(order[(index % #order) + 1])
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.N)
+
 	Hud.modifierPrev.MouseButton1Click:Connect(function()
 		remotes.RequestModifier:FireServer(cycleModifier(-1))
 	end)
@@ -431,7 +482,7 @@ local function updateHints(dt: number)
 		table.insert(lines, `[F] {name} ({math.floor(distance)}m)`)
 	end
 	Hud.hintLabel.Text = #lines > 0 and table.concat(lines, "  ·  ")
-		or "E grab/use · F survivor · G lift · Q drop · Shift sprint · 1-4 ping · M map · B systems"
+		or "E grab/use · F survivor · G lift · Q drop · V ability · N role · 1-4 ping · M map · B systems"
 end
 
 local function updateCamera(dt: number)
@@ -489,7 +540,13 @@ task.spawn(function()
 			objectives = snapshot.objectives or {},
 			route = snapshot.route,
 		})
-		Systems.setState({ route = snapshot.route, upgrades = snapshot.upgrades, lift = snapshot.lift })
+		Systems.setState({
+			route = snapshot.route,
+			upgrades = snapshot.upgrades,
+			lift = snapshot.lift,
+			crew = snapshot.crew,
+			outfall = snapshot.outfall,
+		})
 		state.water = snapshot.water
 		state.power = snapshot.power
 		state.survivors = snapshot.survivors
