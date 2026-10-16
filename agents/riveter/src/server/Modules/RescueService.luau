@@ -234,6 +234,9 @@ function Rescue.build(name: string, model: Model)
 		walkPhase = 0,
 		speed = Rescue.speedFor(trait),
 		stuckSeconds = 0,
+		-- Steadied-by-company bookkeeping, read by the HUD roster.
+		grouped = false,
+		groupCount = 0,
 		lastDistance = math.huge,
 		safeSeconds = 0,
 		downedAt = nil,
@@ -490,11 +493,30 @@ end
 
 -- ===================== motion =====================
 
+-- Survivors stand on the district, not on each other: with three people huddled inside a couple of
+-- studs, a body-height ray would find a neighbour's head and walk each of them up the wall. Bodies
+-- and characters are therefore never ground.
+local function groundIgnore(ignore: Model): { Instance }
+	local list: { Instance } = { ignore }
+	local world = ctx.worldFolder
+	local survivors = world and world:FindFirstChild("Survivors")
+	if survivors then
+		table.insert(list, survivors)
+	end
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		if character then
+			table.insert(list, character)
+		end
+	end
+	return list
+end
+
 local function groundHeight(position: Vector3, ignore: Model): number
 	local origin = Vector3.new(position.X, position.Y + 8, position.Z)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { ignore }
+	params.FilterDescendantsInstances = groundIgnore(ignore)
 	params.IgnoreWater = true
 	local result = Workspace:Raycast(origin, Vector3.new(0, -40, 0), params)
 	if result then
@@ -826,6 +848,40 @@ local function kill(survivor: Survivor, cause: string)
 	Rescue.dirty = true
 end
 
+-- How many players are close enough to steady this survivor (downed players do not count: a
+-- casualty on the ground is not reassurance).
+local function rescuersNear(position: Vector3): number
+	local cfg = ctx.config.Survivors
+	local count = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		local state = ctx.playerService and ctx.playerService.getState(player)
+		if state and state.downed then
+			continue
+		end
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root and ((root :: BasePart).Position - position).Magnitude <= cfg.RescuerRadius then
+			count += 1
+		end
+	end
+	return count
+end
+
+-- Other survivors close by: the huddle. Counted over the live roster, excluding this one.
+local function huddleNear(survivor: Survivor): number
+	local cfg = ctx.config.Survivors
+	local count = 0
+	for _, other in ipairs(Rescue.order) do
+		if other == survivor or other.state == "Rescued" or other.state == "Dead" then
+			continue
+		end
+		if (other.position - survivor.position).Magnitude <= cfg.HuddleRadius then
+			count += 1
+		end
+	end
+	return count
+end
+
 local function updateDanger(survivor: Survivor, dt: number)
 	local depth = ctx.flood.depthAt(survivor.position)
 	local submerged = depth > ctx.config.Water.SurvivorPanicDepth
@@ -870,7 +926,37 @@ local function updateDanger(survivor: Survivor, dt: number)
 		end
 
 	else
-		survivor.panic = math.max(0, survivor.panic - ctx.config.Survivors.PanicCalmPerSecond * dt)
+		local cfg = ctx.config.Survivors
+		local calm = cfg.PanicCalmPerSecond
+		local rescuers = rescuersNear(survivor.position)
+		if rescuers > 0 then
+			calm *= cfg.RescuerCalmMultiplier
+			if survivor.state ~= "Downed" and survivor.health < 100 then
+				survivor.health = math.min(100, survivor.health + cfg.RescuerHealPerSecond * dt)
+			end
+		end
+		local huddle = huddleNear(survivor)
+		if huddle > 0 then
+			calm *= cfg.HuddleCalmMultiplier
+			if survivor.state ~= "Downed" and survivor.health < 100 then
+				survivor.health = math.min(100, survivor.health + cfg.HuddleHealPerSecond * dt)
+			end
+		end
+		survivor.panic = math.max(0, survivor.panic - calm * dt)
+		-- Keep the count current, not just the flag: the roster shows how many people are holding
+		-- this one together, and that number changes as a huddle forms and breaks.
+		local grouped = rescuers + huddle
+		survivor.groupCount = grouped
+		if grouped > 0 then
+			if not survivor.grouped then
+				survivor.grouped = true
+				if rescuers > 0 and huddle > 1 then
+					ctx.telemetry.note("group", `{survivor.name} steadied with {grouped} others present`)
+				end
+			end
+		elseif survivor.grouped then
+			survivor.grouped = false
+		end
 	end
 
 	if survivor.state == "Downed" then
@@ -1091,6 +1177,8 @@ function Rescue.snapshot()
 			sheltering = survivor.shelter ~= nil,
 			shelterLabel = survivor.shelterLabel,
 			rescued = survivor.state == "Rescued",
+			grouped = survivor.grouped == true,
+			groupCount = survivor.groupCount or 0,
 		}
 	end
 	return {

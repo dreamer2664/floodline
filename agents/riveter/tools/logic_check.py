@@ -252,6 +252,7 @@ def main() -> int:
 
     # ---- 23. dragging a downed teammate is wired from the prompt to the readout ----
     player_service = read(SRC / "server" / "Modules" / "PlayerService.luau")
+    rescue_service = read(SRC / "server" / "Modules" / "RescueService.luau")
     hud_client = read(SRC / "client" / "Modules" / "Hud.luau")
     bootstrap = read(SRC / "server" / "Bootstrap.server.luau")
     check("a downed teammate can be dragged, and the client shows who has whom",
@@ -288,6 +289,13 @@ def main() -> int:
           and "RequestWinch" in read(SRC / "shared" / "Net.luau")
           and net > 0.01,
           f"parts={winch_names} net climb per hold={net:.3f}")
+    check("survivors stand on the district, never on each other",
+          "groundIgnore" in rescue_service
+          and 'FindFirstChild("Survivors")' in rescue_service
+          and "for _, player in ipairs(Players:GetPlayers()) do" in rescue_service
+          and "params.FilterDescendantsInstances = groundIgnore(ignore)" in rescue_service,
+          "the survivor ground ray ignores every body, so a huddle cannot levitate")
+
     check("a hand-wound car cannot be finished by the electric motor",
           "Lift.manual and Lift.progress < cfg.Winch.StallProgress" in lift_service
           and "Lift.manual and cfg.Winch.DecayPerSecond" in lift_service,

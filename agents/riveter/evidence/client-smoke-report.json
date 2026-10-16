@@ -1,12 +1,13 @@
 {
-  "checks": 14,
-  "passed": 14,
+  "checks": 15,
+  "passed": 15,
   "failed": 0,
   "note": "Client UI construction and remote reaction only. No rendering, layout, device or latency validation.",
   "results": [
     { "name": "client scripts are present in the shipped place", "ok": true, "detail": "modules=true minimap=true systems=true client=true" },
     { "name": "HUD builds its full interface tree", "ok": true, "detail": "8 panels built" },
     { "name": "objective + power + roster panels accept live payloads", "ok": true, "detail": "power rows=5 roster rows=4" },
+    { "name": "the roster says who has company, and how much", "ok": true, "detail": "status='Following +2' roster='2/8 out  ·  need 3  ·  whistle ready  ·  1 steadied'" },
     { "name": "state/water/tick updates drive the banner, gauge and status strip", "ok": true, "detail": "timer=01:32 gauge=0.36 carry='Carrying: power cell'" },
     { "name": "notifications stack and expire", "ok": true, "detail": "notes 1 -> 3, 1 after expiry" },
     { "name": "world markers bind to survivors and the active objective", "ok": true, "detail": "markers=3, objective anchor=true" },

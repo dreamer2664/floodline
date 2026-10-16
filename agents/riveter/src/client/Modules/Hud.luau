@@ -565,7 +565,16 @@ function Hud.updateSurvivors(snapshot: any)
 	local list = snapshot.list or {}
 	local whistle = snapshot.rallyReadyIn or 0
 	local whistleText = whistle > 0 and `  ·  whistle {math.ceil(whistle)}s` or "  ·  whistle ready"
-	Hud.rosterCount.Text = `{snapshot.rescued}/{snapshot.total} out  ·  need {snapshot.required}{whistleText}`
+	-- Company is the point of the huddle rules, so the roster says it out loud: how many are being
+	-- held together right now, and what each survivor is standing next to.
+	local steadied = 0
+	for _, entry in ipairs(list) do
+		if entry.grouped then
+			steadied += 1
+		end
+	end
+	local companyText = steadied > 0 and `  ·  {steadied} steadied` or ""
+	Hud.rosterCount.Text = `{snapshot.rescued}/{snapshot.total} out  ·  need {snapshot.required}{whistleText}{companyText}`
 	for index, entry in ipairs(list) do
 		local row = Hud.rosterRows[index]
 		if not row then
@@ -627,7 +636,9 @@ function Hud.updateSurvivors(snapshot: any)
 			Dead = C.Bad,
 		}
 		dot.BackgroundColor3 = colors[entry.state] or C.TextDim
-		status.Text = entry.state
+		-- "+2" reads as company: rescuers and neighbours holding this survivor steady.
+		local company = (entry.grouped and (entry.groupCount or 0) > 0) and ` +{entry.groupCount}` or ""
+		status.Text = entry.state .. company
 		status.TextColor3 = colors[entry.state] or C.TextDim
 		panic.Size = UDim2.fromScale(math.clamp(entry.panic / 100, 0, 1), 1)
 		panic.BackgroundColor3 = entry.panic > 70 and C.Bad or C.Warn

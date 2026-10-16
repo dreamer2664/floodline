@@ -123,7 +123,7 @@ check("objective + power + roster panels accept live payloads", function()
 	Hud.updateSurvivors({
 		rescued = 2, total = 8, required = 3, lost = 1, dead = 0,
 		list = {
-			{ name = "Survivor1", label = "Mara (duty engineer)", trait = "Worker", state = "Following", health = 88, panic = 42, position = Stub.v3(-9, 1.2, -12) },
+			{ name = "Survivor1", label = "Mara (duty engineer)", trait = "Worker", state = "Following", health = 88, panic = 42, grouped = true, groupCount = 2, position = Stub.v3(-9, 1.2, -12) },
 			{ name = "Survivor2", label = "Tobin (crushed leg)", trait = "Injured", state = "Downed", health = 0, panic = 96, position = Stub.v3(-33, 1.2, -18) },
 			{ name = "Survivor3", label = "Idris (caretaker)", trait = "Elderly", state = "Rescued", health = 100, panic = 0, position = Stub.v3(0, 1, -12) },
 		},
@@ -134,6 +134,17 @@ check("objective + power + roster panels accept live payloads", function()
 	local rosterRows = #roster:FindFirstChild("List"):GetChildren()
 	return powerRows >= 4 and rosterRows >= 3,
 		string.format("power rows=%d roster rows=%d", powerRows, rosterRows)
+end)
+
+check("the roster says who has company, and how much", function()
+	local gui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
+	local roster = gui:FindFirstChild("Roster")
+	local count = roster:FindFirstChild("CountLabel") :: TextLabel
+	local row = roster:FindFirstChild("List"):FindFirstChild("Survivor1") :: Frame
+	assert(row, "the rostered survivor has no row")
+	local status = row:FindFirstChild("Status") :: TextLabel
+	return status.Text == "Following +2" and string.find(count.Text, "1 steadied", 1, true) ~= nil,
+		string.format("status=%q roster=%q", status.Text, count.Text)
 end)
 
 check("state/water/tick updates drive the banner, gauge and status strip", function()

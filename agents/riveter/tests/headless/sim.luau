@@ -1903,6 +1903,117 @@ scenario("the hand winch lifts the car with no power, and slips when nobody turn
 end)
 
 -- ============================================================
+-- Scenario 48: company steadies people — a rescuer beside them, or other survivors together
+-- ============================================================
+-- Panic is the clock that kills survivors, so the ways to slow it down are the real content of the
+-- rescue loop. Both of them are measurable: the same survivor in the same dry spot must calm faster
+-- with a player standing next to them than alone, and faster still with other survivors beside them.
+scenario("a rescuer beside a survivor steadies them, and a group steadies each other", function()
+	freshRound(player)
+	-- Panic is the clock that kills survivors, so the ways to slow it down are the real content of
+	-- the rescue loop. Both of them are measurable: the same survivor in the same dry spot calms
+	-- faster with a player standing beside them than with nobody, faster with other survivors beside
+	-- them than with nobody — and never slower than the crew's own presence next to a friend.
+	local drySpot = V3(-33, 1.6, 18)
+	-- Parked 36 studs away: outside the rescuer radius and the huddle radius. Not a refuge marker
+	-- either; unclaimed survivors climb toward those, so a refuge is the one place calm cannot be
+	-- measured.
+	local awaySpot = V3(-33, 1.6, 54)
+	local nobodyNear = V3(0, 1.6, 60)
+	local function drift(survivor)
+		return (survivor.position - drySpot).Magnitude
+	end
+	-- Hold the district dry while time passes. Survivors who feel water at their feet run for high
+	-- ground, which is correct behaviour and useless for measuring calm.
+	local function wind(seconds: number)
+		local left = seconds
+		while left > 0 do
+			local slice = math.min(0.2, left)
+			Flood.level = 0.05
+			for index = 1, #Flood.sectorLevels do
+				Flood.sectorLevels[index] = 0.05
+			end
+			Stub.advance(slice)
+			left -= slice
+		end
+	end
+	local subject, neighbourA, neighbourB = Rescue.order[1], Rescue.order[2], Rescue.order[3]
+	-- Idle survivors patrol back toward their home position, so home is pinned along with them.
+	local function park(survivor, spot)
+		survivor.homePosition = spot
+		survivor.shelter = nil
+		survivor.leader = nil
+		survivor.state = "Idle"
+		survivor.panic = 50
+		survivor.health = 60
+		Stub.moveSurvivor(survivor, spot)
+	end
+	-- One measurement window: pin everybody, let the pins settle, then read how far panic fell.
+	local function measure(neighbourSpot, heroSpot, seconds: number): (number, number)
+		park(subject, drySpot)
+		park(neighbourA, neighbourSpot)
+		park(neighbourB, neighbourSpot + V3(0, 0, 2))
+		Stub.movePlayer(player, heroSpot)
+		wind(0.5)
+		park(subject, drySpot)
+		subject.panic = 50
+		subject.health = 60
+		local before = subject.panic
+		wind(seconds)
+		return before - subject.panic, drift(subject)
+	end
+
+	-- Nobody at all: the baseline the other two windows are measured against.
+	local aloneDrop, aloneDrift = measure(awaySpot, nobodyNear, 2.5)
+	assertTrue(aloneDrop > 0, "panic did not fall at all with nobody around")
+	assertTrue(aloneDrift < 4, string.format(
+		"the subject walked %.1f studs mid-measurement: this scenario has to measure calm, not footwork",
+		aloneDrift))
+
+	-- A rescuer within arm's reach: same survivor, same spot, much faster calm and some first aid.
+	local rescuerDrop, rescuerDrift = measure(awaySpot, drySpot + V3(0, 0, 4), 2.5)
+	assertTrue(rescuerDrop > aloneDrop * 1.5, string.format(
+		"a rescuer beside them barely helped: %.1f vs %.1f alone", rescuerDrop, aloneDrop))
+	assertTrue(subject.health > 60, string.format(
+		"a rescuer beside them did no first aid (health %.1f)", subject.health))
+	assertTrue(rescuerDrift < 4, string.format(
+		"the subject walked %.1f studs while being steadied by a rescuer", rescuerDrift))
+
+	-- A huddle: two other survivors right there, and nobody playing the hero.
+	local huddleDrop, huddleDrift = measure(drySpot + V3(0, 0, 3), nobodyNear, 2.5)
+	assertTrue(huddleDrop > aloneDrop * 1.2, string.format(
+		"two survivors side by side calmed no faster than one alone: %.1f vs %.1f", huddleDrop, aloneDrop))
+	assertTrue(huddleDrift < 4, string.format(
+		"the subject walked %.1f studs during the huddle measurement", huddleDrift))
+	assertTrue(subject.grouped == true and subject.groupCount >= 2,
+		`the roster does not see the huddle ({tostring(subject.grouped)}/{subject.groupCount})`)
+
+	-- And the flag in the HUD is honest: separate them and the grouping clears.
+	park(neighbourA, awaySpot)
+	park(neighbourB, awaySpot + V3(0, 0, 2))
+	Stub.movePlayer(player, nobodyNear)
+	wind(0.6)
+	assertTrue(subject.grouped == false, "a survivor alone still reports being in a group")
+
+	-- The snapshot the client reads carries it too, so the roster can show it.
+	local snapshot = Rescue.snapshot()
+	local found = false
+	for _, entry in ipairs(snapshot.list) do
+		if entry.name == subject.name then
+			found = true
+			assertTrue(entry.grouped == false, "the snapshot disagrees with the survivor about grouping")
+			assertTrue(entry.panic ~= nil, "the snapshot dropped the panic value")
+			assertTrue(entry.groupCount == 0, "a lone survivor still reports a group count")
+		end
+	end
+	assertTrue(found, "the subject is missing from the rescue snapshot")
+	return true, string.format(
+		"alone %.1f, beside a rescuer %.1f (x%.1f), in a huddle %.1f (x%.1f) over 2.5s windows",
+		aloneDrop, rescuerDrop, rescuerDrop / math.max(aloneDrop, 0.001),
+		huddleDrop, huddleDrop / math.max(aloneDrop, 0.001))
+end)
+
+-- ============================================================
 -- report
 -- ============================================================
 local passed = #results - failures

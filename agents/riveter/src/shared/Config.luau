@@ -6,7 +6,7 @@ local Config = {}
 
 Config.Game = {
 	Name = "FLOODLINE: Last District",
-	Version = "r09",
+	Version = "r10",
 	MaxPlayers = 4,
 	MinPlayersToStart = 1,
 	LobbyAutoStartSeconds = 10,
@@ -247,6 +247,15 @@ Config.Survivors = {
 	PanicGrowthPerSecond = 4.5,
 	PanicCalmPerSecond = 7.0,
 	PanicThreshold = 100,
+	-- The crew is the cure. A rescuer standing beside someone calms them far faster than distance
+	-- does, and people sheltering together keep each other's nerve better than people sheltering
+	-- alone. Both are what turn "escort one survivor at a time" into "hold a group together".
+	RescuerRadius = 12,
+	RescuerCalmMultiplier = 2.1,
+	RescuerHealPerSecond = 1.6,
+	HuddleRadius = 9,
+	HuddleCalmMultiplier = 1.35,
+	HuddleHealPerSecond = 1.1,
 	LostAfterPanicSeconds = 12,
 	-- The whistle: the answer to "I can only ever move one person at a time". Three survivors within
 	-- earshot join you at once, panicking survivors calm down when they hear it, and the cooldown is

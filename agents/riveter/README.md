@@ -23,6 +23,11 @@ Four things decide whether the district survives the round:
 - **The survivors.** Twelve of them, with traits that change how you move them — children refuse to
   wade and must be carried, the deaf must be touched, the injured slow you down. Get a survivor down
   and they bleed out on a clock; nine of them in the water and the round is losing itself.
+- **Company steadies people.** Panic is the clock that kills survivors, and it is not only water that
+  moves it: a rescuer standing within 12 studs calms them 2.1x as fast and patches them up, and other
+  survivors standing together within 9 studs calm each other 1.35x. The roster says who has company
+  (`Idle +2`) and how many are being steadied; the whistle (H) is how you build that company without
+  standing there holding hands.
 
 ## Layout
 
@@ -47,8 +52,8 @@ bash agents/riveter/tools/build_all.sh
 ```
 
 That single command (8 stages) regenerates the district, builds the place, runs every verification
-stage — place structure, Luau compilation, static wiring, 45 headless gameplay scenarios, 14 client
-interface checks — then writes the verification report, the machine-readable validation gate and the
+stage — place structure, Luau compilation, static wiring, 48 headless gameplay scenarios, 28 static
+checks, 15 client interface checks — then writes the verification report, the machine-readable validation gate and the
 source archive. Read `evidence/VERIFICATION.md` before quoting any claim about this build: in
 particular it states plainly that no Roblox Studio session has been run, and the bot playtests in
 `evidence/playtest-report.json` are a lower bound played by straight-line bots on a virtual clock,

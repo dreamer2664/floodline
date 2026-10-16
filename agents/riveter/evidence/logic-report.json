@@ -131,12 +131,17 @@
       "detail": "parts=['WinchDrum', 'WinchHandle', 'WinchPost'] net climb per hold=0.085"
     },
     {
+      "check": "survivors stand on the district, never on each other",
+      "ok": true,
+      "detail": "the survivor ground ray ignores every body, so a huddle cannot levitate"
+    },
+    {
       "check": "a hand-wound car cannot be finished by the electric motor",
       "ok": true,
       "detail": "Moving/Returning honour the manual flag"
     }
   ],
-  "passed": 27,
+  "passed": 28,
   "failed": 0,
   "sourceFiles": {
     "server": [
