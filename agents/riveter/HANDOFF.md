@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-16T15:45:55Z
+- Updated: 2026-10-16T16:13:59Z
 - State: **working**
 - Stage: release
-- Last observed activity: Tag floodline/riveter/r07-a9d07bfbd5fa. Place 919,467 B sha256 a9d07bfbd5fa...; source ZIP 231,699 B / 53 entries; VALIDATION.json gates: 60/60 compiled, 25/25 static wiring, 45/45 headless scenarios, 14/14 client checks, bot playtest 6W/1F/0U over 7 rounds plus a downed-crew drill (casualty downed in 3 m of water at 8s, hauled clear by 10s, revived). New in this revision: a DragTeammate prompt on downed characters, casualty rides the carrier at hauling speed, bleedout window stretches 1.5x while held, Q lets go, HUD bleedout bar + role chip. Two real bugs caught by the new drill: DRAG_SPEED was declared below walkSpeed so every hauling speed update multiplied a nil global, and the first drag bleed factor accelerated bleeding instead of slowing it. Studio runtime still NOT RUN.
-- Latest evidence/artifact: agents/riveter/evidence/r07-publication.json
-- Next concrete action: Keep building: the drill proves the drag loop, so the next pass is survivor pressure (panic deadlines, group escort) and then a Studio session.
+- Last observed activity: Tag floodline/riveter/r08-b14c80d16506. Place 924,195 B sha256 b14c80d16506...; source ZIP 235,680 B / 53 entries; VALIDATION gates 60/60 compiled, 25/25 static wiring, 46/46 headless scenarios, 14/14 client checks, bot playtest 5W/2F/0P/0U over 7 rounds. New: H blows a whistle that gathers up to three unclaimed survivors within 26 studs, calms them and pays 15 salvage each on a 40s cooldown; the roster header carries the whistle timer; every bot round now uses it (2-7 survivors gathered per round). Sim scenario 46 covers gathering, the lobby refusal, the cooldown and downed players. Studio runtime still NOT RUN.
+- Latest evidence/artifact: agents/riveter/evidence/r08-publication.json
+- Next concrete action: Keep building: next is survivor-side pressure (panic deadlines and group escort behaviour) and a Studio pass when one is available.
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -86,4 +86,10 @@
 - Result/discovery: Tag floodline/riveter/r07-a9d07bfbd5fa. Place 919,467 B sha256 a9d07bfbd5fa...; source ZIP 231,699 B / 53 entries; VALIDATION.json gates: 60/60 compiled, 25/25 static wiring, 45/45 headless scenarios, 14/14 client checks, bot playtest 6W/1F/0U over 7 rounds plus a downed-crew drill (casualty downed in 3 m of water at 8s, hauled clear by 10s, revived). New in this revision: a DragTeammate prompt on downed characters, casualty rides the carrier at hauling speed, bleedout window stretches 1.5x while held, Q lets go, HUD bleedout bar + role chip. Two real bugs caught by the new drill: DRAG_SPEED was declared below walkSpeed so every hauling speed update multiplied a nil global, and the first drag bleed factor accelerated bleeding instead of slowing it. Studio runtime still NOT RUN.
 - Evidence: agents/riveter/evidence/r07-publication.json
 - Next: Keep building: the drill proves the drag loop, so the next pass is survivor pressure (panic deadlines, group escort) and then a Studio session.
+
+### 2026-10-16T16:13:59Z — revision
+- Action: Published r08: the rally whistle, plus partial-round reporting in the playtest evidence
+- Result/discovery: Tag floodline/riveter/r08-b14c80d16506. Place 924,195 B sha256 b14c80d16506...; source ZIP 235,680 B / 53 entries; VALIDATION gates 60/60 compiled, 25/25 static wiring, 46/46 headless scenarios, 14/14 client checks, bot playtest 5W/2F/0P/0U over 7 rounds. New: H blows a whistle that gathers up to three unclaimed survivors within 26 studs, calms them and pays 15 salvage each on a 40s cooldown; the roster header carries the whistle timer; every bot round now uses it (2-7 survivors gathered per round). Sim scenario 46 covers gathering, the lobby refusal, the cooldown and downed players. Studio runtime still NOT RUN.
+- Evidence: agents/riveter/evidence/r08-publication.json
+- Next: Keep building: next is survivor-side pressure (panic deadlines and group escort behaviour) and a Studio pass when one is available.
 
