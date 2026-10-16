@@ -85,6 +85,11 @@ function Scoring.buildSummary(outcome: string, reason: string)
 	if ctx.power.consumers.Pump.powered and ctx.power.consumers.Lift.powered then
 		teamScore += ctx.config.Scoring.PowerEfficiencyBonus
 	end
+	-- Route mastery is part of the score: an unused second route is a missed opportunity.
+	local routesOpened = ctx.route and ctx.route.openedRoutes() or {}
+	if #routesOpened > 0 then
+		teamScore += #routesOpened * 40
+	end
 	return {
 		outcome = outcome,
 		reason = reason,
@@ -94,11 +99,15 @@ function Scoring.buildSummary(outcome: string, reason: string)
 		required = ctx.rescue.requiredRescued(),
 		lost = ctx.rescue.lostCount,
 		dead = ctx.rescue.deadCount,
+		recovered = ctx.rescue.recoveredCount,
 		elapsed = Util.round(elapsed, 0),
 		elapsedText = Util.formatTime(elapsed),
 		players = players,
 		waterLevel = Util.round(ctx.flood.level, 2),
 		powerUsed = ctx.power.snapshot(),
+		routes = routesOpened,
+		upgrades = ctx.upgrade and ctx.upgrade.snapshot() or {},
+		cutOpen = ctx.route and not ctx.route.cut.blocked or false,
 		events = ctx.telemetry and ctx.telemetry.recent(24) or {},
 		hazards = ctx.hazard and ctx.hazard.snapshot() or {},
 	}

@@ -19,6 +19,8 @@ local Hud = require(ClientModules:WaitForChild("Hud"))
 local Markers = require(ClientModules:WaitForChild("Markers"))
 local Effects = require(ClientModules:WaitForChild("Effects"))
 local Results = require(ClientModules:WaitForChild("Results"))
+local Minimap = require(ClientModules:WaitForChild("Minimap"))
+local Systems = require(ClientModules:WaitForChild("Systems"))
 
 local player = Players.LocalPlayer
 local remotes = Net.clientInit(25)
@@ -34,6 +36,8 @@ local state = {
 	round = { state = "Lobby", players = 1, phaseIndex = 0 },
 	status = {},
 	objectives = {},
+	route = nil,
+	upgrades = nil,
 	myDepth = 0,
 	submerged = false,
 	downed = false,
@@ -67,6 +71,7 @@ local function wireRemotes()
 		remotes.ObjectiveSync.OnClientEvent:Connect(function(list: { any })
 			state.objectives = list
 			Hud.updateObjectives(list)
+			Minimap.setState({ objectives = list })
 			local active = nil
 			for _, entry in ipairs(list) do
 				if entry.status == "active" and not active then
@@ -81,6 +86,7 @@ local function wireRemotes()
 		remotes.WaterSync.OnClientEvent:Connect(function(snapshot: any)
 			state.water = snapshot
 			Hud.setWater(snapshot)
+			Minimap.setState({ water = snapshot })
 		end)
 	end
 
@@ -88,6 +94,7 @@ local function wireRemotes()
 		remotes.PowerSync.OnClientEvent:Connect(function(snapshot: any)
 			state.power = snapshot
 			Hud.updatePower(snapshot)
+			Minimap.setState({ power = snapshot })
 		end)
 	end
 
@@ -96,6 +103,7 @@ local function wireRemotes()
 			state.survivors = snapshot
 			Hud.updateSurvivors(snapshot)
 			Markers.syncSurvivors(snapshot)
+			Minimap.setState({ survivors = snapshot })
 		end)
 	end
 
@@ -123,9 +131,25 @@ local function wireRemotes()
 	if remotes.LiftSync then
 		remotes.LiftSync.OnClientEvent:Connect(function(snapshot: any)
 			state.lift = snapshot
+			Systems.setState({ lift = snapshot })
 			if snapshot.state == "Stalled" then
 				Hud.showCentrePrompt("Lift stalled — restore power", "bad")
 			end
+		end)
+	end
+
+	if remotes.RouteSync then
+		remotes.RouteSync.OnClientEvent:Connect(function(snapshot: any)
+			state.route = snapshot
+			Systems.setState({ route = snapshot })
+			Minimap.setState({ route = snapshot })
+		end)
+	end
+
+	if remotes.UpgradeSync then
+		remotes.UpgradeSync.OnClientEvent:Connect(function(snapshot: any)
+			state.upgrades = snapshot
+			Systems.setState({ upgrades = snapshot })
 		end)
 	end
 
@@ -144,6 +168,7 @@ local function wireRemotes()
 	if remotes.PingSync then
 		remotes.PingSync.OnClientEvent:Connect(function(payload: any)
 			Markers.addPing(payload)
+			Minimap.addPing(payload)
 			if payload and payload.player ~= player.Name then
 				Hud.notify({ text = `{payload.player} marked {payload.label}`, tone = "info" })
 			end
@@ -332,6 +357,20 @@ local function bindInput()
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.G)
 
+	ContextActionService:BindAction("FloodlineMinimap", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			Minimap.toggle()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.M)
+
+	ContextActionService:BindAction("FloodlineSystems", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			Systems.toggle()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.B)
+
 	Hud.startButton.MouseButton1Click:Connect(function()
 		remotes.RequestStart:FireServer()
 	end)
@@ -392,7 +431,7 @@ local function updateHints(dt: number)
 		table.insert(lines, `[F] {name} ({math.floor(distance)}m)`)
 	end
 	Hud.hintLabel.Text = #lines > 0 and table.concat(lines, "  ·  ")
-		or "E grab/use · F survivor · G lift · Q drop · Shift sprint · 1-4 ping team"
+		or "E grab/use · F survivor · G lift · Q drop · Shift sprint · 1-4 ping · M map · B systems"
 end
 
 local function updateCamera(dt: number)
@@ -406,6 +445,8 @@ end
 
 wireRemotes()
 Hud.Init()
+Minimap.Init(Hud.gui)
+Systems.Init(Hud.gui, remotes)
 Markers.Init()
 Effects.Init(remotes)
 Results.Init(remotes)
@@ -421,6 +462,7 @@ RunService.RenderStepped:Connect(function(dt)
 	state.myDepth = localDepth()
 	Effects.setWater(state.water, state.myDepth, state.submerged, state.downed)
 	Markers.update()
+	Minimap.update()
 	Hud.update()
 	updateHints(dt)
 	updateCamera(dt)
@@ -440,6 +482,14 @@ task.spawn(function()
 		Hud.updateObjectives(snapshot.objectives or {})
 		Hud.setModifier(snapshot.modifier)
 		Hud.setSession(snapshot.session)
+		Minimap.setState({
+			water = snapshot.water,
+			power = snapshot.power,
+			survivors = snapshot.survivors,
+			objectives = snapshot.objectives or {},
+			route = snapshot.route,
+		})
+		Systems.setState({ route = snapshot.route, upgrades = snapshot.upgrades, lift = snapshot.lift })
 		state.water = snapshot.water
 		state.power = snapshot.power
 		state.survivors = snapshot.survivors

@@ -30,6 +30,22 @@ local function config()
 	return ctx.config.Lift
 end
 
+-- Effective travel time / cabin capacity after the Lift Servo upgrade.
+local function travelSeconds(): number
+	local servo = ctx.upgrade and ctx.upgrade.liftServo() or { speed = 1, capacity = 0 }
+	return config().TravelSeconds / servo.speed
+end
+
+local function capacity(): number
+	local servo = ctx.upgrade and ctx.upgrade.liftServo() or { speed = 1, capacity = 0 }
+	return config().Capacity + servo.capacity
+end
+
+-- Called when an upgrade changes the servo mid-round so the snapshot and prompts agree.
+function Lift.refresh()
+	Lift.setDirty()
+end
+
 function Lift.baseCFrame(): CFrame
 	local cfg = config()
 	return CFrame.new(cfg.BasePosition)
@@ -103,11 +119,11 @@ function Lift.load(player: Player?): (boolean, string?)
 	if not Lift.isAtBase() or (Lift.state ~= "Idle" and Lift.state ~= "Boarding") then
 		return false, "The lift must be resting at the safe zone to load."
 	end
-	local capacity = config().Capacity
+	local room = capacity()
 	local boarded = 0
 	local candidates = ctx.rescue.alive()
 	for _, survivor in ipairs(candidates) do
-		if #Lift.passengers >= capacity or boarded >= capacity then
+		if #Lift.passengers >= room or boarded >= room then
 			break
 		end
 		if survivor.boarding or survivor.state == "Following" and survivor.leader ~= player then
@@ -129,7 +145,7 @@ function Lift.load(player: Player?): (boolean, string?)
 end
 
 function Lift.boardSurvivor(survivor): boolean
-	if #Lift.passengers >= config().Capacity then
+	if #Lift.passengers >= capacity() then
 		return false
 	end
 	if survivor.state == "Rescued" or survivor.state == "Dead" then
@@ -138,7 +154,7 @@ function Lift.boardSurvivor(survivor): boolean
 	survivor.boarding = true
 	survivor.state = "Assisting"
 	table.insert(Lift.passengers, survivor)
-	ctx.log(`[Lift] {survivor.name} boarded ({#Lift.passengers}/{config().Capacity})`)
+	ctx.log(`[Lift] {survivor.name} boarded ({#Lift.passengers}/{capacity()})`)
 	Lift.setDirty()
 	return true
 end
@@ -228,7 +244,7 @@ function Lift.update(dt: number)
 
 	if Lift.state == "Moving" then
 		local before = Lift.baseCFrame():Lerp(Lift.topCFrame(), Lift.progress * Lift.progress * (3 - 2 * Lift.progress))
-		Lift.progress = math.min(1, Lift.progress + dt / cfg.TravelSeconds)
+		Lift.progress = math.min(1, Lift.progress + dt / travelSeconds())
 		local eased = Lift.progress * Lift.progress * (3 - 2 * Lift.progress)
 		local after = Lift.baseCFrame():Lerp(Lift.topCFrame(), eased)
 		applyProgress(Lift.progress)
@@ -254,7 +270,7 @@ function Lift.update(dt: number)
 	end
 
 	if Lift.state == "Returning" then
-		Lift.progress = math.max(0, Lift.progress - dt / cfg.TravelSeconds)
+		Lift.progress = math.max(0, Lift.progress - dt / travelSeconds())
 		applyProgress(Lift.progress)
 		if Lift.progress <= 0 then
 			Lift.state = "Idle"
@@ -271,7 +287,7 @@ function Lift.snapshot()
 		state = Lift.state,
 		progress = Util.round(Lift.progress * 100, 0),
 		passengers = #Lift.passengers,
-		capacity = config().Capacity,
+		capacity = capacity(),
 		powered = ctx.power.isPowered("Lift"),
 		atBase = Lift.isAtBase(),
 	}

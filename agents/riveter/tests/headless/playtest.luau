@@ -1,0 +1,687 @@
+--!nocheck
+-- playtest.luau — headless bot playtests of the shipped place.
+--
+-- Bots play real rounds through the same server modules the game runs: they read the objective
+-- board, walk, use proximity prompts, carry cells, escort survivors, crank the skybridge, clear
+-- the service cut, loot crates, buy bench upgrades and call the evacuation. Each run is timed
+-- against the virtual clock, and the rounds are recorded to evidence/playtest-report.json.
+--
+-- What this DOES cover: round pacing (prep -> rise -> surge -> extraction), power triage, escort
+-- throughput, route use, salvage economy, scaling maths and win/fail conditions.
+--
+-- What this does NOT cover: engine physics, human input, latency, rendering, audio, and anything
+-- about how the game FEELS. Bots walk in straight lines at the speed the server sets on the
+-- humanoid, with a 0.5x factor past waist depth as a stand-in for water drag; they never get
+-- stuck on geometry, never fumble a hold and never mistime a surge. Treat the timings as a
+-- lower bound on a competent human crew, not a guarantee.
+--
+-- Run:  lune run agents/riveter/tests/headless/playtest.luau
+
+local fs = require("@lune/fs")
+local process = require("@lune/process")
+
+local Stub = require("./roblox_stub")
+local Harness = require("./harness")
+
+local ROOT = process.cwd
+local AGENT = ROOT .. "/agents/riveter"
+local PLACE = AGENT .. "/releases/FLOODLINE.rbxlx"
+
+print("=== FLOODLINE bot playtests ===")
+Harness.mountPlace(PLACE)
+Harness.boot()
+
+local function module(name: string)
+	local modules = Harness.mounted.ServerScriptService:FindFirstChild("Modules")
+	return Harness.require(modules:FindFirstChild(name))
+end
+
+local Config = Harness.require(Harness.replicated():FindFirstChild("Shared"):FindFirstChild("Config"))
+local Round = module("RoundService")
+local Power = module("PowerService")
+local Flood = module("FloodService")
+local Rescue = module("RescueService")
+local Lift = module("LiftService")
+local Route = module("RouteService")
+local Upgrades = module("UpgradeService")
+local Doors = module("DoorService")
+local Objectives = module("ObjectiveService")
+local PlayerService = module("PlayerService")
+local World = Harness.world()
+local Players = Stub.players()
+
+local v3 = Stub.v3
+
+local function part(name: string)
+	return Harness.findDescendantByName(World, name)
+end
+
+local function clock()
+	return Stub.clock()
+end
+
+-- ===================== bot =====================
+
+local BOT = {}
+BOT.__index = BOT
+
+local TICK = 0.25          -- virtual seconds per policy step
+local REACH = 4.2          -- how close a bot has to be to use something
+local RUN_LIMIT = 900      -- give up on a round after 15 virtual minutes
+local SWIM_FACTOR = 0.55   -- stand-in for water drag (documented above)
+
+-- Salvage priority: keep the pump ahead of the water, then safety, then throughput.
+local UPGRADE_PRIORITY = { "Impeller", "SealKit", "Capacitor", "Rebreather", "FieldHospital", "LiftServo" }
+
+local function horizontal(a, b)
+	return (v3(a.X, 0, a.Z) - v3(b.X, 0, b.Z)).Magnitude
+end
+
+local function newBot(name: string, index: number)
+	local player = Stub.addPlayer(name)
+	local self = setmetatable({
+		name = name,
+		player = player,
+		index = index,
+		log = {},
+		wants = nil,
+		lastAction = "spawn",
+		stuckFor = 0,
+		lastPosition = nil,
+		failures = 0,
+	}, BOT)
+	Stub.spawnCharacter(player, v3(-6 + index * 3, 3, -18))
+	return self
+end
+
+function BOT:note(message: string)
+	table.insert(self.log, { t = math.floor(clock() * 10) / 10, text = message })
+end
+
+function BOT:position()
+	return Stub.characterPosition(self.player)
+end
+
+function BOT:humanoid()
+	local character = self.player.Character
+	return character and character:FindFirstChildOfClass("Humanoid") or nil
+end
+
+function BOT:health()
+	local humanoid = self:humanoid()
+	return humanoid and humanoid.Health or 0
+end
+
+function BOT:depth()
+	return Flood.depthAt(self:position())
+end
+
+function BOT:carryingCell()
+	return Power.cellByHolder(self.player) ~= nil
+end
+
+function BOT:holding()
+	local cell = Power.cellByHolder(self.player)
+	if cell then
+		return `cell {cell.id}`
+	end
+	for _, item in ipairs({ "Fuse", "Radio", "Medkit", "Wrench" }) do
+		if PlayerService.hasItem(self.player, item) then
+			return item
+		end
+	end
+	return "nothing"
+end
+
+-- Walk toward a point. Returns true when the bot is inside `reach`.
+function BOT:walkTo(target: Vector3, dt: number, reach: number?): boolean
+	local here = self:position()
+	local distance = horizontal(here, target)
+	if distance <= (reach or REACH) then
+		self.stuckFor = 0
+		self.lastPosition = here
+		return true
+	end
+	if distance < 0.4 then
+		return true
+	end
+	local speed = PlayerService.walkSpeed(self.player)
+	local depth = self:depth()
+	if depth > 1.0 then
+		speed *= SWIM_FACTOR
+	end
+	local step = math.min(distance, speed * dt)
+	local delta = target - here
+	local flat = v3(delta.X, 0, delta.Z).Unit * step
+	local next_ = here + v3(flat.X, 0, flat.Z)
+	next_ = v3(next_.X, math.max(next_.Y, target.Y), next_.Z)
+	Stub.movePlayer(self.player, next_)
+	-- Stuck detection: a bot that cannot make progress in 6s of trying is logged, not hidden.
+	if self.lastPosition and (next_ - self.lastPosition).Magnitude < 0.05 then
+		self.stuckFor += dt
+	else
+		self.stuckFor = 0
+	end
+	self.lastPosition = next_
+	return false
+end
+
+function BOT:use(targetPart): boolean
+	if not targetPart then
+		return false
+	end
+	if horizontal(self:position(), targetPart.Position) > (REACH + 2.5) then
+		return false
+	end
+	local prompt = Harness.promptOn(targetPart)
+	if not prompt then
+		return false
+	end
+	-- Honour holds the way a human would: stand still for the hold, then trigger.
+	if prompt.HoldDuration and prompt.HoldDuration > 0.35 then
+		Stub.advance(prompt.HoldDuration)
+	end
+	return Harness.trigger(targetPart, self.player)
+end
+
+local function bestSocket()
+	-- Fill the pump first, then the lift, then the winch: water kills the round fastest.
+	for _, key in ipairs({ "Pump", "Lift", "Winch", "Bridge" }) do
+		local socket = Power.sockets[key]
+		if socket and not socket.cellId and not socket.tripped then
+			return key, socket
+		end
+	end
+	return nil, nil
+end
+
+local function nearestFreeCell(from: Vector3)
+	local best, bestDistance = nil, math.huge
+	for _, cell in pairs(Power.cells) do
+		if not cell.destroyed and not cell.holder and not cell.socket then
+			local distance = horizontal(from, cell.part.Position)
+			if distance < bestDistance then
+				best, bestDistance = cell, distance
+			end
+		end
+	end
+	return best, bestDistance
+end
+
+-- Survivors still out there, sorted by distance, minus the ones a teammate is already handling.
+local function escortCandidates(from: Vector3, self_)
+	local list = {}
+	for _, survivor in ipairs(Rescue.order) do
+		if survivor.state ~= "Rescued" and survivor.state ~= "Dead" and survivor.state ~= "Downed" then
+			local claimed = survivor.leader ~= nil and survivor.leader ~= self_.player
+			if not claimed then
+				table.insert(list, { survivor = survivor, distance = horizontal(from, survivor.position) })
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.distance < b.distance
+	end)
+	return list
+end
+
+local function nearestUnlootedCrate(from: Vector3)
+	local best, bestDistance = nil, math.huge
+	for index = 1, 4 do
+		local crate = part(`SupplyCrate_{index}`)
+		if crate and crate:GetAttribute("Looted") ~= true then
+			local distance = horizontal(from, crate.Position)
+			if distance < bestDistance then
+				best, bestDistance = crate, distance
+			end
+		end
+	end
+	return best
+end
+
+local function buySomething(bot): boolean
+	for _, id in ipairs(UPGRADE_PRIORITY) do
+		if Upgrades.canAfford(id) then
+			local ok = Upgrades.purchase(bot.player, id)
+			if ok then
+				bot:note(`bought {id}`)
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- One bot decision. `role` splits the work so a 2+ crew does not all chase the same thing.
+function BOT:step(dt: number)
+	if Round.state == "Results" or Round.state == "Intermission" or Round.state == "Lobby" then
+		return
+	end
+	if PlayerService.getState(self.player).downed then
+		self.lastAction = "downed"
+		return
+	end
+	local targets = self:targets()
+	if not targets then
+		self.lastAction = "idle"
+		return
+	end
+	local goal = targets.goal
+	local arrive = targets.arrive or REACH
+	if not self:walkTo(goal, dt, arrive) then
+		self.lastAction = targets.label
+		return
+	end
+	targets.act(self, dt)
+end
+
+-- Pick the next thing to do. Bots read the same objective board the HUD shows.
+function BOT:targets()
+	local position = self:position()
+	local carrying = self:carryingCell()
+	local conductor = self.index == 1
+	local quotaMet = Rescue.rescuedCount >= Rescue.requiredRescued()
+
+	-- The evac vehicle is inbound: keep working until it is on the pad, then get on it.
+	if Round.radioCalled then
+		local eta = Round.evacEta()
+		if Round.evacArrived() or eta <= 4 then
+			local pad = part("ExtractionPad")
+			return { goal = pad.Position, label = "boarding", arrive = 6, act = function() end }
+		end
+	end
+
+	-- 0. Downed people come first: a survivor bleeding out in the open is a life lost, and a downed
+	--    teammate is four hands lost.
+	for _, other in ipairs(Players:GetPlayers()) do
+		local otherState = other ~= self.player and PlayerService.getState(other) or nil
+		if otherState and otherState.downed then
+			local character = other.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local here = self:position()
+				return { goal = (root :: any).Position, label = `revive {other.Name}`, arrive = 7,
+					act = function(bot, tick)
+						PlayerService.progressRevive(bot.player, other, tick)
+						if not PlayerService.getState(other).downed then
+							bot:note(`revived {other.Name}`)
+						end
+					end }
+			end
+		end
+	end
+	for _, survivor in ipairs(Rescue.order) do
+		if survivor.state == "Downed" then
+			return { goal = survivor.position, label = `pick up {survivor.name}`, arrive = 5,
+				act = function(bot)
+					if Rescue.revive(bot.player, survivor.name) then
+						bot:note(`revived {survivor.name}`)
+					end
+				end }
+		end
+	end
+
+	-- 1. Anyone in the water gets out first.
+	if self:depth() > 1.1 then
+		local dry = part("SafeZone")
+		return { goal = dry.Position + v3(0, 6, 0), label = "leaving water", arrive = 7, act = function() end }
+	end
+
+	-- 2. Cells and sockets: the conductor's job.
+	if conductor then
+		if carrying then
+			local key, socket = bestSocket()
+			if socket then
+				return { goal = socket.part.Position, label = `fit cell into {key}`,
+					act = function(bot)
+						bot:use(socket.part)
+						if not bot:carryingCell() then
+							bot:note(`powered {key}`)
+						end
+					end }
+			end
+		else
+			local cell, distance = nearestFreeCell(position)
+			if cell and distance < 90 then
+				return { goal = cell.part.Position, label = `collect {cell.id}`,
+					act = function(bot)
+						bot:use(cell.part)
+					end }
+			end
+		end
+
+		-- 3. The relay fuse — capacity is what makes the second socket usable.
+		if not Power.relayRepaired then
+			if PlayerService.hasItem(self.player, "Fuse") then
+				local slot = part("RelaySlot")
+				return { goal = slot.Position, label = "fit fuse", act = function(bot)
+					bot:use(slot)
+					if Power.relayRepaired then
+						bot:note("relay repaired (+1 capacity)")
+					end
+				end }
+			end
+			local fuse = part("RelayFuse")
+			if fuse and fuse:GetAttribute("Taken") ~= true then
+				return { goal = fuse.Position, label = "fetch fuse", act = function(bot)
+					bot:use(fuse)
+				end }
+			end
+		end
+
+		-- 4. Call the evacuation once the quota is met (and keep working while it approaches).
+		if quotaMet and not Round.radioCalled then
+			if PlayerService.hasItem(self.player, "Radio") then
+				local console = part("EvacConsole")
+				return { goal = console.Position, label = "call evacuation", act = function(bot)
+					bot:use(console)
+					if Round.radioCalled then
+						bot:note("evacuation called")
+					end
+				end }
+			end
+			local radio = part("Radio")
+			if radio and radio:GetAttribute("Taken") ~= true then
+				return { goal = radio.Position, label = "fetch radio", act = function(bot)
+					bot:use(radio)
+				end }
+			end
+		end
+	end
+
+	-- 5. Survivors. Each bot takes a different one so a crew spreads out instead of stacking up.
+	local candidates = escortCandidates(position, self)
+	if #candidates > 0 then
+		local pick = conductor and 1 or ((self.index - 2) % #candidates) + 1
+		local entry = candidates[pick]
+		local survivor = entry.survivor
+		if survivor.state ~= "Following" or survivor.leader ~= self.player then
+			return { goal = survivor.position, label = `reach {survivor.label or survivor.name}`, arrive = 5,
+				act = function(bot)
+					if survivor.role == "Child" then
+						if Rescue.carry(bot.player, survivor.name) then
+							bot:note(`carrying {survivor.name}`)
+						end
+					else
+						local ok = Rescue.lead(bot.player, survivor.name)
+						if ok then
+							bot:note(`escorting {survivor.name} ({survivor.trait})`)
+						end
+					end
+				end }
+		end
+		local safeZone = part("SafeZone")
+		return { goal = safeZone.Position, label = `escort {survivor.name}`, arrive = 9, act = function() end }
+	end
+
+	-- 6. Salvage: the conductor loots and buys when there is nobody left to fetch.
+	local bench = part("UpgradeBench")
+	if bench then
+		if Upgrades.cratesOpened < 4 then
+			local crate = nearestUnlootedCrate(position)
+			if crate then
+				return { goal = crate.Position, label = "loot crate", act = function(bot)
+					bot:use(crate)
+				end }
+			end
+		end
+		if Upgrades.salvage >= 20 then
+			return { goal = bench.Position, label = "bench", act = function(bot)
+				buySomething(bot)
+			end }
+		end
+	end
+
+	-- 7. Nothing pressing: hold the pad.
+	local pad = part("ExtractionPad")
+	return { goal = pad.Position, label = "wait at the pad", arrive = 6, act = function() end }
+end
+
+-- ===================== run =====================
+
+local runs = {}
+local limitations = {
+	"No engine physics: bots teleport in straight lines at the server-set walk speed (0.5x past waist depth).",
+	"No client input latency, no camera, no fumbling a hold, no missed prompts.",
+	"Bots never get stuck on props, never stagger on ramps and never collide with each other.",
+	"Rendering, audio and framerate are not exercised at all.",
+}
+
+local function runRound(crew: number, modifier: string)
+	local bots = {}
+	for index = 1, crew do
+		table.insert(bots, newBot(`Bot{index}`, index))
+	end
+	local lead = bots[1]
+
+	Round.resetToLobby()
+	local okModifier = Session_setModifier(modifier)
+	Round.requestStart(lead.player)
+	local started = clock()
+	local record = {
+		crew = crew,
+		modifier = modifier,
+		startedAt = 0,
+		outcome = "unresolved",
+		reason = nil,
+		grade = nil,
+		score = 0,
+		elapsedSeconds = 0,
+		rescued = 0,
+		required = Rescue.requiredRescued(),
+		lost = 0,
+		dead = 0,
+		cellsDocked = 0,
+		routes = {},
+		upgrades = {},
+		salvage = 0,
+		firstPowerAt = nil,
+		quotaAt = nil,
+		evacuationAt = nil,
+		padAt = nil,
+		waterPeak = 0,
+		playerDowns = 0,
+		waterCurve = {},
+		log = {},
+		modifierApplied = okModifier,
+	}
+
+	local lastSample = 0
+	local firstPowerSeen = false
+	local quotaSeen = false
+	local padSeen = false
+	local guard = 0
+
+	while clock() - started < RUN_LIMIT do
+		guard += 1
+		if guard > 200000 then
+			break
+		end
+		for _, bot in ipairs(bots) do
+			bot:step(TICK)
+		end
+		Stub.advance(TICK)
+		local elapsed = clock() - started
+
+		if not firstPowerSeen and (Power.isPowered("Pump") or Power.isPowered("Lift")) then
+			firstPowerSeen = true
+			record.firstPowerAt = math.floor(elapsed * 10) / 10
+		end
+		if not quotaSeen and Rescue.rescuedCount >= Rescue.requiredRescued() then
+			quotaSeen = true
+			record.quotaAt = math.floor(elapsed * 10) / 10
+		end
+		if not padSeen and Round.radioCalled then
+			padSeen = true
+			record.evacuationAt = math.floor(elapsed * 10) / 10
+		end
+		record.waterPeak = math.max(record.waterPeak, Flood.level)
+		record.playerDowns = PlayerService.downedCount
+		if elapsed - lastSample >= 20 then
+			lastSample = elapsed
+			table.insert(record.waterCurve, { t = math.floor(elapsed), level = math.floor(Flood.level * 100) / 100 })
+		end
+		if Round.state == "Results" or Round.state == "Intermission" then
+			record.padAt = math.floor(elapsed * 10) / 10
+			break
+		end
+	end
+
+	local resolved = (Round.state == "Results" or Round.state == "Intermission") and Round.lastOutcome ~= nil
+	local summary = resolved and Round.lastOutcome or nil
+	record.elapsedSeconds = math.floor((clock() - started) * 10) / 10
+	record.recovered = Rescue.recoveredCount
+	if summary then
+		record.outcome = summary.outcome
+		record.reason = summary.reason
+		record.grade = summary.grade
+		record.score = summary.teamScore
+		record.rescued = summary.rescued
+		record.required = summary.required
+		record.lost = summary.lost
+		record.dead = summary.dead
+		record.recovered = summary.recovered or record.recovered
+		record.routes = summary.routes or {}
+		local ownedList = {}
+		for id in pairs(Upgrades.purchased) do
+			table.insert(ownedList, id)
+		end
+		table.sort(ownedList)
+		record.upgrades = ownedList
+		record.salvage = summary.upgrades and summary.upgrades.salvage or 0
+	else
+		record.reason = `still in {Round.state} after {math.floor(record.elapsedSeconds)}s`
+		record.rescued = Rescue.rescuedCount
+		record.lost = Rescue.lostCount
+		record.dead = Rescue.deadCount
+		record.routes = Route.openedRoutes()
+		record.salvage = math.floor(Upgrades.salvage)
+		local owned = {}
+		for id in pairs(Upgrades.purchased) do
+			table.insert(owned, id)
+		end
+		record.upgrades = owned
+	end
+	for _, cell in pairs(Power.cells) do
+		if cell.socket then
+			record.cellsDocked += 1
+		end
+	end
+	if record.waterCurve[#record.waterCurve] == nil or record.waterCurve[#record.waterCurve].t ~= math.floor(record.elapsedSeconds) then
+		table.insert(record.waterCurve, { t = math.floor(record.elapsedSeconds), level = math.floor(Flood.level * 100) / 100 })
+	end
+	-- The lead bot's story is the most useful debugging artefact.
+	record.log = lead.log
+	record.botLogs = {}
+	for _, bot in ipairs(bots) do
+		table.insert(record.botLogs, { name = bot.name, steps = #bot.log, lastAction = bot.lastAction, stuckFor = bot.stuckFor })
+	end
+
+	for _, bot in ipairs(bots) do
+		Stub.removePlayer(bot.player)
+	end
+	Round.resetToLobby()
+	return record
+end
+
+-- The harness exposes SessionService through the server module tree.
+local Session = module("SessionService")
+function Session_setModifier(key: string): boolean
+	return Session.setModifier(key)
+end
+
+local plan = {
+	{ crew = 1, modifier = "Calm" },
+	{ crew = 1, modifier = "Standard" },
+	{ crew = 1, modifier = "Storm" },
+	{ crew = 2, modifier = "Standard" },
+	{ crew = 2, modifier = "Storm" },
+	{ crew = 4, modifier = "Standard" },
+	{ crew = 4, modifier = "Catastrophe" },
+}
+
+for _, entry in ipairs(plan) do
+	local record = runRound(entry.crew, entry.modifier)
+	table.insert(runs, record)
+	print(string.format("[%s] crew=%d %-12s %-25s %5.1fs rescued=%d/%d lost=%d routes=%s score=%d grade=%s",
+		string.upper(record.outcome), record.crew, record.modifier, record.reason or "",
+		record.elapsedSeconds, record.rescued, record.required, record.lost,
+		#record.routes > 0 and table.concat(record.routes, "+") or "-", record.score, tostring(record.grade)))
+end
+
+-- ===================== report =====================
+
+local wins, fails, unresolved = 0, 0, 0
+local gradeCount = {}
+for _, record in ipairs(runs) do
+	if record.outcome == "win" then
+		wins += 1
+	elseif record.outcome == "fail" then
+		fails += 1
+	else
+		unresolved += 1
+	end
+	gradeCount[record.grade or "-"] = (gradeCount[record.grade or "-"] or 0) + 1
+end
+
+-- A tiny JSON encoder: the report is a plain table so nothing can drift out of shape.
+local function encode(value: any, indent: string): string
+	local kind = type(value)
+	if kind == "number" then
+		if value ~= value or value == math.huge or value == -math.huge then
+			return "null"
+		end
+		return tostring(math.floor(value * 1000 + 0.5) / 1000)
+	elseif kind == "string" then
+		return `"{value:gsub('"', "'"):gsub("\n", " ")}"`
+	elseif kind == "boolean" then
+		return tostring(value)
+	elseif kind ~= "table" then
+		return "null"
+	end
+	local isArray = true
+	local count = 0
+	for key in pairs(value) do
+		count += 1
+		if type(key) ~= "number" then
+			isArray = false
+		end
+	end
+	local inner = indent .. "  "
+	local parts = {}
+	if isArray then
+		for _, item in ipairs(value) do
+			table.insert(parts, inner .. encode(item, inner))
+		end
+		if #parts == 0 then
+			return "[]"
+		end
+		return "[\n" .. table.concat(parts, ",\n") .. "\n" .. indent .. "]"
+	end
+	local keys = {}
+	for key in pairs(value) do
+		table.insert(keys, key)
+	end
+	table.sort(keys)
+	for _, key in ipairs(keys) do
+		table.insert(parts, inner .. `"{key}": ` .. encode(value[key], inner))
+	end
+	return "{\n" .. table.concat(parts, ",\n") .. "\n" .. indent .. "}"
+end
+
+local report = {
+	runs = #runs,
+	wins = wins,
+	fails = fails,
+	unresolved = unresolved,
+	note = "Bots play the shipped server modules on a virtual clock. Timings are a lower bound for a competent crew; engine physics, input and rendering are NOT exercised.",
+	limitations = limitations,
+	results = runs,
+}
+for _, record in ipairs(report.results) do
+	record.botLogs = nil -- the lead bot's log is the one that matters
+end
+
+fs.writeFile(AGENT .. "/evidence/playtest-report.json", encode(report, "") .. "\n")
+print(string.format("\n%d wins / %d fails / %d unresolved across %d bot rounds", wins, fails, unresolved, #runs))
+print(`report: agents/riveter/evidence/playtest-report.json`)

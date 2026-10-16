@@ -52,7 +52,7 @@ def main() -> int:
           "missing: " + ", ".join(missing) if missing else f"{len(required_geometry)} named hooks present in the place")
 
     # ---- 2. every Socket_* in the place has a matching consumer in Config ----
-    consumers = set(re.findall(r"^\s{2}(\w+) = \{\n\s+Label", read(SRC / "shared" / "Config.luau"), re.M))
+    consumers = set(re.findall(r"^\s{2}(\w+) = \{\n\s+Label = [^\n]+\n\s+Load = ", read(SRC / "shared" / "Config.luau"), re.M))
     sockets = sorted(k for k in names if k.startswith("Socket_"))
     socket_consumers = {k.split("_", 1)[1] for k in sockets}
     check("every socket maps to a configured consumer", socket_consumers <= consumers,
@@ -93,15 +93,16 @@ def main() -> int:
     # ---- 7. survivors have a prompt + humanoid, one per configured survivor ----
     survivor_models = [k for k in names if re.fullmatch(r"Survivor\d+", k)]
     survivor_prompts = prompt_parents.get("Part:HumanoidRootPart", 0)
-    check("eight survivors with interaction prompts",
-          len(survivor_models) == 8 and survivor_prompts == 8,
-          f"models={len(survivor_models)} survivorPrompts={survivor_prompts} (all prompts={structure['prompts']})")
+    survivor_total = int(re.search(r"Config\.Survivors = \{\n\tTotal = (\d+)", read(SRC / "shared" / "Config.luau")).group(1))
+    check("survivor rigs and prompts match Config.Survivors.Total",
+          len(survivor_models) == survivor_total and survivor_prompts == survivor_total,
+          f"models={len(survivor_models)} survivorPrompts={survivor_prompts} config={survivor_total} (all prompts={structure['prompts']})")
 
     # ---- 8. lift cabin has 4 seats and a platform ----
     seats = len([k for k in names if k.startswith("LiftSeat")])
     check("lift cabin has four seats", seats == 4 and "EvacLift" in names, f"seats={seats}")
 
-    # ---- 9. power cells: three, matching Config.Power.CellCount ----
+    # ---- 9. power cells match Config.Power.CellCount ----
     cells = len([k for k in names if re.fullmatch(r"Cell\d+", k)])
     cell_count = int(re.search(r"CellCount = (\d+)", read(SRC / "shared" / "Config.luau")).group(1))
     check("power cell count matches config", cells == cell_count, f"geometry={cells} config={cell_count}")
@@ -127,6 +128,69 @@ def main() -> int:
     external_sounds = re.findall(r'"rbxassetid://[^"]+"', all_src)
     check("audio uses only bundled engine sounds", not external_sounds,
           f"external={external_sounds}" if external_sounds else "only rbxasset:// engine sounds")
+
+    # ---- 13. skybridge span geometry: decks, rails, cranks, and matching joints ----
+    decks = sorted(k for k in names if re.fullmatch(r"BridgeDeck_[A-D]", k))
+    rails = [k for k in names if k.startswith("BridgeRail_")]
+    cranks = [k for k in names if k.startswith("BridgeCrank_") and not k.startswith("BridgeCrankBase")]
+    config_text = read(SRC / "shared" / "Config.luau")
+    joint = re.search(r"NearJoint = Vector3\.new\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)", config_text)
+    deck_positions = [structure["partPositions"][k] for k in decks] if "partPositions" in structure else []
+    joints_ok = True
+    detail = f"decks={decks} rails={len(rails)} cranks={cranks}"
+    if joint and deck_positions:
+        near = tuple(float(joint.group(i)) for i in (1, 2, 3))
+        closest = min(deck_positions, key=lambda p: (p[0] - near[0]) ** 2 + (p[1] - near[1]) ** 2 + (p[2] - near[2]) ** 2)
+        distance = sum((closest[i] - near[i]) ** 2 for i in range(3)) ** 0.5
+        joints_ok = distance < 6.5
+        detail += f" nearest deck to NearJoint={round(distance, 2)} studs"
+    check("skybridge span is baked in the place",
+          len(decks) == 4 and len(rails) >= 8 and len(cranks) == 2 and joints_ok, detail)
+
+    # ---- 14. second-route content: cut, barricade, bench, crates ----
+    route_parts = ["TunnelBarricade", "UpgradeBench", "ServiceCut", "ParkingGarage", "FerryTerminal", "Skybridge"]
+    crates = sorted(k for k in names if re.fullmatch(r"SupplyCrate_\d", k))
+    missing_route = [k for k in route_parts if k not in names]
+    check("second-route geometry is present",
+          not missing_route and len(crates) == 4,
+          f"missing={missing_route} crates={crates}")
+
+    # ---- 15. new landmarks are registered in WorldService zones ----
+    world_src = read(SRC / "server" / "Modules" / "WorldService.luau")
+    zone_names = set(re.findall(r'\{ name = "(\w+)"', world_src))
+    expected_zones = {"ParkingGarage", "FerryTerminal", "ServiceCut"}
+    check("new landmarks registered as world zones", expected_zones <= zone_names,
+          f"zones={sorted(zone_names)}")
+
+    # ---- 16. upgrade catalog is wired end to end ----
+    upgrade_src = read(SRC / "server" / "Modules" / "UpgradeService.luau")
+    catalog = re.findall(r"^\t(\w+) = \{\n\t\tLabel", config_text, re.M)
+    order = re.search(r"Order = \{ ([^}]+) \}", config_text)
+    order_ids = re.findall(r'"(\w+)"', order.group(1)) if order else []
+    kinds = set(re.findall(r'Kind = "(\w+)"', config_text))
+    readers = {
+        "flood": "floodMultiplier",
+        "oxygen": "oxygenBonus",
+        "capacity": "capacityBonus",
+        "seal": "sealMultiplier",
+        "revive": "reviveSpeed",
+        "lift": "liftServo",
+    }
+    unread = [k for k in kinds if readers.get(k) and readers[k] not in all_src]
+    check("upgrade catalog is complete and consumed",
+          len(order_ids) == 6 and set(order_ids) <= set(catalog) and not unread,
+          f"order={order_ids} unreadEffects={unread}")
+
+    # ---- 17. survivor roles have effects implemented ----
+    roles = set(re.findall(r'Role = "(\w+)"', config_text))
+    role_hooks = {
+        "Medic": "medicAura",
+        "Engineer": "engineerNear",
+        "Child": "MaxWadeDepth",
+    }
+    missing_roles = [r for r in roles if role_hooks.get(r) and role_hooks[r] not in all_src]
+    check("survivor role effects are implemented", not missing_roles,
+          f"roles={sorted(roles)} missing={missing_roles}")
 
     failures = [c for c in checks if not c["ok"]]
     report = {

@@ -77,15 +77,24 @@ function Flood.applyVolumes()
 end
 
 -- Pump mitigation: a powered pump suppresses the rise and slowly drains the low sector.
+-- The Pump Impeller upgrade raises how much of the rise the pump removes (capped so the
+-- flood never becomes free).
 local function pumpMitigation(dt: number)
 	if not ctx.power.isPowered("Pump") then
 		return 1, 0
 	end
+	local multiplier = ctx.upgrade and ctx.upgrade.floodMultiplier() or 1
+	local removal = math.min(0.9, ctx.config.Water.PumpDraw * multiplier)
 	local drain = 0
 	if Flood.level > 1.5 then
-		drain = ctx.config.Water.PumpDrainPerSecond * dt
+		drain = ctx.config.Water.PumpDrainPerSecond * multiplier * dt
 	end
-	return (1 - ctx.config.Water.PumpDraw), drain
+	return (1 - removal), drain
+end
+
+-- Air budget for a dive: player-count scaling plus the Rebreather upgrade.
+function Flood.oxygenTarget(): number
+	return ctx.scaling().OxygenSeconds + (ctx.upgrade and ctx.upgrade.oxygenBonus() or 0)
 end
 
 function Flood.update(dt: number)
@@ -117,7 +126,7 @@ end
 local function characterOxygen(player: Player): { value: number, submerged: boolean }
 	local entry = Flood.oxygen[player]
 	if not entry then
-		entry = { value = ctx.scaling().OxygenSeconds, submerged = false }
+		entry = { value = Flood.oxygenTarget(), submerged = false }
 		Flood.oxygen[player] = entry
 	end
 	return entry
@@ -171,7 +180,7 @@ function Flood.updateCharacters(dt: number)
 			end
 		else
 			entry.submerged = false
-			entry.value = math.min(ctx.scaling().OxygenSeconds, entry.value + ctx.config.Water.OxygenRecoverPerSecond * dt)
+			entry.value = math.min(Flood.oxygenTarget(), entry.value + ctx.config.Water.OxygenRecoverPerSecond * dt)
 		end
 	end
 end

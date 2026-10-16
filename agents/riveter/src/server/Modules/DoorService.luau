@@ -27,6 +27,14 @@ Doors.closedZones = {} :: { [string]: boolean }
 local ctx
 local STEP = math.rad(1)
 
+-- Re-apply every sealed zone after the Seal Kit upgrade lands.
+function Doors.refreshSeals()
+	local strength = ctx.upgrade and ctx.upgrade.sealMultiplier() or 1
+	for zoneName, closed in pairs(Doors.closedZones) do
+		ctx.world.setSealed(zoneName, closed, strength)
+	end
+end
+
 function Doors.isZoneSealed(zoneName: string): boolean
 	return Doors.closedZones[zoneName] == true
 end
@@ -56,7 +64,8 @@ local function apply(door: Door)
 		end
 	end
 	Doors.closedZones[zoneName] = anyClosed
-	ctx.world.setSealed(door.zone, anyClosed)
+	local strength = ctx.upgrade and ctx.upgrade.sealMultiplier() or 1
+	ctx.world.setSealed(door.zone, anyClosed, strength)
 end
 
 function Doors.set(door: Door, closed: boolean, instant: boolean?)
@@ -116,7 +125,10 @@ local function discover()
 	for _, descendant in ipairs(world:GetDescendants()) do
 		if descendant:IsA("BasePart") and string.sub(descendant.Name, 1, 5) == "Door_" then
 			local zoneName = string.sub(descendant.Name, 6)
-			local hingePosition = descendant.Position - Vector3.new(descendant.Size.X * 0.5, 0, 0)
+			-- The hinge sits on the door's short edge: X-facing doors hinge on -X, Z-facing on -Z.
+			local size = descendant.Size
+			local hingeOffset = (size.Z > size.X) and Vector3.new(0, 0, size.Z * 0.5) or Vector3.new(size.X * 0.5, 0, 0)
+			local hingePosition = descendant.Position - hingeOffset
 			local door: Door = {
 				part = descendant,
 				zone = zoneName,

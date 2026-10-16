@@ -42,6 +42,11 @@ export type Survivor = {
 	downedAt: number?,
 	carriedBy: Player?,
 	extractionRoute: string,
+	role: string?,
+	roleNote: string?,
+	refusedAt: number?,
+	routeQueue: { Vector3 }?,
+	routeGoal: Vector3?,
 	boarding: boolean,
 	rescuedAt: number?,
 	notes: { string },
@@ -55,6 +60,7 @@ Rescue.order = {} :: { Survivor }
 Rescue.rescuedCount = 0
 Rescue.lostCount = 0
 Rescue.deadCount = 0
+Rescue.recoveredCount = 0
 Rescue.dirty = true
 Rescue.lastSnapshots = {} :: { [string]: any }
 
@@ -71,6 +77,10 @@ local TRAITS = {
 	Survivor6 = "Dog",
 	Survivor7 = "Injured",
 	Survivor8 = "Worker",
+	Survivor9 = "Medic",
+	Survivor10 = "Engineer",
+	Survivor11 = "Injured",
+	Survivor12 = "Worker",
 }
 
 local NAMES = {
@@ -82,6 +92,10 @@ local NAMES = {
 	Survivor6 = "Kesh (search dog)",
 	Survivor7 = "Juno (firefighter)",
 	Survivor8 = "Alik (pump hand)",
+	Survivor9 = "Sana (paramedic)",
+	Survivor10 = "Dov (plant engineer)",
+	Survivor11 = "Bram (pipefitter)",
+	Survivor12 = "Nika (dockhand)",
 }
 
 local RX = 0.42
@@ -116,6 +130,50 @@ function Rescue.speedFor(trait: string): number
 	local factor = def and def.Speed or 1
 	local base = ctx.config.Survivors.FollowSpeed.Base
 	return base * factor
+end
+
+-- Is a survivor with this role currently following this player?
+function Rescue.followingRole(player: Player, role: string)
+	for _, survivor in ipairs(Rescue.order) do
+		if survivor.leader == player and survivor.state == "Following" and survivor.role == role then
+			return survivor
+		end
+	end
+	return nil
+end
+
+-- The engineer turns cranks and clears debris faster while they are with you.
+function Rescue.engineerNear(player: Player, radius: number?): string?
+	local engineer = Rescue.followingRole(player, "Engineer")
+	if not engineer then
+		return nil
+	end
+	if radius then
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root and ((root :: BasePart).Position - engineer.position).Magnitude > radius then
+			return nil
+		end
+	end
+	return NAMES[engineer.name] or engineer.name
+end
+
+-- Medic field aura: a following medic patches their leader up, slowly.
+function Rescue.medicAura(player: Player, dt: number)
+	local medic = Rescue.followingRole(player, "Medic")
+	if not medic then
+		return
+	end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+	local def = ctx.config.Survivors.Roles.Medic
+	if humanoid.Health >= def.HealCeiling then
+		return
+	end
+	humanoid.Health = math.min(def.HealCeiling, humanoid.Health + def.HealPerSecond * dt)
 end
 
 local function promptFor(model: Model): ProximityPrompt?
@@ -178,6 +236,11 @@ function Rescue.build(name: string, model: Model)
 		downedAt = nil,
 		carriedBy = nil,
 		extractionRoute = "safezone",
+		role = (ctx.config.Survivors.Traits[trait] or {}).Role,
+		roleNote = (ctx.config.Survivors.Traits[trait] or {}).Effect,
+		refusedAt = nil,
+		routeQueue = nil,
+		routeGoal = nil,
 		boarding = false,
 		rescuedAt = nil,
 		notes = {},
@@ -301,6 +364,7 @@ function Rescue.carry(player: Player, name: string): (boolean, string?)
 	end
 	survivor.state = "Carried"
 	survivor.carriedBy = player
+	survivor.shelter = nil
 	survivor.leader = nil
 	Rescue.dirty = true
 	ctx.notifyPlayer(player, `Carrying {NAMES[name] or name}. You move slower.`, "warn")
@@ -445,7 +509,77 @@ end
 
 -- Steering with a cheap detour: survivors walk straight at their goal, and when a prop blocks
 -- them they slide around it for a moment instead of grinding against it forever.
-local function moveToward(survivor: Survivor, target: Vector3, dt: number, speedScale: number): boolean
+-- Survivors walk straight lines except across the roof span, where RouteService hands out
+-- waypoints (near joint, middle, far joint) once the skybridge is out.
+local function routeTarget(survivor: Survivor, target: Vector3): Vector3
+	if not ctx.route then
+		return target
+	end
+	local queue = survivor.routeQueue
+	if queue and #queue > 0 then
+		local head = queue[1]
+		if (head - survivor.position).Magnitude < 3.4 then
+			table.remove(queue, 1)
+			if #queue == 0 then
+				survivor.routeQueue = nil
+				survivor.routeGoal = nil
+			end
+		else
+			return head
+		end
+	elseif survivor.routeGoal == nil or (survivor.routeGoal - target).Magnitude > 12 then
+		local waypoints = ctx.route.waypointsFor(survivor.position, target)
+		if waypoints and #waypoints > 0 then
+			survivor.routeQueue = waypoints
+			survivor.routeGoal = target
+			return waypoints[1]
+		end
+	end
+	return target
+end
+
+-- Moving to high ground. Survivors walk to the structure under a refuge and then climb it. The
+-- engine handles the actual step-up; this keeps them moving and only reports arrival when they are
+-- genuinely up there (horizontal AND vertical proximity). The climb rate is deliberately capped at
+-- a brisk stair-walk so this can never look like a teleport.
+local function moveTowardHeight(survivor: Survivor, target: Vector3, dt: number, speedScale: number): boolean
+	local current = survivor.position
+	local flat = Vector3.new(target.X, current.Y, target.Z) - current
+	local horizontalDistance = flat.Magnitude
+	local heightGap = target.Y - current.Y
+	if horizontalDistance < 3.5 and heightGap < 3.5 then
+		applyRig(survivor, current, survivor.yaw, false, dt)
+		return true
+	end
+	-- Head for the structure; once underneath it, sidle along the footprint looking for the way up.
+	local direction
+	if horizontalDistance < 1.2 then
+		local sweep = os.clock() * 0.9
+		direction = Vector3.new(math.cos(sweep), 0, math.sin(sweep))
+	else
+		direction = flat.Unit
+	end
+	local speed = ctx.config.Survivors.FollowSpeed.Base * speedScale
+	local step = math.min(horizontalDistance, speed * dt)
+	local nextXZ = current + Vector3.new(direction.X, 0, direction.Z) * step
+	local climb = 0
+	if heightGap > 0.5 and horizontalDistance < 16 then
+		climb = math.min(heightGap, 4.2 * dt)
+	end
+	local nextY = current.Y + climb
+	if climb <= 0 then
+		nextY = groundHeight(nextXZ, survivor.model)
+	end
+	local nextPosition = Vector3.new(nextXZ.X, nextY, nextXZ.Z)
+	local yaw = math.atan2(direction.X, direction.Z)
+	applyRig(survivor, nextPosition, yaw, true, dt)
+	survivor.position = nextPosition
+	survivor.yaw = yaw
+	return false
+end
+
+local function moveToward(survivor: Survivor, rawTarget: Vector3, dt: number, speedScale: number): boolean
+	local target = routeTarget(survivor, rawTarget)
 	local current = survivor.position
 	local flatTarget = Vector3.new(target.X, current.Y, target.Z)
 	local delta = flatTarget - current
@@ -555,15 +689,29 @@ function Rescue.retire(survivor: Survivor)
 	survivor.model:PivotTo(CFrame.new(Vector3.new(0, -120, 0)))
 end
 
+-- Role payoffs fire once, on delivery, so the reward is legible to the whole team.
+local function applyRoleEffect(survivor: Survivor, how: string)
+	if survivor.role == "Medic" then
+		ctx.upgrade.onMedicRescue(nil)
+	elseif survivor.role == "Engineer" then
+		ctx.power.clearTrips("flood")
+		ctx.power.rechargeAll(nil)
+		ctx.notify("Engineer on board: flood trips cleared and the cell rack topped up.", "good")
+	end
+	ctx.telemetry.note("role", `{survivor.name} ({survivor.role or survivor.trait}) rescued via {how}`)
+end
+
 local function deliver(survivor: Survivor, how: string)
 	survivor.state = "Rescued"
 	survivor.rescuedAt = os.clock()
 	survivor.leader = nil
 	survivor.carriedBy = nil
+	survivor.shelter = nil
 	Rescue.retire(survivor)
 	Rescue.rescuedCount += 1
 	local traitDef = ctx.config.Survivors.Traits[survivor.trait]
 	local bonus = traitDef and traitDef.Bonus or 0
+	applyRoleEffect(survivor, how)
 	ctx.onSurvivorRescued(survivor, how, bonus)
 	ctx.notify(`{NAMES[survivor.name] or survivor.name} rescued via {how} ({Rescue.rescuedCount}/{ctx.config.Survivors.Total}).`, "good")
 	Rescue.dirty = true
@@ -589,6 +737,23 @@ local function updateDanger(survivor: Survivor, dt: number)
 	end
 
 	if inWater then
+		-- An unclaimed survivor does not stand in the flood: they head for high ground. This is the
+		-- difference between a district that drowns its NPCs on the clock and one the crew can
+		-- actually work: people are found on landings, catwalks and mezzanines, not at the bottom.
+		if (survivor.state == "Idle" or survivor.state == "Lost") and depth > ctx.config.Survivors.ShelterDepth then
+			local refuge = survivor.shelter
+			if not refuge or ctx.flood.depthAt(refuge) > 0.6 then
+				local target, label = Rescue.bestRefuge(survivor.position)
+				if target then
+					survivor.shelter = target
+					survivor.shelterLabel = label
+					if not survivor.shelterNoted then
+						survivor.shelterNoted = true
+						ctx.notify(`{NAMES[survivor.name] or survivor.name} is heading for the {label or "high ground"}.`, "info")
+					end
+				end
+			end
+		end
 		survivor.panic = math.min(140, survivor.panic + ctx.config.Survivors.PanicGrowthPerSecond * (submerged and 1.8 or 0.7) * dt)
 		survivor.health -= (submerged and 8.0 or 2.0) * dt
 		if survivor.health <= 0 and survivor.state ~= "Dead" and survivor.state ~= "Rescued" then
@@ -617,12 +782,35 @@ local function updateDanger(survivor: Survivor, dt: number)
 		survivor.state = "Lost"
 		survivor.leader = nil
 		ctx.notify(`{NAMES[survivor.name] or survivor.name} panicked and broke away.`, "bad")
-		Rescue.lostCount += 1
+		-- Count people, not panic events: a survivor who breaks away, calms down and breaks away
+		-- again is still one loss in the summary.
+		if not survivor.wasLost then
+			survivor.wasLost = true
+			Rescue.lostCount += 1
+		end
 		Rescue.dirty = true
 	end
 end
 
+-- Nearest refuge marker that is still above the water (and its label, for the HUD).
+function Rescue.bestRefuge(from: Vector3): (Vector3?, string?)
+	local best, bestLabel, bestDistance = nil, nil, math.huge
+	for _, part in ipairs(Rescue.refuges or {}) do
+		local depth = ctx.flood.depthAt(part.Position)
+		if depth <= 0.6 then
+			local distance = (Vector3.new(part.Position.X, 0, part.Position.Z) - Vector3.new(from.X, 0, from.Z)).Magnitude
+			if distance < bestDistance then
+				best, bestLabel, bestDistance = part.Position, part:GetAttribute("RefugeLabel"), distance
+			end
+		end
+	end
+	return best, bestLabel
+end
+
 function Rescue.update(dt: number)
+	for _, player in ipairs(Players:GetPlayers()) do
+		Rescue.medicAura(player, dt)
+	end
 	for _, survivor in ipairs(Rescue.order) do
 		if survivor.state == "Rescued" or survivor.state == "Dead" then
 			continue
@@ -679,6 +867,21 @@ function Rescue.update(dt: number)
 				survivor.leader = nil
 			else
 				local leaderPosition = (root :: BasePart).Position
+				-- Children refuse to wade: past knee depth they stop and wait to be carried.
+				if survivor.role == "Child" then
+					local roleDef = ctx.config.Survivors.Roles.Child
+					local ahead = survivor.position + (leaderPosition - survivor.position).Unit * 3
+					local depth = math.max(ctx.flood.depthAt(survivor.position), ctx.flood.depthAt(ahead))
+					if depth > roleDef.MaxWadeDepth then
+						if not survivor.refusedAt or os.clock() - survivor.refusedAt > 6 then
+							survivor.refusedAt = os.clock()
+							ctx.notifyPlayer(leader, `{NAMES[survivor.name] or survivor.name}: {roleDef.MustCarryNote}`, "warn")
+						end
+						applyRig(survivor, survivor.position, survivor.yaw, false, dt)
+						updateDanger(survivor, dt)
+						continue
+					end
+				end
 				local distance = (leaderPosition - survivor.position).Magnitude
 				if distance > 110 then
 					-- Anti-frustration catch-up: reunite with the leader across the district.
@@ -710,9 +913,29 @@ function Rescue.update(dt: number)
 				if player and distance < 18 then
 					survivor.state = "Following"
 					survivor.leader = player
+					if survivor.wasLost and not survivor.recovered then
+						survivor.recovered = true
+						Rescue.recoveredCount += 1
+						ctx.addScore(player, ctx.config.Scoring.PerSurvivor * 0.25, "regained a panicked survivor")
+					end
 					ctx.notifyPlayer(player, `{NAMES[survivor.name] or survivor.name} calmed down and joined you.`, "good")
 					Rescue.dirty = true
 				end
+			end
+		elseif survivor.shelter then
+			-- They have run for high ground: hold there until the crew arrives.
+			local refuge = survivor.shelter
+			if ctx.flood.depthAt(refuge) > 0.6 then
+				-- Their refuge is going under as well: pick a new one next tick.
+				survivor.shelter = nil
+			else
+				local arrived = moveTowardHeight(survivor, refuge, dt, ctx.config.Survivors.ShelterSpeed)
+				if arrived then
+					applyRig(survivor, survivor.position, survivor.yaw, false, dt)
+					-- Dry, off the floor and out of the current: they recover while they wait.
+					survivor.health = math.min(100, survivor.health + ctx.config.Survivors.ShelterRecoverPerSecond * dt)
+				end
+				survivor.panic = math.max(0, survivor.panic - ctx.config.Survivors.PanicCalmPerSecond * 0.45 * dt)
 			end
 		else
 			-- Idle patrol around their spawn.
@@ -746,6 +969,10 @@ function Rescue.snapshot()
 			position = survivor.position,
 			leader = survivor.leader and survivor.leader.Name or nil,
 			notes = survivor.notes,
+			role = survivor.role,
+			roleNote = survivor.roleNote,
+			sheltering = survivor.shelter ~= nil,
+			shelterLabel = survivor.shelterLabel,
 			rescued = survivor.state == "Rescued",
 		}
 	end
@@ -754,6 +981,7 @@ function Rescue.snapshot()
 		rescued = Rescue.rescuedCount,
 		lost = Rescue.lostCount,
 		dead = Rescue.deadCount,
+		recovered = Rescue.recoveredCount,
 		required = Rescue.requiredRescued(),
 		total = ctx.config.Survivors.Total,
 	}
@@ -764,8 +992,24 @@ function Rescue.pushSnapshot()
 	ctx.remotes.SurvivorSync:FireAllClients(Rescue.snapshot())
 end
 
+local function discoverRefuges()
+	Rescue.refuges = {}
+	local folder = ctx.worldFolder:FindFirstChild("Refuges")
+	if not folder then
+		ctx.log("[Rescue] no refuge markers in the world — survivors will not seek high ground")
+		return
+	end
+	for _, descendant in ipairs(folder:GetChildren()) do
+		if descendant:IsA("BasePart") then
+			table.insert(Rescue.refuges, descendant)
+		end
+	end
+	ctx.log(`[Rescue] {#Rescue.refuges} refuge markers adopted`)
+end
+
 function Rescue.Init(context)
 	ctx = context
+	discoverRefuges()
 end
 
 function Rescue.Start(context)

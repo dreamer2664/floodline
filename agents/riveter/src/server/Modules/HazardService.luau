@@ -203,7 +203,7 @@ local function scheduleEvent()
 		return
 	end
 	local roll = math.random()
-	local zoneNames = { "Terminal", "ApartmentBlock", "Workshop", "Clinic", "PumpHouse" }
+	local zoneNames = { "Terminal", "ApartmentBlock", "Workshop", "Clinic", "PumpHouse", "ParkingGarage", "FerryTerminal" }
 	local zoneName = zoneNames[math.random(1, #zoneNames)]
 	local zone = ctx.world.zones[zoneName]
 	if not zone then
@@ -239,6 +239,7 @@ function Hazard.collapse()
 	if not zone then
 		return
 	end
+	table.insert(Hazard.log, "apartment roof access collapse telegraphed")
 	ctx.notify("The apartment roof access gave way — upper floors are compromised.", "bad")
 	table.insert(Hazard.log, "apartment collapse")
 	local top = zone.max.Y

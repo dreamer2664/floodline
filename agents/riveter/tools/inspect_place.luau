@@ -23,6 +23,7 @@ local out: any = {
 	scripts = {},
 	names = {},
 	promptParents = {},
+	partPositions = {},
 	placeBytes = #fs.readFile(PLACE),
 	placeName = place.Name,
 }
@@ -52,6 +53,16 @@ local function walk(instance: Instance, depth: number)
 	end
 	if instance:IsA("BasePart") or instance:IsA("Model") then
 		out.names[instance.Name] = (out.names[instance.Name] or 0) + 1
+	end
+	-- Route geometry is cross-checked against Config, so record its real world positions.
+	if instance:IsA("BasePart") and (string.sub(instance.Name, 1, 10) == "BridgeDeck" or instance.Name == "ExtractionPad" or instance.Name == "TunnelBarricade") then
+		local ok, position = pcall(function()
+			return instance.Position
+		end)
+		if not ok then
+			position = instance.CFrame.Position
+		end
+		out.partPositions[instance.Name] = { position.X, position.Y, position.Z }
 	end
 	if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
 		local source = instance.Source or ""
@@ -163,6 +174,19 @@ for _, key in ipairs(promptKeys) do
 end
 table.insert(lines, '  "promptParents": {')
 table.insert(lines, table.concat(promptLines, ",\n"))
+table.insert(lines, "  },")
+local positionKeys = {}
+for key in pairs(out.partPositions) do
+	table.insert(positionKeys, key)
+end
+table.sort(positionKeys)
+local positionLines = {}
+for _, key in ipairs(positionKeys) do
+	local p = out.partPositions[key]
+	table.insert(positionLines, string.format('    "%s": [%s, %s, %s]', jsonEscape(key), p[1], p[2], p[3]))
+end
+table.insert(lines, '  "partPositions": {')
+table.insert(lines, table.concat(positionLines, ",\n"))
 table.insert(lines, "  }")
 table.insert(lines, "}")
 

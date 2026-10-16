@@ -58,18 +58,23 @@ local playerScripts = starterPlayer and starterPlayer:FindFirstChild("StarterPla
 
 -- Client bootstrap needs the remotes the server created.
 local netFolder = Harness.replicated():FindFirstChild("FloodlineNet")
+local Config = Harness.require(Harness.replicated():FindFirstChild("Shared"):FindFirstChild("Config"))
 
 local modules = playerScripts:FindFirstChild("Modules")
 local hudScript = modules:FindFirstChild("Hud")
 local markersScript = modules:FindFirstChild("Markers")
 local effectsScript = modules:FindFirstChild("Effects")
 local resultsScript = modules:FindFirstChild("Results")
+local minimapScript = modules:FindFirstChild("Minimap")
+local systemsScript = modules:FindFirstChild("Systems")
 local clientScript = playerScripts:FindFirstChild("Client")
 
 check("client scripts are present in the shipped place", function()
 	return hudScript ~= nil and markersScript ~= nil and effectsScript ~= nil
-		and resultsScript ~= nil and clientScript ~= nil,
-		string.format("modules=%s client=%s", tostring(modules ~= nil), tostring(clientScript ~= nil))
+		and resultsScript ~= nil and clientScript ~= nil
+		and minimapScript ~= nil and systemsScript ~= nil,
+		string.format("modules=%s minimap=%s systems=%s client=%s",
+			tostring(modules ~= nil), tostring(minimapScript ~= nil), tostring(systemsScript ~= nil), tostring(clientScript ~= nil))
 end)
 
 -- Load the client modules through the same loader the harness uses for the server.
@@ -77,6 +82,8 @@ local Hud = Harness.require(hudScript)
 local Markers = Harness.require(markersScript)
 local Effects = Harness.require(effectsScript)
 local Results = Harness.require(resultsScript)
+local Minimap = Harness.require(minimapScript)
+local Systems = Harness.require(systemsScript)
 
 check("HUD builds its full interface tree", function()
 	Hud.Init()
@@ -179,6 +186,158 @@ check("world markers bind to survivors and the active objective", function()
 	end
 	return container:FindFirstChild("ObjectiveAnchorPart") ~= nil and tags >= 2,
 		string.format("markers=%d, objective anchor=%s", tags, tostring(container:FindFirstChild("ObjectiveAnchorPart") ~= nil))
+end)
+
+check("minimap builds the district plan and tracks live state", function()
+	local hudGui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
+	Minimap.Init(hudGui)
+	local gui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud"):FindFirstChild("Minimap")
+	assert(gui, "minimap frame missing")
+	local canvas = gui:FindFirstChild("Canvas")
+	assert(canvas, "minimap canvas missing")
+	local landmarks = 0
+	for key in pairs(Minimap.static) do
+		if key ~= "Water" then
+			landmarks += 1
+		end
+	end
+	assert(landmarks >= 6, string.format("only %d static map layers measured", landmarks))
+	-- The span line has to read as "not walkable yet" before RouteSync says otherwise.
+	Minimap.setState({ route = { extended = 0, crossable = false, cutOpen = false } })
+	Minimap.update()
+	local sky = Minimap.static.Skybridge
+	assert(sky ~= nil, "the skybridge is not drawn on the map at all")
+	local skyTucked = sky.BackgroundTransparency
+	local tuckedColor = sky.BackgroundColor3
+	Minimap.setState({
+		survivors = { list = {
+			{ name = "Survivor1", label = "Mara", state = "Following", health = 90, panic = 5, position = Stub.v3(-9, 1.2, -12) },
+			{ name = "Survivor4", label = "Pia", state = "Carried", health = 100, panic = 0, position = Stub.v3(-4, 1.2, -8) },
+			{ name = "Survivor7", label = "Nadia", state = "Rescued", health = 100, panic = 0, position = Stub.v3(0, 1.2, -10) },
+		} },
+		water = { level = 6.2, sectorLevels = { 8, 6.2, 7.4 } },
+		power = {
+			cells = {
+				Cell_A = { id = "Cell_A", charge = 70, position = Stub.v3(-34, 1.6, -20) },
+				Cell_B = { id = "Cell_B", charge = 0, destroyed = true, position = Stub.v3(28, 1.6, 31) },
+			},
+			sockets = { Lift = { position = Stub.v3(1, 1.4, -38.6), tripped = false } },
+		},
+		route = { extended = 100, crossable = true, cutOpen = false, nearJoint = Stub.v3(28.5, 14.35, -13.5), farJoint = Stub.v3(5.5, 16.45, -36.5) },
+		objectives = { { id = "lift", title = "Power the lift", status = "active", target = Stub.v3(1, 1.4, -38.6) } },
+	})
+	Minimap.update()
+	local keys = {}
+	local visible = {}
+	for key, frame in pairs(Minimap.dots) do
+		table.insert(keys, key)
+		if frame.Visible then
+			visible[key] = true
+		end
+	end
+	table.sort(keys)
+	assert(visible.p_ClientTester, "the local player is not on the map: " .. table.concat(keys, ","))
+	assert(visible.s_1, "a following survivor is not on the map: " .. table.concat(keys, ","))
+	assert(not visible.s_2, "a carried survivor should ride the carrier, not sit on the map")
+	assert(not visible.s_3, "a rescued survivor is still drawn on the map")
+	assert(visible.c_Cell_A, "a loose power cell is not on the map")
+	assert(not visible.c_Cell_B, "a destroyed cell is still drawn on the map")
+	assert(visible.k_Lift, "a power socket is not on the map")
+	assert(visible.o_lift, "the active objective is not on the map")
+	assert(Minimap.snapshot().dots == 5, `expected 5 live dots, got {Minimap.snapshot().dots}`)
+	-- The span line reads as walkable once RouteSync says it is out.
+	assert(sky.BackgroundTransparency < skyTucked - 0.3,
+		string.format("the skybridge line did not thicken when the span extended (%.2f -> %.2f)",
+			skyTucked, sky.BackgroundTransparency))
+	assert(tuckedColor ~= sky.BackgroundColor3, "the span line did not change colour when it opened")
+	assert(sky.BackgroundColor3 == Config.Ui.Colors.Good, "the walkable span is not drawn in the 'open' colour")
+	Minimap.addPing({ type = "danger", label = "Danger", player = "Teammate", position = Stub.v3(2, 1, -6), lifetime = 0.4 })
+	Minimap.update()
+	assert(#Minimap.pings >= 1, "ping did not reach the minimap")
+	Stub.advance(1)
+	Minimap.update()
+	assert(#Minimap.pings == 0, "ping did not fade off the minimap")
+	assert(Minimap.toggle() == false and gui.Visible == false, "M toggle did not hide the map")
+	assert(Minimap.toggle() == true and gui.Visible == true, "M toggle did not restore the map")
+	local final = Minimap.snapshot()
+	assert(final.enabled == true and final.dots == 5 and final.pings == 0 and final.statics == landmarks + 1,
+		string.format("minimap snapshot disagrees with the widgets: dots=%s statics=%s pings=%s",
+			tostring(final.dots), tostring(final.statics), tostring(final.pings)))
+	return true, string.format("%d map layers, 5 live dots (cells/sockets/objective/survivors), 2 hidden, span line solid, ping fade + M toggle verified",
+		landmarks)
+end)
+
+check("systems board shows both routes and buys an upgrade through the server", function()
+	local hudGui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
+	local remotes = {}
+	for _, name in ipairs({ "RequestUpgrade", "RequestCrank", "GetSnapshot" }) do
+		remotes[name] = netFolder:FindFirstChild(name)
+	end
+	assert(remotes.RequestUpgrade ~= nil, "RequestUpgrade remote missing from the shipped net folder")
+	Systems.Init(hudGui, remotes)
+	local panel = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud"):FindFirstChild("Systems")
+	assert(panel, "systems panel missing")
+	assert(panel:FindFirstChild("Lift") ~= nil and panel:FindFirstChild("Skybridge") ~= nil and panel:FindFirstChild("Cut") ~= nil,
+		"the three route rows are not on the board")
+	for _, id in ipairs(Config.Upgrades.Order) do
+		assert(Systems.rows[id] ~= nil, "upgrade row missing: " .. id)
+	end
+
+	Systems.setState({
+		route = {
+			extended = 40, crossable = false, winchPowered = true, cutOpen = false, cutProgress = 33,
+			recommended = "Lift", liftPowered = false,
+		},
+		lift = { state = "Stalled" },
+		upgrades = {
+			salvage = 34, earned = 34, spent = 0, crates = 1, owned = { FieldHospital = true },
+			items = {
+				{ id = "SealKit", label = "Door Seal Kit", desc = "Sealed rooms hold twice as long", cost = 20, kind = "seal", owned = false, affordable = true },
+				{ id = "Impeller", label = "Pump Impeller", desc = "The pump eats more of the rise", cost = 35, kind = "flood", owned = false, affordable = false },
+				{ id = "Rebreather", label = "Rebreather", desc = "+9s of air", cost = 25, kind = "oxygen", owned = false, affordable = false },
+				{ id = "Capacitor", label = "Grid Capacitor", desc = "+1 capacity", cost = 40, kind = "capacity", owned = false, affordable = false },
+				{ id = "LiftServo", label = "Lift Servo", desc = "Faster lift, extra seat", cost = 45, kind = "lift", owned = false, affordable = false },
+				{ id = "FieldHospital", label = "Field Hospital", desc = "Revives twice as fast", cost = 40, kind = "revive", owned = true, buyer = "ClientTester" },
+			},
+		},
+	})
+	assert(string.find(Systems.routeRows.Skybridge.Text, "winch powered", 1, true) ~= nil,
+		"skybridge row did not report the powered winch: " .. Systems.routeRows.Skybridge.Text)
+	-- Without a winch the row must tell the crew to crank it themselves.
+	Systems.setState({ route = {
+		extended = 0, crossable = false, winchPowered = false, cutOpen = false, cutProgress = 0,
+		recommended = "ServiceCut", liftPowered = true,
+	} })
+	assert(string.find(Systems.routeRows.Skybridge.Text, "crank it by hand", 1, true) ~= nil,
+		"skybridge row did not describe the hand crank: " .. Systems.routeRows.Skybridge.Text)
+	assert(string.find(Systems.hintLabel.Text, "ServiceCut", 1, true) ~= nil, "the recommended route hint did not update")
+	Systems.setState({ route = {
+		extended = 40, crossable = false, winchPowered = true, cutOpen = false, cutProgress = 33,
+		recommended = "Lift", liftPowered = false,
+	} })
+	assert(string.find(Systems.routeRows.Cut.Text, "blocked", 1, true) ~= nil, "cut row did not report the blockage")
+	assert(string.find(Systems.routeRows.Lift.Text, "Stalled", 1, true) ~= nil, "lift row did not report the stall")
+	assert(Systems.salvageLabel.Text == "Salvage: 34", "salvage pool not shown: " .. Systems.salvageLabel.Text)
+	assert(string.find(Systems.hintLabel.Text, "Lift", 1, true) ~= nil, "recommended route hint missing: " .. Systems.hintLabel.Text)
+	assert(string.find(Systems.rows.SealKit.label.Text, "Seal Kit", 1, true) ~= nil, "upgrade row label missing")
+	assert(Systems.rows.SealKit.cost.Text == "20", "affordable upgrade does not show its price: " .. Systems.rows.SealKit.cost.Text)
+	assert(string.find(Systems.rows.FieldHospital.label.Text, "✓", 1, true) ~= nil, "owned upgrade not ticked")
+
+	-- Buying goes through the remote exactly once, with the id the server expects.
+	local fired = {}
+	local original = remotes.RequestUpgrade.FireServer
+	remotes.RequestUpgrade.FireServer = function(self, ...)
+		table.insert(fired, { ... })
+		return original(self, ...)
+	end
+	Systems.rows.SealKit.button.MouseButton1Click:Fire()
+	assert(#fired == 1, string.format("expected one purchase request, got %d", #fired))
+	assert(fired[1][1] == "SealKit", "purchase sent the wrong upgrade id: " .. tostring(fired[1][1]))
+	remotes.RequestUpgrade.FireServer = original
+	assert(Systems.toggle() == false and panel.Visible == false, "B toggle did not hide the board")
+	assert(Systems.toggle() == true and panel.Visible == true, "B toggle did not restore the board")
+	return true, string.format("routes Lift/Skybridge/Cut + %d upgrade rows, purchase of %s forwarded to the server, B toggle verified",
+		(function() local n = 0 for _ in pairs(Systems.rows) do n += 1 end return n end)(), fired[1][1])
 end)
 
 check("results screen renders a real round summary and votes for a rematch", function()
@@ -294,11 +453,25 @@ check("client bootstrap runs end to end on live payload shapes", function()
 	roundRemote.OnClientEvent:Fire("state", { state = "Surge", timeLeft = 60, phaseIndex = 4, players = 2, required = 4 })
 	fire("StateSync", { ClientTester = { stamina = 40, oxygen = 12, submerged = true, items = {}, downed = false } })
 	fire("Notification", { text = "Surge: the district is going under.", tone = "bad" })
+	fire("RouteSync", { extended = 100, crossable = true, winchPowered = false, cutOpen = true, cutProgress = 100,
+		recommended = "Skybridge", liftPowered = true, nearJoint = Stub.v3(28.5, 14.35, -13.5), farJoint = Stub.v3(5.5, 16.45, -36.5) })
+	fire("UpgradeSync", { salvage = 58, earned = 70, spent = 12, crates = 2, owned = { SealKit = true },
+		items = { { id = "SealKit", label = "Door Seal Kit", desc = "Sealed rooms hold twice as long", cost = 20, kind = "seal", owned = true, buyer = "ClientTester" } } })
+	fire("LiftSync", { state = "Loading", progress = 0.4, capacity = 3, passengers = 1, callButton = "pad" })
 	Stub.advance(3)
 	local gui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
 	local stateLabel = gui:FindFirstChild("TopBanner"):FindFirstChild("StateLabel")
-	return stateLabel.Text == "SURGE",
-		string.format("client ticked 3s of live payloads, banner=%s", stateLabel.Text)
+	local mapGui = gui:FindFirstChild("Minimap")
+	assert(stateLabel.Text == "SURGE", "banner did not follow the round state: " .. stateLabel.Text)
+	assert(mapGui ~= nil and mapGui:FindFirstChild("Canvas") ~= nil, "the minimap was not created by the real client bootstrap")
+	local skyText = Systems.routeRows.Skybridge.Text
+	assert(string.find(skyText, "walkable", 1, true) ~= nil,
+		"the systems board did not follow RouteSync: " .. skyText)
+	assert(Systems.salvageLabel.Text == "Salvage: 58",
+		"the systems board did not follow UpgradeSync: " .. Systems.salvageLabel.Text)
+	assert(#Minimap.pings == 0 and Minimap.enabled, "minimap state was disturbed by the client tick")
+	return true,
+		string.format("client ticked 3s of live payloads: banner=%s, map built, route board=%s", stateLabel.Text, skyText)
 end)
 
 local passed = 0

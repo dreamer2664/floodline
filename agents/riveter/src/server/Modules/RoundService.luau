@@ -18,11 +18,15 @@ Round.roundStartedAt = 0
 Round.radioCalled = false
 Round.extracted = false
 Round.extractedPlayers = {} :: { [Player]: boolean }
+Round.holdNotified = {} :: { [Player]: number }
+Round.evacuationAt = 0
+Round.evacuationApproachSeconds = 0
 Round.rematchVotes = {} :: { [Player]: boolean }
 Round.lastOutcome = nil :: any
 Round.lobbyCountdown = nil :: number?
 Round.paused = false
 Round.stateLabel = "Waiting"
+Round.poweredOnce = {} :: { [string]: boolean }
 
 local ctx
 local PHASES = { "Prep", "Phase 1", "Phase 2", "Phase 3", "Phase 4" }
@@ -59,11 +63,18 @@ end
 
 function Round.resetToLobby()
 	Round.phaseIndex = 0
+	-- The previous round's summary has been shown and voted on; a stale one must never leak into
+	-- the next round's results screen or telemetry.
+	Round.lastOutcome = nil
 	Round.radioCalled = false
 	Round.extracted = false
 	Round.extractedPlayers = {}
+	Round.holdNotified = {}
+	Round.evacuationAt = 0
+	Round.evacuationApproachSeconds = 0
 	Round.rematchVotes = {}
 	Round.roundStartedAt = 0
+	Round.poweredOnce = {}
 	ctx.flood.reset()
 	ctx.flood.setPhase("Lobby")
 	ctx.power.reset()
@@ -73,6 +84,10 @@ function Round.resetToLobby()
 	ctx.playerService.reset()
 	ctx.scoring.reset()
 	ctx.telemetry.reset()
+	ctx.route.reset()
+	ctx.upgrade.reset()
+	ctx.interact.reset()
+	ctx.doors.reset()
 	setState("Lobby", nil)
 	Round.lobbyCountdown = nil
 	ctx.notify("Lobby open. Step onto the terminal pad to start when ready.", "info")
@@ -84,6 +99,9 @@ local function beginPrep()
 	Round.radioCalled = false
 	Round.extracted = false
 	Round.extractedPlayers = {}
+	Round.holdNotified = {}
+	Round.evacuationAt = 0
+	Round.evacuationApproachSeconds = 0
 	Round.rematchVotes = {}
 	ctx.flood.reset()
 	ctx.flood.setPhase("Prep")
@@ -93,6 +111,10 @@ local function beginPrep()
 	ctx.hazard.reset()
 	ctx.scoring.reset()
 	ctx.playerService.reset()
+	ctx.route.reset()
+	ctx.interact.reset()
+	ctx.doors.reset()
+	ctx.upgrade.reset()
 	local prep = ctx.scaling().PrepSeconds
 	Round.phaseEndsAt = os.clock() + prep
 	setState("Prep", prep)
@@ -111,6 +133,7 @@ end
 
 local function advancePhase()
 	Round.phaseIndex += 1
+	ctx.upgrade.onPhaseBegan(Round.phaseIndex)
 	if Round.phaseIndex > ctx.config.Round.PhaseCount then
 		beginSurge()
 		return
@@ -128,11 +151,20 @@ local function beginSurge()
 	ctx.telemetry.note("flood", "surge began", { level = Util.round(ctx.flood.level, 2) })
 end
 
+-- Every road into the extraction phase goes through here, so the vehicle always has an arrival
+-- time. (A surge that forces the evacuation used to leave the pad permanently inert: the round
+-- could then only end when the window timed out.)
 local function beginExtraction(reason: string)
 	ctx.flood.setPhase("Extraction")
 	setState("Extraction", ctx.config.Round.ExtractionSeconds)
-	Round.notifyAll(`Extraction authorised: {reason}. Ride the lift to the relay pad.`, "good")
-	ctx.telemetry.note("round", `extraction authorised ({reason})`)
+	local approach = (Round.state == "Surge") and ctx.config.Round.EvacApproachSecondsStorm
+		or ctx.config.Round.EvacApproachSeconds
+	if Round.evacuationAt == 0 then
+		Round.evacuationAt = os.clock() + approach
+		Round.evacuationApproachSeconds = approach
+	end
+	Round.notifyAll(`Extraction authorised: {reason}. The evac vehicle is {approach}s out.`, "good")
+	ctx.telemetry.note("round", `extraction authorised ({reason}), evac ETA {approach}s`)
 end
 
 local function finish(outcome: string, reason: string)
@@ -174,6 +206,21 @@ function Round.callEvacuation(player: Player)
 	ctx.objective.markDirty()
 end
 
+-- Seconds until the vehicle is on the pad, or 0 once it is (used by the HUD and the objective).
+function Round.evacEta(): number
+	if not Round.radioCalled then
+		return -1
+	end
+	if Round.evacuationAt == 0 then
+		return 0
+	end
+	return math.max(0, math.ceil(Round.evacuationAt - os.clock()))
+end
+
+function Round.evacArrived(): boolean
+	return Round.radioCalled and Round.evacuationAt ~= 0 and os.clock() >= Round.evacuationAt
+end
+
 function Round.evaluate(): boolean
 	if Round.state == "Lobby" or Round.state == "Results" or Round.state == "Intermission" then
 		return false
@@ -208,6 +255,9 @@ function Round.evaluate(): boolean
 	end
 
 	-- Success: required survivors rescued, radio called, everyone extracted (or time out).
+	if Round.radioCalled and not Round.evacArrived() then
+		return false
+	end
 	if Round.radioCalled and ctx.rescue.rescuedCount >= ctx.rescue.requiredRescued() then
 		local alivePlayers = 0
 		local extracted = 0
@@ -269,8 +319,15 @@ function Round.evaluate(): boolean
 	return false
 end
 
+function Round.onRouteOpened(name: string)
+	local labels = { Skybridge = "the roof skybridge", ServiceCut = "the service cut" }
+	Round.notifyAll(`New route open: {labels[name] or name}.`, "good")
+	ctx.telemetry.note("route", `{name} usable`)
+end
+
 function Round.onSurvivorRescued(survivor, how: string, traitBonus: number)
 	ctx.scoring.teamBonus += traitBonus
+	ctx.upgrade.onSurvivorRescued()
 	ctx.telemetry.note("rescue", `{survivor.name} ({survivor.trait}) via {how}`, {
 		rescued = ctx.rescue.rescuedCount,
 		level = Util.round(ctx.flood.level, 2),
@@ -284,6 +341,11 @@ end
 
 function Round.onConsumerPowered(name: string)
 	ctx.telemetry.note("power", `{name} powered`)
+	Round.poweredOnce = Round.poweredOnce or {}
+	if not Round.poweredOnce[name] then
+		Round.poweredOnce[name] = true
+		ctx.upgrade.onFirstPower(name)
+	end
 	if name == "Lift" and not Round.radioCalled and ctx.rescue.rescuedCount >= ctx.rescue.requiredRescued() then
 		Round.notifyAll("Quota met. Fetch the radio and call the evacuation.", "good")
 	end
@@ -385,7 +447,13 @@ function Round.tickExtraction()
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if root and humanoid and humanoid.Health > 0 and not Round.extractedPlayers[player] then
 			local distance = ((root :: BasePart).Position - pad.Position).Magnitude
-			if distance <= 9 then
+			if distance <= 9 and not Round.evacArrived() then
+				local eta = Round.evacEta()
+				if not Round.holdNotified[player] or os.clock() - (Round.holdNotified[player] or 0) > 8 then
+					Round.holdNotified[player] = os.clock()
+					ctx.notifyPlayer(player, `Hold the pad — the evac vehicle is {eta}s out.`, "warn")
+				end
+			elseif distance <= 9 then
 				Round.extractedPlayers[player] = true
 				ctx.addScore(player, 50, "extracted")
 				ctx.notifyPlayer(player, "You are on the extraction pad.", "good")
@@ -408,6 +476,9 @@ function Round.update(dt: number)
 			Round.resetToLobby()
 		end
 	else
+		if Round.evacArrived() and Round.phaseEndsAt == math.huge then
+			Round.phaseEndsAt = os.clock() + 45 -- last call to get on board
+		end
 		Round.tickExtraction()
 		Round.evaluate()
 	end
@@ -425,11 +496,15 @@ function Round.snapshot()
 		timeLeft = Round.stateEndsAt ~= math.huge and math.max(0, Round.stateEndsAt - os.clock()) or nil,
 		elapsed = Round.roundElapsed(),
 		radioCalled = Round.radioCalled,
+		evacEta = Round.evacEta(),
+		evacArrived = Round.evacArrived(),
 		extracted = Round.extracted,
 		required = ctx.rescue.requiredRescued(),
 		rescued = ctx.rescue.rescuedCount,
 		players = Round.playerCount(),
 		scaling = ctx.scaling(),
+		salvage = math.floor(ctx.upgrade.salvage),
+		route = ctx.route.snapshot(),
 	}
 end
 

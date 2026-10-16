@@ -8,22 +8,22 @@
     {
       "check": "every socket maps to a configured consumer",
       "ok": true,
-      "detail": "sockets=['Socket_Bridge', 'Socket_Lift', 'Socket_Pump'] consumers=['Bridge', 'Lift', 'Pump', 'Relay']"
+      "detail": "sockets=['Socket_Bridge', 'Socket_Lift', 'Socket_Pump', 'Socket_Winch'] consumers=['Bridge', 'Lift', 'Pump', 'Relay', 'Winch']"
     },
     {
       "check": "all remote usages are declared",
       "ok": true,
-      "detail": "24 remotes used, all declared"
+      "detail": "27 remotes used, all declared"
     },
     {
       "check": "bootstrap modules exported",
       "ok": true,
-      "detail": "15 modules required, all present"
+      "detail": "17 modules required, all present"
     },
     {
       "check": "client modules exported",
       "ok": true,
-      "detail": "4 modules required, all present"
+      "detail": "6 modules required, all present"
     },
     {
       "check": "shared modules exported",
@@ -31,9 +31,9 @@
       "detail": "3 shared modules required, all present"
     },
     {
-      "check": "eight survivors with interaction prompts",
+      "check": "survivor rigs and prompts match Config.Survivors.Total",
       "ok": true,
-      "detail": "models=8 survivorPrompts=8 (all prompts=33)"
+      "detail": "models=12 survivorPrompts=12 config=12 (all prompts=50)"
     },
     {
       "check": "lift cabin has four seats",
@@ -43,7 +43,7 @@
     {
       "check": "power cell count matches config",
       "ok": true,
-      "detail": "geometry=3 config=3"
+      "detail": "geometry=4 config=4"
     },
     {
       "check": "no loadstring / http code / external asset ids",
@@ -59,9 +59,34 @@
       "check": "audio uses only bundled engine sounds",
       "ok": true,
       "detail": "only rbxasset:// engine sounds"
+    },
+    {
+      "check": "skybridge span is baked in the place",
+      "ok": true,
+      "detail": "decks=['BridgeDeck_A', 'BridgeDeck_B', 'BridgeDeck_C', 'BridgeDeck_D'] rails=8 cranks=['BridgeCrank_Far', 'BridgeCrank_Near'] nearest deck to NearJoint=4.07 studs"
+    },
+    {
+      "check": "second-route geometry is present",
+      "ok": true,
+      "detail": "missing=[] crates=['SupplyCrate_1', 'SupplyCrate_2', 'SupplyCrate_3', 'SupplyCrate_4']"
+    },
+    {
+      "check": "new landmarks registered as world zones",
+      "ok": true,
+      "detail": "zones=['ApartmentBlock', 'Clinic', 'FerryTerminal', 'Mid', 'North', 'ParkingGarage', 'PumpHouse', 'RelayTower', 'ServiceCut', 'South', 'Terminal', 'Workshop']"
+    },
+    {
+      "check": "upgrade catalog is complete and consumed",
+      "ok": true,
+      "detail": "order=['Impeller', 'Rebreather', 'Capacitor', 'SealKit', 'FieldHospital', 'LiftServo'] unreadEffects=[]"
+    },
+    {
+      "check": "survivor role effects are implemented",
+      "ok": true,
+      "detail": "roles=['Child', 'Engineer', 'Medic'] missing=[]"
     }
   ],
-  "passed": 12,
+  "passed": 17,
   "failed": 0,
   "sourceFiles": {
     "server": [
@@ -77,9 +102,11 @@
       "src/server/Modules/PowerService.luau",
       "src/server/Modules/RescueService.luau",
       "src/server/Modules/RoundService.luau",
+      "src/server/Modules/RouteService.luau",
       "src/server/Modules/ScoringService.luau",
       "src/server/Modules/SessionService.luau",
       "src/server/Modules/Telemetry.luau",
+      "src/server/Modules/UpgradeService.luau",
       "src/server/Modules/WorldService.luau"
     ],
     "client": [
@@ -87,7 +114,9 @@
       "src/client/Modules/Effects.luau",
       "src/client/Modules/Hud.luau",
       "src/client/Modules/Markers.luau",
-      "src/client/Modules/Results.luau"
+      "src/client/Modules/Minimap.luau",
+      "src/client/Modules/Results.luau",
+      "src/client/Modules/Systems.luau"
     ],
     "shared": [
       "src/shared/Config.luau",

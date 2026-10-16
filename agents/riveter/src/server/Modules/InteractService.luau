@@ -167,6 +167,10 @@ Interact.actions = {
 
 -- ===================== discovery =====================
 
+-- Every part wired as a takeable item. A round reset must restore them, or a rematch starts
+-- with no fuse, no radio and no medkits: the district would be unwinnable on round two.
+local itemParts = {}
+
 local function discover()
 	local world = ctx.worldFolder
 	local named = {
@@ -186,11 +190,13 @@ local function discover()
 			if actionName == "Radio" then
 				-- The radio is both an item pickup and the evacuation console once carried.
 				wire(descendant, "Item", "Take Radio", "Relay Radio", 0.4)
+				table.insert(itemParts, descendant)
 			else
 				wire(descendant, actionName, spec[1], spec[2], spec[3])
 			end
 		elseif ITEM_NAMES[descendant.Name] then
 			wire(descendant, "Item", `Take {ITEM_NAMES[descendant.Name]}`, descendant.Name, 0.35)
+			table.insert(itemParts, descendant)
 		elseif descendant.Name == "LiftCallTop" then
 			local prompt = ensurePrompt(descendant, "Call Lift", "Evac Lift (Pad)")
 			prompt.Triggered:Connect(function(player: Player)
@@ -200,6 +206,24 @@ local function discover()
 			wire(descendant, "Radio", "Call Evacuation", "Evacuation Console", 0.6)
 		end
 	end
+end
+
+-- Put every takeable item back in the world (round reset / rematch).
+function Interact.reset()
+	local restored = 0
+	for _, part in ipairs(itemParts) do
+		if part:GetAttribute("Taken") then
+			restored += 1
+		end
+		part:SetAttribute("Taken", false)
+		part.Transparency = 0
+		part.CanCollide = true
+		local prompt = part:FindFirstChildOfClass("ProximityPrompt")
+		if prompt then
+			prompt.Enabled = true
+		end
+	end
+	return restored
 end
 
 function Interact.Init(context)

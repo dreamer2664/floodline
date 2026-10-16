@@ -28,14 +28,38 @@ local SERVICE_TARGETS = {
 	StarterPlayer = "StarterPlayer",
 }
 
+-- rbx-dom quirk: a part positioned with .Position exposes that position but reports an
+-- identity CFrame, while a part built from a rotated CFrame reports the CFrame and has no
+-- computable .Position. Read whichever one is actually present.
+local function readPartPosition(part)
+	local ok, position = pcall(function()
+		return part.Position
+	end)
+	if ok then
+		return position
+	end
+	return part.CFrame.Position
+end
+
+local function readPartLook(part)
+	local ok, cframe = pcall(function()
+		return part.CFrame
+	end)
+	if ok and cframe then
+		return cframe.LookVector
+	end
+	return nil
+end
+
 -- @lune/roblox does not implement Model:GetPivot, so measure the bounding box ourselves.
 local function sourcePivot(model)
 	local min, max
 	for _, descendant in ipairs(model:GetDescendants()) do
 		if descendant:IsA("BasePart") then
 			local half = descendant.Size * 0.5
-			local lo = descendant.Position - half
-			local hi = descendant.Position + half
+			local center = readPartPosition(descendant)
+			local lo = center - half
+			local hi = center + half
 			if not min then
 				min, max = lo, hi
 			else
@@ -54,9 +78,18 @@ local function copyInstance(source, parent)
 	local target = Stub.Instance.new(source.ClassName)
 	target.Name = source.Name
 	if source:IsA("BasePart") then
+		local position = readPartPosition(source)
 		target.Size = Stub.v3(source.Size.X, source.Size.Y, source.Size.Z)
-		target.Position = Stub.v3(source.Position.X, source.Position.Y, source.Position.Z)
-		target.CFrame = Stub.cframe(target.Position)
+		target.Position = Stub.v3(position.X, position.Y, position.Z)
+		local look = readPartLook(source)
+		if look and (math.abs(look.X) > 0.01 or math.abs(look.Y) > 0.01 or (look.Z + 1) > 0.01) then
+			target.CFrame = Stub.cframeFrom(
+				Stub.v3(position.X, position.Y, position.Z),
+				Stub.v3(position.X + look.X * 4, position.Y + look.Y * 4, position.Z + look.Z * 4)
+			)
+		else
+			target.CFrame = Stub.cframe(target.Position)
+		end
 		target.Anchored = source.Anchored
 		target.CanCollide = source.CanCollide
 		target.CanQuery = source.CanQuery

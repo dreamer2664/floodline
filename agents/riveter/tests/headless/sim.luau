@@ -78,6 +78,8 @@ local Doors = module("DoorService")
 local Comms = module("CommsService")
 local Session = module("SessionService")
 local PlayerService = module("PlayerService")
+local Route = module("RouteService")
+local Upgrades = module("UpgradeService")
 
 local function part(name: string)
 	local found = Harness.findDescendantByName(World, name)
@@ -110,6 +112,29 @@ local function step(seconds: number, player)
 			PlayerService.state(player).lastPosition = root.Position
 		end
 	end
+end
+
+local function standPlayer(who, position)
+	Stub.movePlayer(who, position)
+	local character = who.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root then
+		PlayerService.state(who).lastPosition = root.Position
+	end
+end
+
+-- The evac vehicle needs a real approach window; tests wait it out the way players do.
+local function waitForEvac(who, timeout: number?)
+	local limit = timeout or 180
+	local waited = 0
+	while not Round.evacArrived() and waited < limit do
+		Stub.advance(1)
+		waited += 1
+		if who then
+			standPlayer(who, Stub.characterPosition(who))
+		end
+	end
+	return Round.evacArrived(), waited
 end
 
 -- ============================================================
@@ -377,11 +402,20 @@ scenario("round reaches a win when the quota is met and the team extracts", func
 	Harness.trigger(console, player)
 	assertTrue(Round.radioCalled, "evacuation was not authorised")
 	assertTrue(Round.state == "Extraction", "expected Extraction state, got " .. Round.state)
+	assertTrue(Round.evacEta() > 0, "the evac vehicle arrived instantly")
 
-	-- Stand on the extraction pad so the round can resolve.
+	-- The pad is a lie until the vehicle is on it: standing there early must not extract anyone.
 	local pad = part("ExtractionPad")
 	Stub.movePlayer(player, pad.Position + Stub.v3(0, 3, 0))
 	for _ = 1, 20 do
+		Stub.advance(0.5)
+		Stub.movePlayer(player, pad.Position + Stub.v3(0, 3, 0))
+	end
+	assertTrue(Round.extractedPlayers[player] ~= true, "the crew extracted before the vehicle landed")
+
+	-- ...and once it lands, the pad resolves the round.
+	waitForEvac(player, 120)
+	for _ = 1, 40 do
 		Stub.advance(0.5)
 		Stub.movePlayer(player, pad.Position + Stub.v3(0, 3, 0))
 		if Round.state == "Results" then
@@ -625,6 +659,729 @@ scenario("telemetry wrote an inspectable round log", function()
 	local hasOutcome = string.find(first.Value, "outcome", 1, true) ~= nil
 	assertTrue(hasOutcome, "round log does not contain the outcome record")
 	return true, string.format("%d round log(s), %d bytes in the newest", entries, #first.Value)
+end)
+
+
+-- ============================================================
+-- Test fixtures shared by the r05 scenarios
+-- ============================================================
+
+-- Deterministically energise a socket. Scenarios that are about water/power maths use this so
+-- they never depend on which scenario ran before them or on a player's carrying state.
+local function forcePower(socketKey: string, cellId: string)
+	local socket = Power.sockets[socketKey]
+	assertTrue(socket ~= nil, "no socket named " .. socketKey)
+	local cell = Power.cells[cellId]
+	assertTrue(cell ~= nil, "no cell named " .. cellId)
+	if cell.holder then
+		cell.holder = nil
+	end
+	if cell.socket and Power.sockets[cell.socket] then
+		Power.sockets[cell.socket].cellId = nil
+	end
+	cell.socket = socketKey
+	socket.cellId = cellId
+	Power.recompute()
+	return cell
+end
+
+local function zoneOf(name: string)
+	return module("WorldService").zones[name]
+end
+
+local function zoneCount(): number
+	local count = 0
+	for _ in pairs(module("WorldService").zones) do
+		count += 1
+	end
+	return count
+end
+
+-- ============================================================
+-- Scenario 14: the skybridge starts retracted and the span is real baked geometry
+-- ============================================================
+scenario("skybridge is baked, retracted at round start and walkable when extended", function()
+	freshRound(player)
+	assertTrue(Route.deckParts and #Route.deckParts == 4,
+		`expected 4 span segments, got {Route.deckParts and #Route.deckParts or 0}`)
+	assertTrue(#Route.railParts >= 8, `expected at least 8 rail members, got {#Route.railParts}`)
+	assertTrue(Route.extension() == 0, "span should start tucked")
+	-- tucked segments must not be walkable
+	for _, entry in ipairs(Route.deckParts) do
+		assertTrue(entry.part.CanCollide == false, "a retracted span segment still has collision")
+	end
+	-- ...and a segment must actually sit at its tucked CFrame
+	local first = Route.deckParts[1]
+	local tucked = first.tucked.Position
+	local actual = first.part.CFrame.Position
+	assertTrue((tucked - actual).Magnitude < 0.5, "first segment is not at its tucked position")
+	-- no crossing without extension
+	assertTrue(Route.waypointsFor(Route.nearJoint, Route.farJoint) == nil,
+		"a retracted span offered crossing waypoints")
+	return true, string.format("%d segments, %d rail members, tucked at (%.1f, %.1f, %.1f)",
+		#Route.deckParts, #Route.railParts, tucked.X, tucked.Y, tucked.Z)
+end)
+
+-- ============================================================
+-- Scenario 15: the powered winch walks the span out (one grid consumer)
+-- ============================================================
+scenario("a powered winch extends the skybridge without any cranking", function()
+	freshRound(player)
+	local picked, pickReason = Power.pickup(player, "Cell_A")
+	assertTrue(picked, "could not pick up a cell for the winch: " .. tostring(pickReason))
+	local inserted, insertReason = Power.insert(player, "Winch")
+	assertTrue(inserted, "could not insert the cell into the winch socket: " .. tostring(insertReason))
+	assertTrue(Power.isPowered("Winch"), "winch socket did not power up on one cell")
+	Stub.advance(Config.Route.Skybridge.MotorSeconds + 1.5)
+	assertTrue(Route.extension() >= 0.999, `span only reached {Route.extension()}`)
+	assertTrue(Route.isCrossable(), "span is not crossable after full extension")
+	local solid = 0
+	for _, entry in ipairs(Route.deckParts) do
+		if entry.part.CanCollide then
+			solid += 1
+		end
+	end
+	assertTrue(solid == 4, `only {solid} of 4 segments became solid`)
+	local routes = Route.openedRoutes()
+	local has = false
+	for _, name in ipairs(routes) do
+		if name == "Skybridge" then
+			has = true
+		end
+	end
+	assertTrue(has, "the skybridge did not register as an opened route")
+	return true, `extended to {Route.extension()}% in {Config.Route.Skybridge.MotorSeconds}s on 1 cell, routes={table.concat(routes, ",")}`
+end)
+
+-- ============================================================
+-- Scenario 16: no power at all — the hand cranks still open the roof route
+-- ============================================================
+scenario("hand cranking opens the skybridge with the grid dark", function()
+	freshRound(player)
+	assertTrue(not Power.isPowered("Winch"), "winch should be unpowered in a fresh round")
+	local config = Config.Route.Skybridge
+	local turns = math.ceil(config.ExtendSeconds / config.CrankPromptHold)
+	local accepted, rejected = 0, 0
+	for _ = 1, turns + 2 do
+		local ok = Route.crank(player)
+		if ok then
+			accepted += 1
+		else
+			rejected += 1
+		end
+		Stub.advance(config.CrankCooldown + 0.05)
+	end
+	assertTrue(Route.isCrossable(), `hand cranking only reached {Route.extension()}%`)
+	assertTrue(rejected >= 1, "the crank never refused a turn (cooldown or completion check missing)")
+	assertTrue(Route.skybridge.viaPower == false, "hand cranking was flagged as winch power")
+	return true, `{accepted} turns accepted, {rejected} refused, span at {Route.extension()}% with zero power`
+end)
+
+-- ============================================================
+-- Scenario 17: escorting across the span uses explicit waypoints
+-- ============================================================
+scenario("survivors cross the roof span on route waypoints, not through the air", function()
+	freshRound(player)
+	Route.setExtension(1)
+	local apartmentSide = Stub.v3(30, 14, -12)
+	local towerSide = Stub.v3(0, 16.4, -36)
+	local waypoints = Route.waypointsFor(apartmentSide, towerSide)
+	assertTrue(waypoints ~= nil and #waypoints == 3, "no bridge waypoints were offered across the span")
+	local survivor = Rescue.get("Survivor5")
+	assertTrue(survivor ~= nil, "Survivor5 missing")
+	-- Leadership needs proximity, so recruit her first, then walk the pair onto the span.
+	standPlayer(player, apartmentSide)
+	Rescue.setRigPosition(survivor, apartmentSide + Stub.v3(2, 0, 0))
+	Stub.advance(0.2)
+	local led, leadReason = Rescue.lead(player, "Survivor5")
+	assertTrue(led, "could not recruit Survivor5: " .. tostring(leadReason))
+	standPlayer(player, towerSide)
+	local startParameter = Route.spanParameter(survivor.position)
+	local sawQueue = false
+	for _ = 1, 240 do
+		Stub.advance(0.25)
+		if survivor.routeQueue then
+			sawQueue = true
+		end
+		if Route.spanParameter(survivor.position) > 0.75 then
+			break
+		end
+	end
+	local endParameter = Route.spanParameter(survivor.position)
+	assertTrue(sawQueue, "the survivor never picked up the bridge waypoint queue")
+	assertTrue(endParameter > startParameter + 0.25,
+		string.format("survivor did not cross the span (t %.2f -> %.2f)", startParameter, endParameter))
+	return true, string.format("crossed the span on waypoints: t %.2f -> %.2f over %d ticks", startParameter, endParameter, 240)
+end)
+
+-- ============================================================
+-- Scenario 18: the service cut is blocked, clears in three digs, then connects the district
+-- ============================================================
+scenario("the service cut opens only after the collapse is dug out", function()
+	freshRound(player)
+	local barricade = part("TunnelBarricade")
+	assertTrue(Route.cut.blocked, "the cut should start blocked")
+	assertTrue(barricade.CanCollide, "the barricade is not solid at round start")
+	local salvageBefore = Upgrades.salvage
+	local digs = 0
+	for _ = 1, 3 do
+		Harness.trigger(barricade, player)
+		Stub.advance(0.4)
+		digs += 1
+	end
+	assertTrue(not Route.cut.blocked, `the cut is still blocked after {digs} digs`)
+	assertTrue(barricade.CanCollide == false, "the barricade is still solid after clearing")
+	assertTrue(barricade.Transparency > 0.9, "the cleared barricade was not hidden")
+	assertTrue(Upgrades.salvage > salvageBefore, "clearing the cut paid no salvage")
+	local routes = Route.openedRoutes()
+	assertTrue(#routes == 1 and routes[1] == "ServiceCut", "the cut did not register as an opened route")
+	return true, `cleared in {digs} digs, +{Upgrades.salvage - salvageBefore} salvage, routes={table.concat(routes, ",")}`
+end)
+
+-- ============================================================
+-- Scenario 19: closing both cut doors actually holds the water back
+-- ============================================================
+scenario("sealing the service cut slows its flooding (it floods first when open)", function()
+	freshRound(player)
+	local cutDoors = {}
+	for _, door in ipairs(Doors.list) do
+		if door.zone == "ServiceCut" then
+			table.insert(cutDoors, door)
+		end
+	end
+	assertTrue(#cutDoors == 2, `expected 2 service cut doors, found {#cutDoors}`)
+	local probe = Stub.v3(-19.5, 1, -22.5)
+	Flood.surge(3.0)
+	Stub.advance(0.5)
+	for _, door in ipairs(cutDoors) do
+		Doors.set(door, false, true)
+	end
+	local openDepth = Flood.depthAt(probe)
+	for _, door in ipairs(cutDoors) do
+		Doors.set(door, true, true)
+	end
+	local closedDepth = Flood.depthAt(probe)
+	assertTrue(Doors.isZoneSealed("ServiceCut"), "the cut zone was not sealed")
+	assertTrue(closedDepth < openDepth - 0.5,
+		string.format("sealed cut should be much drier: open=%.2f closed=%.2f", openDepth, closedDepth))
+	return true, string.format("cut depth open=%.2fm closed=%.2fm", openDepth, closedDepth)
+end)
+
+-- ============================================================
+-- Scenario 20: salvage crates pay once, and the bench spends the pool
+-- ============================================================
+scenario("salvage crates pay out once and the bench spends the pool", function()
+	Round.resetToLobby()
+	Round.requestStart(player)
+	Stub.advance(1)
+	local crate = part("SupplyCrate_2")
+	local before = Upgrades.salvage
+	local cratesBefore = Upgrades.cratesOpened
+	Harness.trigger(crate, player)
+	assertTrue(Upgrades.cratesOpened == cratesBefore + 1, "the crate prompt did not open the crate")
+	local gained = Upgrades.lastCratePayout
+	assertTrue(gained >= 12 and gained <= 20, `crate payout out of range: {gained}`)
+	assertTrue(Upgrades.salvage == before + gained, `the pool did not move by exactly the payout ({before} -> {Upgrades.salvage})`)
+	Harness.trigger(crate, player)
+	assertTrue(Upgrades.salvage == before + gained, "the same crate paid twice")
+	assertTrue(Upgrades.cratesOpened >= 1, "the crate was not counted")
+	local ok, reason = Upgrades.canAfford("SealKit")
+	assertTrue(ok, `could not afford the cheapest upgrade after a crate: {tostring(reason)}`)
+	Upgrades.purchase(player, "SealKit")
+	assertTrue(Upgrades.has("SealKit"), "the seal kit purchase did not register")
+	local okAgain, reasonAgain = Upgrades.canAfford("SealKit")
+	assertTrue(not okAgain and reasonAgain ~= nil, "the same upgrade was purchasable twice")
+	return true, `crate paid {gained}, pool {before} -> {Upgrades.salvage}, SealKit fitted`
+end)
+
+-- ============================================================
+-- Scenario 21: the grid capacitor upgrade really lifts the brownout
+-- ============================================================
+scenario("the capacitor upgrade lifts a real brownout", function()
+	freshRound(player)
+	assertTrue(Power.pickup(player, "Cell_A"), "no Cell_A")
+	Power.insert(player, "Pump")
+	assertTrue(Power.pickup(player, "Cell_B"), "no Cell_B")
+	Power.insert(player, "Lift")
+	assertTrue(Power.isPowered("Pump") and Power.isPowered("Lift"), "two high-priority consumers should run at capacity 2")
+	assertTrue(Power.pickup(player, "Cell_C"), "no Cell_C")
+	Power.insert(player, "Bridge")
+	local brownout = not Power.isPowered("Bridge")
+	assertTrue(brownout, "the third consumer should brown out at capacity 2")
+	assertTrue(Power.consumers.Bridge.reason == "brownout", `expected a brownout reason, got {tostring(Power.consumers.Bridge.reason)}`)
+	local capacityBefore = Power.capacity
+	Upgrades.award(60, "sim funding")
+	Upgrades.purchase(player, "Capacitor")
+	assertTrue(Power.capacity == capacityBefore + 1, `capacity did not rise: {capacityBefore} -> {Power.capacity}`)
+	assertTrue(Power.isPowered("Bridge"), "the bridge did not come online after the capacitor was fitted")
+	return true, `capacity {capacityBefore} -> {Power.capacity}, brownout cleared without touching the sockets`
+end)
+
+-- ============================================================
+-- Scenario 22: pump impeller + rebreather change the simulation measurably
+-- ============================================================
+scenario("impeller and rebreather upgrades change water and air numbers", function()
+	freshRound(player)
+	local airBefore = Flood.oxygenTarget()
+	-- Baseline: no pump at all, so the district takes on water at the raw phase rate.
+	local dryStart = Flood.level
+	Stub.advance(12)
+	local dryDelta = Flood.level - dryStart
+	forcePower("Pump", "Cell_A")
+	assertTrue(Power.isPowered("Pump"), "the pump did not come online with one cell")
+	local pumpedStart = Flood.level
+	Stub.advance(12)
+	local pumpedDelta = Flood.level - pumpedStart
+	assertTrue(pumpedDelta < dryDelta * 0.5,
+		string.format("the pump barely changed the rise: %.3f -> %.3f per 12s", dryDelta, pumpedDelta))
+	Upgrades.award(200, "sim funding")
+	Upgrades.purchase(player, "Impeller")
+	Upgrades.purchase(player, "Rebreather")
+	assertTrue(Upgrades.has("Impeller") and Upgrades.has("Rebreather"), "upgrades did not register")
+	local impellerStart = Flood.level
+	Stub.advance(12)
+	local impellerDelta = Flood.level - impellerStart
+	assertTrue(Flood.oxygenTarget() == airBefore + 9,
+		`rebreather did not add 9s of air ({airBefore} -> {Flood.oxygenTarget()})`)
+	assertTrue(impellerDelta < pumpedDelta * 0.6,
+		string.format("impeller had no measurable effect: %.3f -> %.3f per 12s", pumpedDelta, impellerDelta))
+	return true, string.format("air %ds -> %ds, 12s of water: %.2f dry, %.2f pumped, %.2f fitted",
+		airBefore, Flood.oxygenTarget(), dryDelta, pumpedDelta, impellerDelta)
+end)
+
+-- ============================================================
+-- Scenario 23: lift servo upgrade (faster travel, one more seat)
+-- ============================================================
+scenario("the lift servo upgrade speeds travel and adds a passenger slot", function()
+	freshRound(player)
+	Power.pickup(player, "Cell_A")
+	Power.insert(player, "Lift")
+	local capacityBefore = Lift.snapshot().capacity
+	Upgrades.award(200, "sim funding")
+	Upgrades.purchase(player, "LiftServo")
+	local capacityAfter = Lift.snapshot().capacity
+	assertTrue(capacityAfter == capacityBefore + 1, `capacity unchanged: {capacityBefore} -> {capacityAfter}`)
+
+	local function progressAfter(seconds: number): number
+		Route.setExtension(0)
+		Lift.reset()
+		Power.recompute()
+		local survivor = Rescue.get("Survivor5")
+		Lift.boardSurvivor(survivor)
+		Lift.call(player)
+		Stub.advance(seconds)
+		local progress = Lift.progress
+		Lift.reset()
+		Rescue.release(player)
+		survivor.boarding = false
+		survivor.state = "Idle"
+		Lift.passengers = {}
+		return progress
+	end
+	-- measure the same 3s window with and without the servo
+	Upgrades.purchased["LiftServo"] = { by = player.Name, at = os.clock() }
+	local fast = progressAfter(3)
+	Upgrades.purchased["LiftServo"] = nil
+	local slow = progressAfter(3)
+	assertTrue(fast > slow, string.format("servo did not speed the lift: %.2f vs %.2f progress in 3s", fast, slow))
+	Upgrades.purchased["LiftServo"] = { by = player.Name, at = os.clock() }
+	Lift.refresh()
+	return true, string.format("3s of travel: %.0f%% -> %.0f%%, seats %d -> %d", slow * 100, fast * 100, capacityBefore, capacityAfter)
+end)
+
+-- ============================================================
+-- Scenario 24: field hospital — revives at twice the speed, at full health
+-- ============================================================
+scenario("the field hospital upgrade halves revive time and restores full health", function()
+	freshRound(player)
+	local target = Stub.addPlayer("Casualty")
+	Stub.spawnCharacter(target, Stub.v3(0, 3, -12))
+	Stub.advance(0.5)
+	local humanoid = target.Character:FindFirstChildOfClass("Humanoid")
+	PlayerService.setupCharacter(target, target.Character)
+	-- Revives only progress while the rescuer is over the casualty (9 studs).
+	standPlayer(player, Stub.v3(0, 3, -10))
+	humanoid.Health = 0
+	PlayerService.downed(target, "sim")
+	local state = PlayerService.getState(target)
+	assertTrue(state.downed, "the casualty was not downed")
+	local function tickRevive(seconds: number)
+		for _ = 1, math.floor(seconds / 0.1) do
+			PlayerService.progressRevive(player, target, 0.1)
+		end
+	end
+	tickRevive(2.6)
+	assertTrue(state.downed, "a 2.6s revive is too fast before the upgrade")
+	tickRevive(2.4)
+	assertTrue(not state.downed, "the baseline revive never completed")
+	Upgrades.award(200, "sim funding")
+	Upgrades.purchase(player, "FieldHospital")
+	humanoid.Health = 0
+	PlayerService.downed(target, "sim")
+	tickRevive(2.4)
+	assertTrue(not PlayerService.getState(target).downed, "the upgraded revive did not complete in 2.4s")
+	assertTrue(humanoid.Health >= humanoid.MaxHealth - 0.01,
+		`field hospital revive left {humanoid.Health} health`)
+	Stub.removePlayer(target)
+	return true, "baseline revive needed 5s, upgraded revive landed in 2.4s at full health"
+end)
+
+-- ============================================================
+-- Scenario 25: survivor roles — medic aura, engineer speed, medic rescue payout
+-- ============================================================
+scenario("medic and engineer roles change what the team can do", function()
+	freshRound(player)
+	local medic = Rescue.get("Survivor9")
+	local engineer = Rescue.get("Survivor10")
+	assertTrue(medic ~= nil and engineer ~= nil, "role survivors missing")
+	assertTrue(medic.role == "Medic", `Survivor9 role={tostring(medic.role)}`)
+	assertTrue(engineer.role == "Engineer", `Survivor10 role={tostring(engineer.role)}`)
+	local safeZone = part("SafeZone")
+
+	-- 1. An engineer in tow turns the crank for you.
+	local crankBefore = Route.skybridge.work
+	Route.crank(player, 1)
+	local plain = Route.skybridge.work - crankBefore
+	Route.skybridge.work = crankBefore
+	Rescue.lead(player, "Survivor10")
+	Rescue.setRigPosition(engineer, Stub.characterPosition(player))
+	Route.skybridge.lastCrankAt = 0
+	Route.crank(player, 1)
+	local boosted = Route.skybridge.work - crankBefore
+	assertTrue(boosted > plain + 0.3,
+		string.format("the engineer did not speed the crank (%.2f -> %.2f)", plain, boosted))
+
+	-- 2. A shorted socket stays dead after the trip: trip it, then deliver the engineer and watch
+	--    the trip clear. This has to happen before anyone else reaches the safe zone.
+	Power.pickup(player, "Cell_A")
+	Power.insert(player, "Lift")
+	local socket = Power.sockets.Lift
+	Power.tripSocket("Lift", "flood")
+	assertTrue(socket.tripped, "test setup failed: socket not tripped")
+	Route.skybridge.work = crankBefore
+	Rescue.setRigPosition(engineer, safeZone.Position + Stub.v3(0, 1.5, 0))
+	for _ = 1, 12 do
+		Stub.advance(0.5)
+		if engineer.state == "Rescued" then
+			break
+		end
+	end
+	assertTrue(engineer.state == "Rescued", `engineer not delivered (state={engineer.state})`)
+	assertTrue(socket.tripped == false, "the engineer rescue did not clear the flood trip")
+
+	-- 3. A following medic patches the leader up, but only up to the field ceiling. Stand clear of
+	--    the safe zone or the medic delivers herself and fires the much larger rescue payout.
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	standPlayer(player, part("PumpHouse").Position + Stub.v3(0, 4, 0))
+	Rescue.lead(player, "Survivor9")
+	Rescue.setRigPosition(medic, Stub.characterPosition(player))
+	humanoid.Health = 40
+	Stub.advance(6)
+	assertTrue(humanoid.Health > 41,
+		string.format("the medic aura did not heal (health=%.1f)", humanoid.Health))
+	assertTrue(humanoid.Health <= Config.Survivors.Roles.Medic.HealCeiling + 0.5,
+		string.format("the medic aura healed past its ceiling (%.1f)", humanoid.Health))
+
+	-- 4. Delivering the medic restocks the team's medkits.
+	standPlayer(player, safeZone.Position + Stub.v3(0, 3, 0))
+	Rescue.setRigPosition(medic, safeZone.Position + Stub.v3(0, 1.5, 0))
+	for _ = 1, 12 do
+		Stub.advance(0.5)
+		if medic.state == "Rescued" then
+			break
+		end
+	end
+	assertTrue(medic.state == "Rescued", `medic not delivered (state={medic.state})`)
+	local medkits = PlayerService.getState(player).items.Medkit or 0
+	assertTrue(medkits >= 2, `medic rescue did not restock medkits ({medkits} is under 2)`)
+	return true, string.format("crank %.2f -> %.2f per turn, trip cleared by the engineer, medic held the leader at %.0f, medkits=%d",
+		plain, boosted, humanoid.Health, medkits)
+end)
+
+-- ============================================================
+-- Scenario 26: a child refuses to wade and must be carried
+-- ============================================================
+scenario("children refuse to wade and are carried instead", function()
+	freshRound(player)
+	local child = Rescue.get("Survivor4")
+	assertTrue(child ~= nil and child.role == "Child", "Survivor4 is not the child rig")
+	Flood.surge(2.2)
+	Stub.advance(0.4)
+	local spot = Stub.v3(0, 0.8, -6)
+	Rescue.lead(player, "Survivor4")
+	Rescue.setRigPosition(child, spot)
+	Stub.advance(3)
+	local moved = (child.position - spot).Magnitude
+	assertTrue(moved < 4, string.format("the child waded %.1f studs instead of refusing", moved))
+	assertTrue(child.state == "Following", `child state changed to {child.state}`)
+
+	local ok = Rescue.carry(player, "Survivor4")
+	assertTrue(ok, "could not pick the child up")
+	assertTrue(child.state == "Carried", `child state is {child.state} after the carry`)
+	Stub.movePlayer(player, Stub.v3(8, 0.8, -6))
+	Stub.advance(1)
+	local offset = (child.position - Stub.characterPosition(player)).Magnitude
+	assertTrue(offset < 4, string.format("carried child is %.1f studs from the carrier", offset))
+	return true, string.format("child held position in %.2fm water, then rode the carrier (offset %.1fm)", Flood.depthAt(spot), offset)
+end)
+
+-- ============================================================
+-- Scenario 27: the district's new content is reachable and wired
+-- ============================================================
+scenario("garage, ferry and the cut expose their content to the simulation", function()
+	freshRound(player)
+	assertTrue(Power.cells.Cell_D ~= nil, "the fourth cell was not adopted")
+	assertTrue(Power.cells.Cell_D.label == "Ferry strongbox", `cell D label: {tostring(Power.cells.Cell_D.label)}`)
+	for _, name in ipairs({ "ParkingGarage", "FerryTerminal", "ServiceCut" }) do
+		assertTrue(zoneOf(name) ~= nil, `{name} is not a registered world zone`)
+	end
+	local garage = zoneOf("ParkingGarage")
+	assertTrue(garage.max.Y > 15, `garage roof should exceed 15 studs, got {garage.max.Y}`)
+	assertTrue(part("Cell4").Position.Y > 1, "the ferry cell is not where the geometry says")
+	assertTrue(part("UpgradeBench") ~= nil, "the salvage bench is missing")
+	return true, string.format("4 cells, %d zones, garage roof at %.0f studs", zoneCount(), garage.max.Y)
+end)
+
+-- ============================================================
+-- Scenario 28: the objective list teaches both routes
+-- ============================================================
+scenario("objectives cover both routes and the salvage bench", function()
+	freshRound(player)
+	Objectives.rebuild(player)
+	local ids = {}
+	for _, entry in ipairs(Objectives.list) do
+		ids[entry.id] = entry.status
+	end
+	for _, want in ipairs({ "cells", "pump", "relay", "lift", "skybridge", "cut", "salvage", "rescue", "extract" }) do
+		assertTrue(ids[want] ~= nil, `missing objective: {want}`)
+	end
+	-- and they flip once the route is real
+	Route.setExtension(1)
+	Objectives.rebuild(player)
+	local skyStatus = nil
+	for _, entry in ipairs(Objectives.list) do
+		if entry.id == "skybridge" then
+			skyStatus = entry.status
+		end
+	end
+	assertTrue(skyStatus == "done", `skybridge objective did not complete (status={tostring(skyStatus)})`)
+	return true, `{#Objectives.list} objectives, skybridge flips to done when the span is out`
+end)
+
+-- ============================================================
+-- Scenario 29: a full round records route mastery in the summary
+-- ============================================================
+scenario("route mastery is scored in the round summary", function()
+	Round.resetToLobby()
+	Round.requestStart(player)
+	Stub.advance(1)
+	Route.setExtension(1)
+	local barricade = part("TunnelBarricade")
+	for _ = 1, 3 do
+		Harness.trigger(barricade, player)
+		Stub.advance(0.4)
+	end
+	local needed = Rescue.requiredRescued()
+	local safeZone = part("SafeZone")
+	for _, survivor in ipairs(Rescue.order) do
+		if Rescue.rescuedCount >= needed then
+			break
+		end
+		if survivor.state ~= "Rescued" and survivor.state ~= "Dead" then
+			Rescue.lead(player, survivor.name)
+			Rescue.setRigPosition(survivor, safeZone.Position + Stub.v3(0, 1.5, 0))
+			Stub.advance(4)
+		end
+	end
+	Harness.trigger(part("Radio"), player)
+	Harness.trigger(part("EvacConsole"), player)
+	assertTrue(Round.radioCalled, "evacuation was not authorised")
+	assertTrue(Round.state == "Extraction", "expected Extraction, got " .. Round.state)
+	local pad = part("ExtractionPad")
+	waitForEvac(player, 120)
+	for _ = 1, 60 do
+		Stub.advance(0.5)
+		Stub.movePlayer(player, pad.Position + Stub.v3(0, 3, 0))
+		if Round.state == "Results" then
+			break
+		end
+	end
+	local summary = Round.lastOutcome
+	assertTrue(summary ~= nil, "the round never resolved")
+	assertTrue(summary.outcome == "win" or summary.outcome == "partial", `unexpected outcome {summary.outcome}`)
+	assertTrue(summary.routes ~= nil and #summary.routes == 2, `expected 2 opened routes, got {summary.routes and #summary.routes or 0}`)
+	assertTrue(summary.cutOpen == true, "the summary did not record the open service cut")
+	assertTrue(summary.upgrades ~= nil and summary.upgrades.salvage ~= nil, "the summary has no salvage block")
+	return true, string.format("outcome=%s routes=%s score=%d salvage=%d", summary.outcome, table.concat(summary.routes, "+"), summary.teamScore, summary.upgrades.salvage)
+end)
+
+-- ============================================================
+-- Scenario 30: the local player cannot fake route or upgrade state
+-- ============================================================
+scenario("route and upgrade changes only happen through server-owned paths", function()
+	freshRound(player)
+	-- There is no remote that sets extension, salvage or capacity directly.
+	local net = Harness.mounted.ReplicatedStorage:FindFirstChild("FloodlineNet")
+	local names = {}
+	for _, child in ipairs(net:GetChildren()) do
+		names[child.Name] = true
+	end
+	assertTrue(names.RequestUpgrade == true, "the bench remote is missing")
+	assertTrue(names.RequestCrank == nil, "a crank remote exists that the server does not validate")
+	assertTrue(names.SetRoute == nil and names.SetSalvage == nil, "a route/salvage setter remote leaked in")
+	local salvageBefore = Upgrades.salvage
+	-- purchasing without salvage must fail
+	Upgrades.salvage = 0
+	local ok, reason = Upgrades.purchase(player, "Impeller")
+	assertTrue(not ok and reason ~= nil, "an unaffordable purchase went through")
+	assertTrue(Upgrades.salvage == 0, "the failed purchase still moved the pool")
+	Upgrades.salvage = salvageBefore
+	return true, "no client-side setter exists; unaffordable purchases are refused with a reason"
+end)
+
+-- ============================================================
+-- Scenario 36: a rematch puts the district back the way it started
+-- ============================================================
+scenario("a rematch restores world items, doors, routes and the salvage pool", function()
+	Round.resetToLobby()
+	Round.requestStart(player)
+	Stub.advance(1)
+
+	-- Spend the world: take the radio and the fuse, loot a crate, seal a door, open both routes.
+	local radio = part("Radio")
+	local fuse = part("RelayFuse")
+	standPlayer(player, fuse.Position + Stub.v3(0, 2, 0))
+	Harness.trigger(fuse, player)
+	Rescue.release(player)
+	standPlayer(player, radio.Position + Stub.v3(0, 2, 0))
+	Harness.trigger(radio, player)
+	local crate = part("SupplyCrate_1")
+	standPlayer(player, crate.Position + Stub.v3(0, 2, 0))
+	Harness.trigger(crate, player)
+	Route.setExtension(1)
+	local barricade = part("TunnelBarricade")
+	for _ = 1, 3 do
+		Harness.trigger(barricade, player)
+		Stub.advance(0.4)
+	end
+	local doorsClosed = 0
+	for _, door in ipairs(Doors.list) do
+		Doors.set(door, true, true)
+		doorsClosed += 1
+	end
+	assertTrue(radio:GetAttribute("Taken") == true, "test setup failed: the radio was not taken")
+	assertTrue(Route.extension() >= 0.999, "test setup failed: the span did not extend")
+	assertTrue(Upgrades.cratesOpened >= 1, "test setup failed: the crate did not open")
+
+	-- Rematch.
+	Round.resetToLobby()
+	Round.requestStart(player)
+	Stub.advance(1)
+
+	assertTrue(radio:GetAttribute("Taken") == false, "the radio is still marked as taken in round two")
+	assertTrue(radio.Transparency == 0, "the radio is still invisible in round two")
+	local prompt = radio:FindFirstChildOfClass("ProximityPrompt")
+	assertTrue(prompt ~= nil and prompt.Enabled, "the radio prompt is still disabled in round two")
+	assertTrue(fuse:GetAttribute("Taken") == false, "the relay fuse was not restored")
+	assertTrue(crate:GetAttribute("Looted") == false, "the salvage crate was not restocked")
+	assertTrue(Route.extension() == 0, "the skybridge is still extended")
+	assertTrue(Route.cut.blocked, "the service cut is still open")
+	assertTrue(barricade.CanCollide, "the collapsed barricade is still walkable")
+	assertTrue(Upgrades.salvage == Config.Upgrades.StartSalvage,
+		`the salvage pool did not reset ({Upgrades.salvage} vs {Config.Upgrades.StartSalvage})`)
+	local closed = 0
+	for _, door in ipairs(Doors.list) do
+		if door.closed then
+			closed += 1
+		end
+	end
+	assertTrue(closed < doorsClosed, "every door is still sealed in round two")
+	-- and the round is genuinely playable: the fuse can be taken again
+	standPlayer(player, fuse.Position + Stub.v3(0, 2, 0))
+	assertTrue(Harness.trigger(fuse, player), "the fuse prompt would not fire in round two")
+	assertTrue(PlayerService.hasItem(player, "Fuse"), "the fuse could not be collected in round two")
+	return true, string.format("radio/fuse/crate/span/cut/salvage all restored; %d doors resealed, fuse re-collectable", closed)
+end)
+
+-- ============================================================
+-- Scenario 37: survivors take to high ground instead of drowning in the open
+-- ============================================================
+scenario("unclaimed survivors climb to a refuge when the water reaches them", function()
+	freshRound(player)
+	assertTrue(Rescue.refuges ~= nil and #Rescue.refuges == 8, `expected 8 refuge markers, found {Rescue.refuges and #Rescue.refuges or 0}`)
+	local survivor = Rescue.get("Survivor6")
+	assertTrue(survivor ~= nil, "Survivor6 missing")
+	-- Put them in deep water at the foot of the pump house catwalk.
+	local base = Stub.v3(-30, 1.0, -38)
+	Rescue.setRigPosition(survivor, base)
+	Flood.surge(3.4)
+	local startY = survivor.position.Y
+	assertTrue(Flood.depthAt(survivor.position) > 1,
+		string.format("the test spot is not flooded (%.2fm)", Flood.depthAt(survivor.position)))
+	local sawShelter = false
+	for _ = 1, 90 do
+		Stub.advance(1)
+		if survivor.shelter then
+			sawShelter = true
+		end
+		if survivor.position.Y > 8 then
+			break
+		end
+	end
+	assertTrue(sawShelter, "the survivor never looked for high ground")
+	assertTrue(survivor.position.Y > startY + 4,
+		string.format("the survivor did not climb (y %.1f -> %.1f)", startY, survivor.position.Y))
+	assertTrue(survivor.state ~= "Dead", "the survivor drowned on the way up")
+	assertTrue(Flood.depthAt(survivor.position) <= 0.6,
+		string.format("the survivor is still standing in %.2fm of water", Flood.depthAt(survivor.position)))
+	return true, string.format("climbed %.1f -> %.1f studs (%s), state=%s",
+		startY, survivor.position.Y, tostring(survivor.shelterLabel), survivor.state)
+end)
+
+-- ============================================================
+-- Scenario 38: a surge that forces the evacuation still lands the vehicle
+-- ============================================================
+scenario("a surge-forced evacuation still schedules the evac vehicle", function()
+	freshRound(player)
+	-- Bank the quota first so the long wait for the surge cannot end the round early.
+	local safeZone = part("SafeZone")
+	for _, survivor in ipairs(Rescue.order) do
+		if Rescue.rescuedCount >= Rescue.requiredRescued() + 2 then
+			break
+		end
+		Rescue.lead(player, survivor.name)
+		Rescue.setRigPosition(survivor, safeZone.Position + Stub.v3(0, 1.5, 0))
+		Stub.advance(4)
+	end
+	assertTrue(Rescue.rescuedCount >= Rescue.requiredRescued(), "could not bank the quota for this scenario")
+	-- Keep the pump running, or the district drowns long before the surge arrives.
+	forcePower("Pump", "Cell_A")
+	assertTrue(Power.isPowered("Pump"), "the pump is not holding the water back")
+	-- Run the clock until the storm surge takes over and auto-calls the evacuation.
+	local advanced = 0
+	while not Round.radioCalled and advanced < 1200 do
+		Stub.advance(5)
+		advanced += 5
+	end
+	assertTrue(Round.radioCalled, "the surge never forced an evacuation call")
+	assertTrue(Round.state == "Extraction", `expected Extraction after the surge, got {Round.state}`)
+	assertTrue(Round.evacEta() >= 0, "the forced evacuation left the vehicle unscheduled")
+	assertTrue(not Round.evacArrived(), "the vehicle should still be inbound")
+	local pad = part("ExtractionPad")
+	standPlayer(player, pad.Position + Stub.v3(0, 3, 0))
+	local arrived = waitForEvac(player, 120)
+	assertTrue(arrived, "the vehicle never landed after a surge-forced call")
+	local extracted = false
+	for _ = 1, 60 do
+		Stub.advance(0.5)
+		standPlayer(player, pad.Position + Stub.v3(0, 3, 0))
+		if Round.extractedPlayers[player] then
+			extracted = true
+			break
+		end
+	end
+	assertTrue(extracted, "the pad stayed inert after the vehicle landed")
+	return true, string.format("surge forced the call at t=%ds, vehicle landed, pad accepted the crew", advanced)
 end)
 
 -- ============================================================

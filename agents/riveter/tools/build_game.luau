@@ -22,6 +22,7 @@ fs.writeDir(GEN .. "/models")
 
 local V3 = roblox.Vector3
 local C3 = roblox.Color3
+local CFrame = roblox.CFrame
 local Enum = roblox.Enum
 
 local CONC = Enum.Material.Concrete
@@ -90,6 +91,32 @@ local function M(parent, name)
 	return m
 end
 
+-- Parts that need real orientation (ramps, the skybridge span) take a CFrame instead of a
+-- world position; everything else stays on the simpler P() helper.
+local function P3(parent, name, size, cframe, color, material, anchored, collide, transparency)
+	local o = roblox.Instance.new("Part")
+	o.Name = name
+	o.Size = size
+	o.CFrame = cframe
+	o.Color = color or C_LIGHT
+	o.Material = material or CONC
+	o.Anchored = anchored ~= false
+	o.CanCollide = collide ~= false
+	o.Transparency = transparency or 0
+	o.Parent = parent
+	return o
+end
+
+-- Yaw/pitch helper for span members: yaw is atan2(dx, dz), pitch tilts the part's +Z nose up.
+local function spanPart(parent, name, width, thickness, length, from, to, color, material)
+	local delta = to - from
+	local span = delta.Magnitude
+	local yaw = math.atan2(delta.X, delta.Z)
+	local pitch = math.asin(math.clamp(delta.Y / math.max(span, 0.001), -1, 1))
+	local cframe = CFrame.new((from + to) * 0.5) * CFrame.Angles(0, yaw, 0) * CFrame.Angles(-pitch, 0, 0)
+	return P3(parent, name, V3.new(width, thickness, length or span), cframe, color, material)
+end
+
 local function prompt(parent, action, object, hold)
 	local pr = roblox.Instance.new("ProximityPrompt")
 	pr.ActionText = action
@@ -103,6 +130,13 @@ end
 -- A hinged door: the Door_ prefix is what DoorService looks for; the zone name follows it.
 local function DOOR(parent, zone, position, width, height, color)
 	local door = P(parent, "Door_" .. zone, V3.new(width, height, 0.35), position, color or C3.fromRGB(120, 92, 64), WOOD, true, true, 0)
+	prompt(door, "Toggle Door", zone .. " door", 0.2)
+	return door
+end
+
+-- Same door, but thin along X: for walls that run north-south (the service cut ends).
+local function DOORZ(parent, zone, position, width, height, color)
+	local door = P(parent, "Door_" .. zone, V3.new(0.35, height, width), position, color or C3.fromRGB(96, 112, 124), METAL, true, true, 0)
 	prompt(door, "Toggle Door", zone .. " door", 0.2)
 	return door
 end
@@ -187,10 +221,12 @@ copyModel("World", function(world)
 	P(term, "Socket_Pump", V3.new(1.8, 1.8, 1.8), V3.new(-9, 1.4, -38.6), C3.fromRGB(206, 124, 44), METAL, true, true, 0)
 	P(term, "Socket_Bridge", V3.new(1.8, 1.8, 1.8), V3.new(-4, 1.4, -38.6), C3.fromRGB(206, 124, 44), METAL, true, true, 0)
 	P(term, "Socket_Lift", V3.new(1.8, 1.8, 1.8), V3.new(1, 1.4, -38.6), C3.fromRGB(206, 124, 44), METAL, true, true, 0)
+	P(term, "Socket_Winch", V3.new(1.8, 1.8, 1.8), V3.new(6, 1.4, -38.6), C3.fromRGB(206, 124, 44), METAL, true, true, 0)
 	prompt(term.Socket_Pump, "Use Socket", "Pump Socket")
 	prompt(term.Socket_Bridge, "Use Socket", "Bridge Socket")
 	prompt(term.Socket_Lift, "Use Socket", "Lift Socket")
-	P(term, "Charger", V3.new(2.6, 1.4, 2.6), V3.new(6, 1, -38.6), C3.fromRGB(80, 190, 120), METAL, true, true, 0)
+	prompt(term.Socket_Winch, "Use Socket", "Winch Socket")
+	P(term, "Charger", V3.new(2.6, 1.4, 2.6), V3.new(9, 1, -38.6), C3.fromRGB(80, 190, 120), METAL, true, true, 0)
 	prompt(term.Charger, "Dock Cell", "Cell Charger", 0.3)
 	P(term, "Switchboard", V3.new(5, 3.4, 0.5), V3.new(10, 2, -40.6), C3.fromRGB(58, 60, 70), METAL, true, true, 0)
 	for i = 0, 3 do
@@ -414,6 +450,232 @@ copyModel("World", function(world)
 	P(docks, "DockPallet", V3.new(3.4, 0.4, 2.2), V3.new(22, 0.5, 30), C3.fromRGB(122, 96, 60), WOOD, true, true, 0)
 	P(docks, "DockSign", V3.new(5, 1.4, 0.3), V3.new(30, 4.6, 36), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
 
+	-- ================= 7. PARKING GARAGE =================
+	-- Three open decks plus a roof, connected by external switchback ramps. The far corner of
+	-- the district: a long trip for two survivors and a spare power cell, and the only roof
+	-- outside the apartment block that reaches above the surge line.
+	-- ---- refuges: high, reachable ground that an unclaimed survivor runs to when the water comes.
+	-- They sit on walkable decks (ramp landings, catwalks, upper floors), so the district's own
+	-- geometry is what keeps people alive. RescueService walks to the nearest one still dry.
+	local refugeFolder = M(world, "Refuges")
+	local refuges = {
+		{ "Refuge1", "clinic landing", V3.new(-2, 8.4, 34) },
+		{ "Refuge2", "workshop mezzanine", V3.new(-30, 9.2, -6) },
+		{ "Refuge3", "pump house catwalk", V3.new(-30, 12.6, -38) },
+		{ "Refuge4", "relay platform", V3.new(32, 16.2, -12) },
+		{ "Refuge5", "apartment stairs", V3.new(38, 7.4, 15) },
+		{ "Refuge6", "garage roof", V3.new(-4, 8.8, -14) },
+		{ "Refuge7", "ferry hall mezzanine", V3.new(66, 5.2, 27) },
+		{ "Refuge8", "dock gantry", V3.new(0, 3.2, -55) },
+	}
+	for _, entry in ipairs(refuges) do
+		local marker = P(refugeFolder, entry[1], V3.new(3.4, 0.4, 3.4), entry[3], C3.fromRGB(120, 226, 160), NEON, false, false, 0.65)
+		marker:SetAttribute("Refuge", true)
+		marker:SetAttribute("RefugeLabel", entry[2])
+		marker.CanQuery = false
+	end
+
+	local gar = M(world, "ParkingGarage")
+	local GX, GZ = -64, -8
+	local GDECK = { 0.6, 5.6, 10.6, 15.6 }
+	P(gar, "Ground", V3.new(32, 0.6, 30), V3.new(GX, 0.3, GZ), C3.fromRGB(64, 66, 74), CONC, true, true, 0)
+	for level = 1, 3 do
+		P(gar, "Deck" .. level, V3.new(32, 0.5, 30), V3.new(GX, GDECK[level], GZ), C3.fromRGB(72, 74, 82), CONC, true, true, 0)
+	end
+	P(gar, "Roof", V3.new(32, 0.6, 30), V3.new(GX, GDECK[4], GZ), C3.fromRGB(52, 54, 62), CONC, true, true, 0)
+	-- column grid
+	for _, cx in ipairs({ -76, -64, -52 }) do
+		for _, cz in ipairs({ -19, -8, 3 }) do
+			for level = 0, 2 do
+				P(gar, `Col_{level}_{cx}_{cz}`, V3.new(1.4, 4.4, 1.4), V3.new(cx, GDECK[level + 1] + 2.4, cz), C3.fromRGB(84, 86, 94), CONC, true, true, 0)
+			end
+		end
+	end
+	-- ramps: west up, east up, west up again to the roof (kerbs mark the drop)
+	local ramps = {
+		{ name = "RampA", from = V3.new(-81.5, 0.85, 6), to = V3.new(-81.5, 5.85, -18) },
+		{ name = "RampB", from = V3.new(-46.5, 5.85, -18), to = V3.new(-46.5, 10.85, 6) },
+		{ name = "RampC", from = V3.new(-81.5, 10.85, 6), to = V3.new(-81.5, 15.85, -18) },
+	}
+	for _, ramp in ipairs(ramps) do
+		spanPart(gar, ramp.name, 5, 0.5, nil, ramp.from, ramp.to, C3.fromRGB(78, 80, 88), CONC)
+		for side = -1, 1, 2 do
+			local a = ramp.from + V3.new(side * 2.5, 0.85, 0)
+			local b = ramp.to + V3.new(side * 2.5, 0.85, 0)
+			spanPart(gar, ramp.name .. "Kerb" .. side, 0.3, 0.9, nil, a, b, C3.fromRGB(120, 126, 136), METAL)
+		end
+	end
+	-- parapets, with mouths left open where the ramps meet each deck
+	for level = 0, 3 do
+		local y = GDECK[level + 1] + 0.85
+		for _, edge in ipairs({ { "N", V3.new(0, 0, -15) }, { "S", V3.new(0, 0, 15) } }) do
+			P(gar, `Parapet_{edge[1]}_{level}`, V3.new(32, 1.1, 0.4), V3.new(GX, y, GZ) + edge[2], C3.fromRGB(118, 126, 136), METAL, true, true, 0)
+		end
+		local spans = { { -21, 4 }, { -6, 14 } }
+		for index, span in ipairs(spans) do
+			P(gar, `Parapet_W_{level}_{index}`, V3.new(0.4, 1.1, span[2]), V3.new(-80, y, span[1]), C3.fromRGB(118, 126, 136), METAL, true, true, 0)
+			P(gar, `Parapet_E_{level}_{index}`, V3.new(0.4, 1.1, span[2]), V3.new(-48, y, span[1]), C3.fromRGB(118, 126, 136), METAL, true, true, 0)
+		end
+	end
+	-- parked cars: body, cabin and two lamp blocks per car
+	local carColors = {
+		C3.fromRGB(150, 70, 66), C3.fromRGB(70, 110, 150), C3.fromRGB(90, 130, 90),
+		C3.fromRGB(180, 170, 150), C3.fromRGB(120, 96, 128), C3.fromRGB(80, 84, 92),
+	}
+	for level = 0, 2 do
+		local y = GDECK[level + 1]
+		for slot = 1, 4 do
+			local cx = (slot % 2 == 0) and -58 or -74
+			local cz = -18 + math.floor((slot - 1) / 2) * 10
+			local color = carColors[((level * 4 + slot) % #carColors) + 1]
+			P(gar, `Car_{level}_{slot}_Body`, V3.new(4.2, 1.3, 2.2), V3.new(cx, y + 0.9, cz), color, SMOOTH, true, true, 0)
+			P(gar, `Car_{level}_{slot}_Cabin`, V3.new(2.3, 0.9, 2), V3.new(cx, y + 1.9, cz), color, GLASS, true, true, 0.25)
+			P(gar, `Car_{level}_{slot}_LampL`, V3.new(0.3, 0.4, 0.5), V3.new(cx, y + 0.9, cz - 1.1), C3.fromRGB(240, 230, 180), NEON, true, false, 0.2)
+			P(gar, `Car_{level}_{slot}_LampR`, V3.new(0.3, 0.4, 0.5), V3.new(cx, y + 0.9, cz + 1.1), C3.fromRGB(240, 230, 180), NEON, true, false, 0.2)
+		end
+	end
+	-- deck dressing
+	P(gar, "Booth", V3.new(5, 3, 5), V3.new(-51, 1.9, 4), C3.fromRGB(84, 88, 96), CONC, true, true, 0)
+	P(gar, "BoothWindow", V3.new(3, 1.4, 0.3), V3.new(-51, 2.4, 1.6), C3.fromRGB(150, 180, 200), GLASS, true, true, 0.35)
+	P(gar, "BoothLamp", V3.new(1.2, 0.3, 1.2), V3.new(-51, 3.4, 4), C3.fromRGB(255, 226, 176), NEON, true, false, 0.2)
+	P(gar, "BarrierArm", V3.new(9, 0.3, 0.3), V3.new(-51, 2.2, -1), C3.fromRGB(230, 120, 60), PLASTIC, true, true, 0)
+	P(gar, "BarrierPost", V3.new(0.6, 2.6, 0.6), V3.new(-46.5, 1.6, -1), C3.fromRGB(90, 94, 104), METAL, true, true, 0)
+	P(gar, "Sign_Garage", V3.new(8, 2, 0.4), V3.new(GX, 12.6, -23.2), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
+	P(gar, "OilDrum1", V3.new(1.6, 2.2, 1.6), V3.new(-77, 1.6, 4), C3.fromRGB(160, 90, 60), METAL, true, true, 0)
+	P(gar, "OilDrum2", V3.new(1.6, 2.2, 1.6), V3.new(-77, 1.6, 6), C3.fromRGB(180, 130, 50), METAL, true, true, 0)
+	P(gar, "ToolTrolley", V3.new(2.4, 1.4, 1.6), V3.new(-60, 1.2, 5.5), C3.fromRGB(140, 100, 60), METAL, true, true, 0)
+	P(gar, "DeckLamp1", V3.new(0.6, 0.4, 3), V3.new(-64, 5.2, -8), C3.fromRGB(255, 232, 186), NEON, true, false, 0.25)
+	P(gar, "DeckLamp2", V3.new(0.6, 0.4, 3), V3.new(-64, 10.2, -8), C3.fromRGB(255, 232, 186), NEON, true, false, 0.25)
+	P(gar, "DrainGrate", V3.new(2, 0.25, 2), V3.new(-70, 0.9, -14), C3.fromRGB(52, 54, 62), SLATE, true, true, 0)
+	-- roof: tanks, aircon, mast, stair core up from the top deck
+	for index, spot in ipairs({ { -75, 4 }, { -61, -20 } }) do
+		P(gar, `Tank_{index}`, V3.new(4.4, 5, 4.4), V3.new(spot[1], GDECK[4] + 2.9, spot[2]), C3.fromRGB(150, 150, 158), METAL, true, true, 0)
+		P(gar, `TankCap_{index}`, V3.new(4.8, 0.4, 4.8), V3.new(spot[1], GDECK[4] + 5.6, spot[2]), C3.fromRGB(120, 124, 132), METAL, true, true, 0)
+	end
+	P(gar, "Aircon1", V3.new(3.4, 2, 2.6), V3.new(-56, GDECK[4] + 1.4, 0), C3.fromRGB(120, 124, 132), METAL, true, true, 0)
+	P(gar, "Aircon2", V3.new(3.4, 2, 2.6), V3.new(-70, GDECK[4] + 1.4, 2), C3.fromRGB(120, 124, 132), METAL, true, true, 0)
+	P(gar, "AntennaMast", V3.new(0.5, 9, 0.5), V3.new(-79, GDECK[4] + 4.8, -21), C3.fromRGB(198, 198, 206), METAL, true, true, 0)
+	P(gar, "AntennaTip", V3.new(0.8, 0.8, 0.8), V3.new(-79, GDECK[4] + 9.4, -21), C3.fromRGB(255, 90, 70), NEON, true, false, 0.1)
+	for step = 0, 5 do
+		P(gar, "RoofStep" .. step, V3.new(4, 0.4, 1.1), V3.new(-51, GDECK[4] - 0.2 + step * 0.85, 3 - step * 0.9), C3.fromRGB(88, 92, 102), CONC, true, true, 0)
+	end
+	P(gar, "LiveCableGarage", V3.new(0.4, 0.4, 14), V3.new(-58, 0.5, -8), C3.fromRGB(255, 120, 60), NEON, true, true, 0.15)
+
+	-- ================= 8. FERRY TERMINAL + PIER =================
+	local fer = M(world, "FerryTerminal")
+	P(fer, "Floor", V3.new(26, 0.6, 20), V3.new(56, 0.5, 30), C3.fromRGB(80, 82, 90), CONC, true, true, 0)
+	P(fer, "WallN", V3.new(26, 9, 0.7), V3.new(56, 4.8, 20), C3.fromRGB(70, 72, 82), CONC, true, true, 0)
+	P(fer, "WallS", V3.new(26, 9, 0.7), V3.new(56, 4.8, 40), C3.fromRGB(70, 72, 82), CONC, true, true, 0)
+	P(fer, "WallE", V3.new(0.7, 9, 20), V3.new(69, 4.8, 30), C3.fromRGB(70, 72, 82), CONC, true, true, 0)
+	P(fer, "WallW_L", V3.new(0.7, 9, 6), V3.new(43, 4.8, 23), C3.fromRGB(70, 72, 82), CONC, true, true, 0)
+	P(fer, "WallW_R", V3.new(0.7, 9, 8), V3.new(43, 4.8, 36), C3.fromRGB(70, 72, 82), CONC, true, true, 0)
+	P(fer, "Roof", V3.new(26, 0.6, 20), V3.new(56, 9.5, 30), C3.fromRGB(58, 60, 68), CONC, true, true, 0)
+	P(fer, "RoofParapetN", V3.new(26, 1.1, 0.3), V3.new(56, 10.1, 20), C3.fromRGB(118, 126, 136), METAL, true, true, 0)
+	P(fer, "RoofParapetS", V3.new(26, 1.1, 0.3), V3.new(56, 10.1, 40), C3.fromRGB(118, 126, 136), METAL, true, true, 0)
+	P(fer, "Sign_Ferry", V3.new(9, 2.2, 0.4), V3.new(56, 5.4, 20.4), C3.fromRGB(84, 206, 130), NEON, true, true, 0)
+	-- waiting hall
+	for row = 1, 3 do
+		P(fer, "BenchSeat" .. row, V3.new(6, 0.35, 1.2), V3.new(50, 1.5, 24 + row * 3.4), C3.fromRGB(96, 74, 52), WOOD, true, true, 0)
+		P(fer, "BenchBack" .. row, V3.new(6, 1.4, 0.3), V3.new(50, 2.1, 23.6 + row * 3.4), C3.fromRGB(96, 74, 52), WOOD, true, true, 0)
+		P(fer, "BenchLeg" .. row, V3.new(0.5, 1.4, 1.2), V3.new(48, 0.9, 24 + row * 3.4), C3.fromRGB(80, 84, 92), METAL, true, true, 0)
+	end
+	P(fer, "TicketBooth", V3.new(7, 4.4, 7), V3.new(64, 2.8, 25), C3.fromRGB(88, 92, 100), CONC, true, true, 0)
+	P(fer, "TicketWindow", V3.new(3, 1.2, 0.3), V3.new(64, 3.4, 21.6), C3.fromRGB(150, 180, 200), GLASS, true, true, 0.35)
+	P(fer, "TicketCounter", V3.new(5, 1.1, 1.4), V3.new(64, 1, 22.4), C3.fromRGB(120, 96, 62), WOOD, true, true, 0)
+	P(fer, "Strongbox", V3.new(1.8, 1.4, 1.4), V3.new(64, 1.1, 27.5), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
+	P(fer, "Turnstile1", V3.new(0.6, 1.4, 3), V3.new(47, 1.1, 32), C3.fromRGB(120, 126, 136), METAL, true, true, 0)
+	P(fer, "Turnstile2", V3.new(0.6, 1.4, 3), V3.new(47, 1.1, 36), C3.fromRGB(120, 126, 136), METAL, true, true, 0)
+	P(fer, "NoticeBoard", V3.new(4, 2.4, 0.3), V3.new(60, 3.2, 20.4), C3.fromRGB(96, 74, 52), WOOD, true, true, 0)
+	P(fer, "VendingMachine", V3.new(2.2, 3.4, 1.2), V3.new(68.2, 2.2, 24), C3.fromRGB(90, 130, 160), METAL, true, true, 0)
+	P(fer, "VendingGlow", V3.new(1.6, 2.2, 0.1), V3.new(67.6, 2.4, 24), C3.fromRGB(120, 220, 240), NEON, true, false, 0.15)
+	P(fer, "CafeCounter", V3.new(8, 1.1, 1.6), V3.new(52, 1, 37), C3.fromRGB(200, 200, 210), SMOOTH, true, true, 0)
+	P(fer, "CafeShelf", V3.new(9, 0.3, 1.2), V3.new(52, 4.4, 38.6), C3.fromRGB(96, 74, 52), WOOD, true, true, 0)
+	P(fer, "Luggage1", V3.new(2, 1.4, 1.2), V3.new(46, 1.3, 27), C3.fromRGB(120, 96, 62), FABRIC, true, true, 0)
+	P(fer, "Luggage2", V3.new(2, 1.4, 1.2), V3.new(46, 1.3, 29), C3.fromRGB(120, 96, 62), FABRIC, true, true, 0)
+	P(fer, "Clock", V3.new(2.2, 2.2, 0.3), V3.new(56, 6, 20.4), C3.fromRGB(232, 238, 244), SMOOTH, true, true, 0)
+	P(fer, "HallLamp1", V3.new(3.4, 0.3, 1.2), V3.new(50, 8.9, 30), C3.fromRGB(255, 232, 186), NEON, true, false, 0.2)
+	P(fer, "HallLamp2", V3.new(3.4, 0.3, 1.2), V3.new(62, 8.9, 30), C3.fromRGB(255, 232, 186), NEON, true, false, 0.2)
+	DOOR(fer, "FerryTerminal", V3.new(43, 3.6, 29), 6, 6.8, C3.fromRGB(150, 170, 180))
+	TR(fer, "LadderFerry", V3.new(1.6, 9, 1.6), V3.new(68, 4.8, 38), C3.fromRGB(120, 128, 138))
+	-- pier across the canal and the harbour clutter
+	P(world, "PierDeck", V3.new(7, 0.4, 11), V3.new(21.5, 1.1, 47.5), C3.fromRGB(112, 96, 74), WOOD, true, true, 0)
+	for index, spot in ipairs({ { 18.4, 43.2 }, { 24.6, 43.2 }, { 18.4, 51.8 }, { 24.6, 51.8 } }) do
+		P(world, "PierPile" .. index, V3.new(0.8, 5, 0.8), V3.new(spot[1], -1, spot[2]), C3.fromRGB(84, 72, 58), WOOD, true, true, 0)
+	end
+	spanPart(world, "Gangway", 3.6, 0.35, nil, V3.new(21.5, 0.9, 37.5), V3.new(21.5, 1.25, 42.5), C3.fromRGB(100, 106, 116), METAL)
+	P(world, "PierBollard1", V3.new(0.8, 1.5, 0.8), V3.new(18.6, 2, 49), C3.fromRGB(90, 94, 104), METAL, true, true, 0)
+	P(world, "PierBollard2", V3.new(0.8, 1.5, 0.8), V3.new(24.4, 2, 49), C3.fromRGB(90, 94, 104), METAL, true, true, 0)
+	P(world, "LifeboatHull", V3.new(2.6, 1.4, 6), V3.new(21.5, 2.4, 50.5), C3.fromRGB(226, 150, 60), PLASTIC, true, true, 0)
+	P(world, "LifeboatCabin", V3.new(2, 1, 2), V3.new(21.5, 3.2, 52), C3.fromRGB(236, 236, 240), PLASTIC, true, true, 0)
+	P(world, "PierLamp", V3.new(0.6, 4.4, 0.6), V3.new(24.4, 3.3, 43.4), C3.fromRGB(92, 92, 102), METAL, true, true, 0)
+	P(world, "PierLampHead", V3.new(1.2, 0.5, 1.2), V3.new(24.4, 5.6, 43.4), C3.fromRGB(255, 226, 176), NEON, true, false, 0.2)
+	P(world, "FishCrate1", V3.new(2.4, 1.8, 1.8), V3.new(19, 2, 45), C3.fromRGB(104, 84, 54), WOOD, true, true, 0)
+	P(world, "FishCrate2", V3.new(2.4, 1.8, 1.8), V3.new(19, 3.8, 45), C3.fromRGB(104, 84, 54), WOOD, true, true, 0)
+	P(world, "CableReel", V3.new(2.6, 2.6, 1.4), V3.new(23.6, 2.1, 52), C3.fromRGB(120, 96, 62), WOOD, true, true, 0)
+	P(world, "Buoy1", V3.new(1.4, 1.8, 1.4), V3.new(19.5, 0.4, 53.4), C3.fromRGB(230, 120, 90), PLASTIC, true, true, 0)
+	P(world, "Buoy2", V3.new(1.4, 1.8, 1.4), V3.new(23.5, 0.4, 54.2), C3.fromRGB(230, 120, 90), PLASTIC, true, true, 0)
+
+	-- ================= 9. SERVICE CUT (the blocked shortcut) =================
+	-- A roofed service passage between the pump house and the terminal: no interior foundation,
+	-- so it floods with the street, it hides a survivor behind a collapsed conduit pile, and its
+	-- live cable makes it lethal once the water is in.
+	local cut = M(world, "ServiceCut")
+	P(cut, "Floor", V3.new(11.6, 0.5, 5), V3.new(-19.5, 0.25, -22.5), C3.fromRGB(58, 60, 68), CONC, true, true, 0)
+	P(cut, "WallS", V3.new(11.6, 4, 0.6), V3.new(-19.5, 2.3, -25), C3.fromRGB(62, 64, 72), CONC, true, true, 0)
+	P(cut, "WallN", V3.new(11.6, 4, 0.6), V3.new(-19.5, 2.3, -20), C3.fromRGB(62, 64, 72), CONC, true, true, 0)
+	P(cut, "Ceiling", V3.new(11.6, 0.4, 5), V3.new(-19.5, 4.15, -22.5), C3.fromRGB(48, 50, 58), CONC, true, true, 0)
+	for index, offset in ipairs({ { -1.3, 3.5 }, { 0, 3.5 }, { 1.3, 3.5 } }) do
+		P(cut, "Conduit" .. index, V3.new(11.4, 0.4, 0.4), V3.new(-19.5, offset[2], -22.5 + offset[1]), C3.fromRGB(96, 102, 112), METAL, true, true, 0)
+	end
+	P(cut, "JunctionBox", V3.new(1.2, 1.6, 0.8), V3.new(-16, 2.4, -24.4), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
+	P(cut, "CutLamp1", V3.new(0.4, 0.3, 1.6), V3.new(-16.5, 3.9, -22.5), C3.fromRGB(255, 232, 186), NEON, true, false, 0.25)
+	P(cut, "CutLamp2", V3.new(0.4, 0.3, 1.6), V3.new(-22.5, 3.9, -22.5), C3.fromRGB(255, 232, 186), NEON, true, false, 0.25)
+	P(cut, "CutBarrel", V3.new(1.5, 2, 1.5), V3.new(-24, 1.4, -24), C3.fromRGB(160, 90, 60), METAL, true, true, 0)
+	P(cut, "CutPallet", V3.new(2.6, 0.3, 2), V3.new(-15.5, 0.65, -24.2), C3.fromRGB(122, 96, 60), WOOD, true, true, 0)
+	P(cut, "CutPipeRun", V3.new(0.7, 0.7, 11), V3.new(-19.5, 1.4, -24.2), C3.fromRGB(150, 120, 80), METAL, true, true, 0)
+	P(cut, "LiveCableCut", V3.new(0.35, 0.35, 10.6), V3.new(-19.5, 0.55, -20.9), C3.fromRGB(255, 120, 60), NEON, true, true, 0.15)
+	DOORZ(cut, "ServiceCut", V3.new(-14, 2.6, -22.5), 5, 4.6, C3.fromRGB(96, 112, 124))
+	DOORZ(cut, "ServiceCut", V3.new(-25, 2.6, -22.5), 5, 4.6, C3.fromRGB(96, 112, 124))
+	-- the collapse itself: solid until someone digs through it
+	local barricade = P(cut, "TunnelBarricade", V3.new(1.8, 3.4, 5), V3.new(-19.5, 2.05, -22.5), C3.fromRGB(88, 82, 74), SLATE, true, true, 0)
+	P(cut, "TunnelBarricadeRubble", V3.new(2.6, 1.2, 5), V3.new(-20.6, 0.9, -22.5), C3.fromRGB(74, 70, 64), SLATE, true, true, 0)
+	prompt(barricade, "Clear Debris", "Collapsed Conduit", 1.4)
+
+	-- ================= 10. SKYBRIDGE (second extraction route) =================
+	-- The span is baked in its extended position so it is visible and editable in Studio;
+	-- RouteService retracts it at round start and walks it back out when the crew cranks.
+	local bridge = M(world, "Skybridge")
+	local B_NEAR = V3.new(28.5, 14.35, -13.5)
+	local B_FAR = V3.new(5.5, 16.45, -36.5)
+	local delta = B_FAR - B_NEAR
+	local dir = delta.Unit
+	local right = V3.new(dir.Z, 0, -dir.X)
+	local SEGMENTS = 4
+	local segLength = delta.Magnitude / SEGMENTS
+	for index = 1, SEGMENTS do
+		local from = B_NEAR + dir * ((index - 1) * segLength)
+		local to = B_NEAR + dir * (index * segLength)
+		local letter = string.sub("ABCD", index, index)
+		spanPart(bridge, "BridgeDeck_" .. letter, 2.8, 0.4, nil, from, to, C3.fromRGB(96, 102, 112), METAL)
+		for side = -1, 1, 2 do
+			spanPart(bridge, `BridgeRail_{letter}{side}`, 0.22, 1.05, nil, from + right * (side * 1.3) + V3.new(0, 0.72, 0), to + right * (side * 1.3) + V3.new(0, 0.72, 0), C3.fromRGB(150, 158, 168), METAL)
+			spanPart(bridge, `BridgeChord_{letter}{side}`, 0.3, 0.3, nil, from + right * (side * 1.3) + V3.new(0, -0.75, 0), to + right * (side * 1.3) + V3.new(0, -0.75, 0), C3.fromRGB(90, 96, 106), METAL)
+		end
+		spanPart(bridge, "BridgeBrace_" .. letter, 0.26, 0.26, nil, from + right * 1.3 + V3.new(0, -0.7, 0), to + right * (-1.3) + V3.new(0, 0.2, 0), C3.fromRGB(90, 96, 106), METAL)
+	end
+	for index = 1, 3 do
+		local at = B_NEAR + dir * (segLength * index)
+		P(bridge, "BridgePost_" .. index, V3.new(0.4, 1.3, 0.4), at + V3.new(0, 0.7, 0), C3.fromRGB(150, 158, 168), METAL, true, true, 0)
+	end
+	-- hand cranks at both ends (the winch consumer is only an accelerator)
+	P(bridge, "BridgeCrankBase_Near", V3.new(2.2, 0.5, 2.2), V3.new(31.2, 13.95, -12.2), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
+	P(bridge, "BridgeCrank_Near", V3.new(1.5, 1.5, 1.5), V3.new(31.2, 14.85, -12.2), C3.fromRGB(200, 140, 60), METAL, true, true, 0)
+	prompt(bridge.BridgeCrank_Near, "Crank Skybridge", "Skybridge Winch (roof)", 1.6)
+	P(bridge, "BridgeCrankBase_Far", V3.new(2.2, 0.5, 2.2), V3.new(4.6, 16.5, -34.4), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
+	P(bridge, "BridgeCrank_Far", V3.new(1.5, 1.5, 1.5), V3.new(4.6, 17.4, -34.4), C3.fromRGB(200, 140, 60), METAL, true, true, 0)
+	prompt(bridge.BridgeCrank_Far, "Crank Skybridge", "Skybridge Winch (tower)", 1.6)
+	P(bridge, "BridgeSign", V3.new(5, 1.4, 0.3), V3.new(28.5, 16.4, -13.5), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
+
 	-- ================= street furniture, hazards, routes =================
 	for i = -4, 4 do
 		P(world, "Barrier" .. i, V3.new(1.3, 1.4, 0.5), V3.new(i * 5, 0.7, 6), C3.fromRGB(222, 122, 44), PLASTIC, true, true, 0)
@@ -453,6 +715,36 @@ copyModel("World", function(world)
 	P(gate, "MotorLamp", V3.new(1, 0.4, 0.3), V3.new(-7.4, 3.6, 14.4), C3.fromRGB(220, 70, 60), NEON, true, false, 0.2)
 	P(gate, "Sign_Gate", V3.new(4, 1.2, 0.3), V3.new(0, 6, 14.4), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
 
+	-- ---------- salvage crates, the upgrade bench, roof dressing ----------
+	local salvageFolder = M(world, "Salvage")
+	local crateSpots = {
+		{ -51, 16.6, -1 }, -- parking garage roof, up the stair core
+		{ 46, 1.6, 38 }, -- ferry hall, behind the cafe counter
+		{ -24, 1.6, -21.5 }, -- service cut, past the collapsed conduit
+		{ 26, 14.5, 1 }, -- apartment roof, inside the parapet
+	}
+	for index, spot in ipairs(crateSpots) do
+		local crate = P(salvageFolder, "SupplyCrate_" .. index, V3.new(2.2, 1.8, 1.8), V3.new(spot[1], spot[2], spot[3]), C3.fromRGB(122, 96, 60), WOOD, true, true, 0)
+		P(salvageFolder, "SupplyCrateBand_" .. index, V3.new(2.3, 0.35, 1.9), V3.new(spot[1], spot[2] + 0.4, spot[3]), C3.fromRGB(210, 174, 90), METAL, true, false, 0.1)
+		prompt(crate, "Open Crate", "Salvage Crate", 0.6)
+	end
+	local bench = P(world, "UpgradeBench", V3.new(3.4, 1.1, 1.6), V3.new(11.2, 1, -26), C3.fromRGB(96, 104, 118), METAL, true, true, 0)
+	P(world, "UpgradeBenchGlow", V3.new(3, 0.25, 0.15), V3.new(11.2, 1.7, -26.6), C3.fromRGB(120, 220, 180), NEON, true, false, 0.15)
+	P(world, "UpgradeBenchRack", V3.new(1.2, 2.6, 1.2), V3.new(13, 1.4, -26), C3.fromRGB(88, 96, 110), METAL, true, true, 0)
+	prompt(bench, "Build Upgrade", "Salvage Bench", 0.8)
+	-- apartment roof dressing (clear of the skybridge tuck stack at x 28-36, z -13..-6)
+	P(world, "AptTank", V3.new(4.2, 4.6, 4.2), V3.new(41, 16.3, 1), C3.fromRGB(150, 150, 158), METAL, true, true, 0)
+	P(world, "AptTankCap", V3.new(4.6, 0.4, 4.6), V3.new(41, 18.8, 1), C3.fromRGB(120, 124, 132), METAL, true, true, 0)
+	P(world, "AptAircon", V3.new(3.2, 1.8, 2.4), V3.new(26, 14.7, -8), C3.fromRGB(120, 124, 132), METAL, true, true, 0)
+	P(world, "AptAntenna", V3.new(0.4, 7, 0.4), V3.new(42, 17.5, -13), C3.fromRGB(198, 198, 206), METAL, true, true, 0)
+	P(world, "AptAntennaTip", V3.new(0.7, 0.7, 0.7), V3.new(42, 21.2, -13), C3.fromRGB(255, 120, 70), NEON, true, false, 0.1)
+	-- sandbag line at the safe zone (the last dry ground)
+	for index = 0, 5 do
+		P(world, "Sandbag" .. index, V3.new(2.4, 0.8, 1.4), V3.new(-7 + index * 2.8, 0.8, -19.8), C3.fromRGB(146, 134, 104), FABRIC, true, true, 0)
+	end
+	P(world, "RouteSignBridge", V3.new(4.4, 1.4, 0.3), V3.new(31.4, 16.2, -12.4), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
+	P(world, "RouteSignCut", V3.new(4.4, 1.4, 0.3), V3.new(-14.4, 4.6, -22.5), C3.fromRGB(224, 154, 62), NEON, true, true, 0)
+
 	-- ---------- power cells ----------
 	local cells = M(world, "Cells")
 	local c1 = P(cells, "Cell1", V3.new(1.5, 1.5, 1.5), V3.new(-34, 1.6, -20), C3.fromRGB(255, 200, 60), NEON, true, true, 0)
@@ -461,6 +753,8 @@ copyModel("World", function(world)
 	prompt(c2, "Pick up Cell", "Power Cell", 0.3)
 	local c3 = P(cells, "Cell3", V3.new(1.5, 1.5, 1.5), V3.new(38, 14.9, -3), C3.fromRGB(255, 200, 60), NEON, true, true, 0)
 	prompt(c3, "Pick up Cell", "Power Cell", 0.3)
+	local c4 = P(cells, "Cell4", V3.new(1.5, 1.5, 1.5), V3.new(64, 2.6, 27.5), C3.fromRGB(255, 200, 60), NEON, true, true, 0)
+	prompt(c4, "Pick up Cell", "Power Cell", 0.3)
 
 	-- ---------- survivors ----------
 	local survs = M(world, "Survivors")
@@ -494,6 +788,10 @@ copyModel("World", function(world)
 	survivor("Survivor6", V3.new(-2, 1.2, 12)) -- street by the shelter
 	survivor("Survivor7", V3.new(40, 1.6, -1)) -- apartment ground floor
 	survivor("Survivor8", V3.new(0, 16.6, -40)) -- tower platform (lift route or ladder)
+survivor("Survivor9", V3.new(-70, 6.6, -8)) -- parking garage first deck (medic)
+survivor("Survivor10", V3.new(56, 1.6, 26)) -- ferry hall waiting room (engineer)
+survivor("Survivor11", V3.new(-22.5, 1.6, -22.5)) -- service cut, behind the collapse
+survivor("Survivor12", V3.new(21.5, 2.4, 46)) -- pier end, above the canal
 
 	-- ---------- spawn ----------
 	local sp = roblox.Instance.new("SpawnLocation")
@@ -515,9 +813,10 @@ local sourceFiles = {
 	server = {
 		"CommsService", "DoorService", "FloodService", "HazardService", "InteractService",
 		"LiftService", "ObjectiveService", "PlayerService", "PowerService", "RescueService",
-		"RoundService", "ScoringService", "SessionService", "Telemetry", "WorldService",
+		"RoundService", "RouteService", "ScoringService", "SessionService", "Telemetry",
+		"UpgradeService", "WorldService",
 	},
-	client = { "Effects", "Hud", "Markers", "Results" },
+	client = { "Effects", "Hud", "Markers", "Minimap", "Results", "Systems" },
 }
 
 local function countLines(path: string): number
@@ -576,9 +875,11 @@ local project = [[{
         "PowerService": { "$path": "src/server/Modules/PowerService.luau" },
         "RescueService": { "$path": "src/server/Modules/RescueService.luau" },
         "RoundService": { "$path": "src/server/Modules/RoundService.luau" },
+        "RouteService": { "$path": "src/server/Modules/RouteService.luau" },
         "ScoringService": { "$path": "src/server/Modules/ScoringService.luau" },
         "SessionService": { "$path": "src/server/Modules/SessionService.luau" },
         "Telemetry": { "$path": "src/server/Modules/Telemetry.luau" },
+        "UpgradeService": { "$path": "src/server/Modules/UpgradeService.luau" },
         "WorldService": { "$path": "src/server/Modules/WorldService.luau" }
       }
     },
@@ -593,6 +894,8 @@ local project = [[{
           "Effects": { "$path": "src/client/Modules/Effects.luau" },
           "Hud": { "$path": "src/client/Modules/Hud.luau" },
           "Markers": { "$path": "src/client/Modules/Markers.luau" },
+          "Minimap": { "$path": "src/client/Modules/Minimap.luau" },
+          "Systems": { "$path": "src/client/Modules/Systems.luau" },
           "Results": { "$path": "src/client/Modules/Results.luau" }
         }
       }

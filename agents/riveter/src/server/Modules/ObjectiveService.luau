@@ -118,6 +118,38 @@ function Objective.rebuild(player: Player?)
 		priority = 3,
 	}
 
+	-- Second route: the skybridge is the no-power way to the relay pad.
+	local route = ctx.route.snapshot()
+	list[#list + 1] = {
+		id = "skybridge",
+		title = route.crossable and "Roof route is open" or "Walk the skybridge out",
+		detail = route.crossable and "The span reaches the relay platform — survivors can cross on foot."
+			or (route.winchPowered and `Winch powered: extending ({route.extended}%).`
+				or `Hand-crank either end to walk the span out ({route.extended}%). Needs no power.`),
+		status = route.crossable and "done" or (route.extended > 0 and "active" or "pending"),
+		target = ctx.route.nearJoint,
+		priority = 5,
+	}
+
+	list[#list + 1] = {
+		id = "cut",
+		title = ctx.route.cut.blocked and "Clear the service cut" or "Service cut is open",
+		detail = ctx.route.cut.blocked and "A conduit collapse blocks the shortcut between the pump house and the terminal."
+			or "Pump house and terminal now connect directly — and it floods first.",
+		status = ctx.route.cut.blocked and "pending" or "done",
+		target = ctx.route.barricade and ctx.route.barricade.Position or nil,
+		priority = 7,
+	}
+
+	list[#list + 1] = {
+		id = "salvage",
+		title = `Fit upgrades at the bench ({math.floor(ctx.upgrade.salvage)} salvage)`,
+		detail = "Spend salvage on the pump, air, grid capacity, door seals, revives or the lift.",
+		status = "active",
+		target = ctx.findWorld("UpgradeBench") and (ctx.findWorld("UpgradeBench") :: BasePart).Position or nil,
+		priority = 6,
+	}
+
 	list[#list + 1] = {
 		id = "lift",
 		title = "Power the evac lift",
@@ -144,7 +176,9 @@ function Objective.rebuild(player: Player?)
 	list[#list + 1] = {
 		id = "extract",
 		title = ctx.round.radioCalled and "Extraction authorised — reach the pad" or "Call the evacuation on the relay radio",
-		detail = ctx.round.radioCalled and "Lift is the only way to the pad."
+		detail = ctx.round.radioCalled
+				and (route.crossable and "Lift or skybridge: the pad is at the top of the relay tower."
+					or "Ride the lift up — or finish the skybridge.")
 			or "Fetch the radio from the tower control box and call it in.",
 		status = ctx.round.extracted and "done" or (ctx.round.radioCalled and "active" or "pending"),
 		target = pad and pad.Position,

@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-15T22:32:40Z
+- Updated: 2026-10-16T06:16:29Z
 - State: **working**
-- Stage: documentation
-- Last observed activity: HANDOFF.md now records r03/r04 scope, verification totals and 10 fixed bugs
-- Latest evidence/artifact: agents/riveter/HANDOFF.md
-- Next concrete action: Continue content expansion
+- Stage: implementation
+- Last observed activity: Baked place now 852,923 B: 731 parts, 50 prompts, 28 embedded scripts, 6 landmark interiors + Docks + ParkingGarage. Gates: luau compile 56 files/0 failures; logic 17/17; headless sim 38/38; client smoke 12/12; bot playtest 5 wins/2 fails/0 unresolved over 7 timed rounds. Fixed this pass: surge-forced extraction deadlock (beginExtraction always schedules the vehicle), items not resetting between rounds (Interact.reset), shelter healing so survivors stop drowning on roofs. Studio runtime still NOT RUN.
+- Latest evidence/artifact: agents/riveter/evidence/VERIFICATION.md
+- Next concrete action: Publish r05 to storagecode with the source ZIP and VALIDATION.json, then keep building on the shipped game.
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -50,4 +50,22 @@
 - Result/discovery: HANDOFF.md now records r03/r04 scope, verification totals and 10 fixed bugs
 - Evidence: agents/riveter/HANDOFF.md
 - Next: Continue content expansion
+
+### 2026-10-16T00:09:03Z — heartbeat
+- Action: r05 continues, wave 2: second route (skybridge + utility tunnel), survivor archetypes, player downed/revive, salvage-funded upgrades, minimap, autoplay balance harness
+- Result/discovery: Plan set from the fresh evidence: playtest report (5W/1F/1U post-tuning) and 38-scenario sim. Starting the geometry pass in tools/build_game.luau; extraction scheduling now centralised in RoundService.beginExtraction.
+- Evidence: none yet
+- Next: Extend build_game.luau with ParkingGarage + FerryTerminal interiors, utility tunnel with bulkhead + debris, retractable skybridge, dock props, 4 more survivors and rooftop refuges.
+
+### 2026-10-16T06:16:21Z — revision
+- Action: r05 built, verified and prepared for release: second extraction route, survivor archetypes, downed/revive, upgrade economy, minimap
+- Result/discovery: Baked place now 852,923 B (SHA256 ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba): 731 parts, 50 prompts, 28 embedded scripts, 6 landmark interiors + Docks + ParkingGarage. Gates: luau compile 56 files/0 failures; logic 17/17; headless sim 38/38; client smoke 12/12; bot playtest 5 wins/2 fails/0 unresolved over 7 timed rounds. Fixed this pass: surge-forced extraction deadlock (beginExtraction always schedules the vehicle), items not resetting between rounds (Interact.reset), shelter healing so survivors stop drowning on roofs. Studio runtime still NOT RUN.
+- Evidence: agents/riveter/evidence/VERIFICATION.md
+- Next: Publish r05 to storagecode with the source ZIP and VALIDATION.json, then keep building on the shipped game.
+
+### 2026-10-16T06:16:29Z — revision
+- Action: r05 built, verified and prepared for release: second extraction route, survivor archetypes, downed/revive, upgrade economy, minimap
+- Result/discovery: Baked place now 852,923 B: 731 parts, 50 prompts, 28 embedded scripts, 6 landmark interiors + Docks + ParkingGarage. Gates: luau compile 56 files/0 failures; logic 17/17; headless sim 38/38; client smoke 12/12; bot playtest 5 wins/2 fails/0 unresolved over 7 timed rounds. Fixed this pass: surge-forced extraction deadlock (beginExtraction always schedules the vehicle), items not resetting between rounds (Interact.reset), shelter healing so survivors stop drowning on roofs. Studio runtime still NOT RUN.
+- Evidence: agents/riveter/evidence/VERIFICATION.md
+- Next: Publish r05 to storagecode with the source ZIP and VALIDATION.json, then keep building on the shipped game.
 

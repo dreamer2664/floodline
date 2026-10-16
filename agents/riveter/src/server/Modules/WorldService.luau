@@ -16,6 +16,7 @@ export type Zone = {
 	size: Vector3,
 	sector: number,
 	interior: boolean,
+	foundation: number?,
 	floorY: number,
 	roofY: number,
 }
@@ -29,6 +30,7 @@ World.survivorModels = {} :: { [string]: Model }
 World.props = {} :: { [string]: Instance }
 World.water = {} :: { BasePart }
 World.sealedZones = {} :: { [string]: boolean }
+World.sealedStrength = {} :: { [string]: number }
 World.lift = nil :: Model?
 World.spawnLocation = nil :: SpawnLocation?
 
@@ -38,6 +40,9 @@ local SECTORS = {
 	{ name = "North", zMin = -95, zMax = -32 },
 }
 
+-- interior = encloses people (gets a raised foundation so it floods later)
+-- foundation = explicit override in studs of level offset (ServiceCut sits at street level and
+--              deliberately has none, so it is the first thing to fill up)
 local LANDMARKS = {
 	{ name = "Terminal", interior = true, sector = 2 },
 	{ name = "PumpHouse", interior = true, sector = 2 },
@@ -45,6 +50,9 @@ local LANDMARKS = {
 	{ name = "Workshop", interior = true, sector = 1 },
 	{ name = "Clinic", interior = true, sector = 1 },
 	{ name = "RelayTower", interior = false, sector = 2 },
+	{ name = "ParkingGarage", interior = false, sector = 2, foundation = 0 },
+	{ name = "FerryTerminal", interior = true, sector = 1 },
+	{ name = "ServiceCut", interior = true, sector = 2, foundation = 0 },
 }
 
 local function boundsOf(inst: Instance): (Vector3, Vector3, Vector3, Vector3)
@@ -116,19 +124,25 @@ function World.depthAt(position: Vector3, level: number, sectorLevels: { number 
 	end
 	local zone = World.zoneAt(position)
 	local foundation = 0
-	if zone and zone.interior then
-		foundation = 0.9
+	if zone then
+		if zone.foundation ~= nil then
+			foundation = zone.foundation
+		elseif zone.interior then
+			foundation = 0.9
+		end
 		if World.sealedZones[zone.name] then
-			-- Sealed rooms hold the water back: the floor floods much later.
-			foundation += 2.6
+			-- Sealed rooms hold the water back: the floor floods much later. The Seal Kit
+			-- upgrade raises how much a closed door actually holds.
+			foundation += 2.6 * (World.sealedStrength[zone.name] or 1)
 		end
 	end
 	local waterY = localLevel - foundation
 	return math.max(0, waterY - position.Y)
 end
 
-function World.setSealed(zoneName: string, sealed: boolean)
+function World.setSealed(zoneName: string, sealed: boolean, strength: number?)
 	World.sealedZones[zoneName] = sealed
+	World.sealedStrength[zoneName] = strength or World.sealedStrength[zoneName] or 1
 end
 
 function World.createWaterVolumes(): { BasePart }
@@ -215,6 +229,7 @@ function World.Init(ctx)
 			local min, max, center, size = boundsOf(model)
 			local zone: Zone = {
 				name = def.name,
+				foundation = def.foundation,
 				model = model,
 				min = min,
 				max = max,

@@ -26,6 +26,8 @@ local ScoringService = require(Modules:WaitForChild("ScoringService"))
 local TelemetryService = require(Modules:WaitForChild("Telemetry"))
 local RoundService = require(Modules:WaitForChild("RoundService"))
 local DoorService = require(Modules:WaitForChild("DoorService"))
+local RouteService = require(Modules:WaitForChild("RouteService"))
+local UpgradeService = require(Modules:WaitForChild("UpgradeService"))
 local CommsService = require(Modules:WaitForChild("CommsService"))
 local SessionService = require(Modules:WaitForChild("SessionService"))
 
@@ -60,6 +62,8 @@ local ctx: any = {
 	telemetry = TelemetryService,
 	round = RoundService,
 	doors = DoorService,
+	route = RouteService,
+	upgrade = UpgradeService,
 	comms = CommsService,
 	session = SessionService,
 	world = WorldService,
@@ -174,6 +178,11 @@ function ctx.onCellDestroyed(cellId: string)
 	RoundService.onCellDestroyed(cellId)
 end
 
+function ctx.onRouteOpened(name: string)
+	RoundService.onRouteOpened(name)
+	ObjectiveService.markDirty()
+end
+
 function ctx.onSurvivorRescued(survivor, how: string, bonus: number)
 	RoundService.onSurvivorRescued(survivor, how, bonus)
 end
@@ -182,10 +191,12 @@ end
 
 local services = {
 	{ name = "World", service = WorldService },
+	{ name = "Upgrade", service = UpgradeService },
 	{ name = "Power", service = PowerService },
 	{ name = "Flood", service = FloodService },
 	{ name = "Rescue", service = RescueService },
 	{ name = "Lift", service = LiftService },
+	{ name = "Route", service = RouteService },
 	{ name = "Hazard", service = HazardService },
 	{ name = "Interact", service = InteractService },
 	{ name = "Player", service = PlayerService },
@@ -325,6 +336,16 @@ remotes.RequestModifier.OnServerEvent:Connect(function(player: Player, modifierN
 	ctx.requestModifier(player, modifierName)
 end)
 
+remotes.RequestUpgrade.OnServerEvent:Connect(function(player: Player, upgradeId: string)
+	if type(upgradeId) ~= "string" then
+		return
+	end
+	local ok, reason = UpgradeService.purchase(player, upgradeId)
+	if not ok and reason then
+		ctx.notifyPlayer(player, reason, "warn")
+	end
+end)
+
 remotes.ReportPosition.OnServerEvent:Connect(function(player: Player, position: Vector3)
 	local state = PlayerService.getState(player)
 	if state then
@@ -340,6 +361,8 @@ remotes.GetSnapshot.OnServerInvoke = function(player: Player)
 		power = PowerService.snapshot(),
 		survivors = RescueService.snapshot(),
 		lift = LiftService.snapshot(),
+		route = RouteService.snapshot(),
+		upgrades = UpgradeService.snapshot(),
 		objectives = ObjectiveService.list,
 		scaling = ctx.scaling(),
 		modifier = SessionService.snapshot(),

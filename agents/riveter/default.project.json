@@ -32,9 +32,11 @@
         "PowerService": { "$path": "src/server/Modules/PowerService.luau" },
         "RescueService": { "$path": "src/server/Modules/RescueService.luau" },
         "RoundService": { "$path": "src/server/Modules/RoundService.luau" },
+        "RouteService": { "$path": "src/server/Modules/RouteService.luau" },
         "ScoringService": { "$path": "src/server/Modules/ScoringService.luau" },
         "SessionService": { "$path": "src/server/Modules/SessionService.luau" },
         "Telemetry": { "$path": "src/server/Modules/Telemetry.luau" },
+        "UpgradeService": { "$path": "src/server/Modules/UpgradeService.luau" },
         "WorldService": { "$path": "src/server/Modules/WorldService.luau" }
       }
     },
@@ -49,6 +51,8 @@
           "Effects": { "$path": "src/client/Modules/Effects.luau" },
           "Hud": { "$path": "src/client/Modules/Hud.luau" },
           "Markers": { "$path": "src/client/Modules/Markers.luau" },
+          "Minimap": { "$path": "src/client/Modules/Minimap.luau" },
+          "Systems": { "$path": "src/client/Modules/Systems.luau" },
           "Results": { "$path": "src/client/Modules/Results.luau" }
         }
       }

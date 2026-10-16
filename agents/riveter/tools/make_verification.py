@@ -28,6 +28,52 @@ def main() -> int:
     stats = load("build-stats.json")
     sha = subprocess.check_output(["sha256sum", str(PLACE)], text=True).split()[0]
     size = PLACE.stat().st_size
+    playtest_path = EVIDENCE / "playtest-report.json"
+    playtest = json.loads(playtest_path.read_text(encoding="utf-8")) if playtest_path.exists() else None
+
+    playtest_section = "## 1.2 Bot playtests\n\nNo playtest report was present when this document was generated.\n"
+    if playtest:
+        def cell(row: dict, *names: str) -> str:
+            for name in names:
+                value = row.get(name)
+                if value not in (None, ""):
+                    return str(value)
+            return "-"
+
+        rows = "\n".join(
+            "| {crew}p | {mod} | {outcome} | {elapsed}s | {reason} | {rescued}/{required} | {lost} | {salvage} | {score} | {grade} |".format(
+                crew=cell(row, "crew", "players", "playerCount"),
+                mod=cell(row, "modifier", "difficulty"),
+                outcome=cell(row, "outcome"),
+                elapsed=cell(row, "elapsedSeconds", "elapsed"),
+                reason=cell(row, "reason"),
+                rescued=cell(row, "rescued"),
+                required=cell(row, "required"),
+                lost=cell(row, "lost"),
+                salvage=cell(row, "salvage", "salvageLeft"),
+                score=cell(row, "score", "teamScore"),
+                grade=cell(row, "grade"),
+            )
+            for row in playtest["results"]
+        )
+        limits = "\n".join(f"- {line}" for line in playtest.get("limitations", []))
+        playtest_section = f"""## 1.2 Bot playtests ({playtest['runs']} timed rounds)
+
+Autonomous bots play complete rounds through the shipped server modules on the virtual clock
+(`tests/headless/playtest.luau`): {playtest['wins']} wins, {playtest['fails']} fails,
+{playtest['unresolved']} unresolved.
+
+| Crew | Modifier | Outcome | Elapsed | Reason | Rescued/Required | Lost | Salvage | Score | Grade |
+|---|---|---|---|---|---|---|---|---|---|
+{rows}
+
+What this does **not** measure:
+
+{limits}
+
+Result counts in this table are the bots' own; they are a lower bound on a competent human crew
+and they are not player telemetry.
+"""
 
     sim_rows = "\n".join(
         f"| {'PASS' if row['ok'] else 'FAIL'} | {row['name']} | {row['detail']} |" for row in sim["results"]
@@ -70,13 +116,14 @@ module sources into a stub runtime (Instance tree, Vector3/CFrame math, AABB ray
 services, virtual clock) and then plays the game: prompts are fired, remotes are used, the clock is
 fast-forwarded through Prep → Rising → Surge → Extraction → Results.
 
-### 1.2 Client interface checks
+{playtest_section}
+### 1.3 Client interface checks
 
 | Result | Check | Measured |
 |---|---|---|
 {client_rows}
 
-### 1.3 Static wiring checks
+### 1.4 Static wiring checks
 
 | Result | Check | Measured |
 |---|---|---|
@@ -101,7 +148,7 @@ These are not hypothetical; each was caught by a check and then fixed in the shi
 - **No Roblox Studio session was run.** No human or agent opened this place in Studio, clicked Play, or observed it on a screen. Any claim about how it *feels* to play would be inventing evidence.
 - **Engine behaviour is not covered by the harness.** Real character physics, seat welding and platform carry, network replication and latency, `ProximityPrompt` hold/range rules, streaming, rendering, sound, mobile/gamepad input, and DataStore-free persistence are all outside the stub's reach.
 - **The stub is a test double, not an engine.** Its raycasts are AABB-only, its CFrame maths is simplified, and it has no collision response — so NPC routing that works headless may still need tuning in Studio.
-- **No playtest data exists.** Balance numbers (flood rates, survivor speed, quota) are reasoned, not measured against real players.
+- **Balance is measured with bots, not players.** The round timings in §1.2 come from scripted bots walking straight lines at the server-set speed; they bound pacing from below and say nothing about difficulty for a real crew, let alone for a crew of four people talking to each other.
 - **Art and audio are procedural primitives.** No external asset IDs are used anywhere, but that also means no custom meshes, textures or sound design.
 - **Performance is unmeasured.** Part count ({structure['parts']}) is modest, but draw calls, lighting cost, and script activity under load have not been profiled.
 

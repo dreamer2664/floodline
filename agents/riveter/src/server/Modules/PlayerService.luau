@@ -179,7 +179,8 @@ function PlayerService.revivePlayer(player: Player, byWhom: Player?)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.Health = math.max(35, humanoid.MaxHealth * 0.5)
+		local field = ctx.upgrade and ctx.upgrade.has("FieldHospital")
+		humanoid.Health = field and humanoid.MaxHealth or math.max(35, humanoid.MaxHealth * 0.5)
 		humanoid.WalkSpeed = PlayerService.walkSpeed(player)
 		humanoid.UseJumpPower = true
 		humanoid.JumpPower = 50
@@ -212,9 +213,9 @@ function PlayerService.progressRevive(player: Player, target: Player, dt: number
 	if ((root :: BasePart).Position - (rescuerRoot :: BasePart).Position).Magnitude > 9 then
 		return false
 	end
-	local speed = 1
+	local speed = ctx.upgrade and ctx.upgrade.reviveSpeed() or 1
 	if PlayerService.hasItem(player, "Medkit") then
-		speed = 1.9
+		speed *= 1.9
 	end
 	targetState.reviveProgress += dt * speed
 	if targetState.reviveProgress >= 4.5 then

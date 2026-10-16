@@ -74,6 +74,7 @@ function Power.repairRelay(player: Player?): boolean
 	end
 	Power.relayRepaired = true
 	Power.capacity = ctx.config.Power.BaseCapacity + ctx.config.Power.RelayCapacityBonus
+		+ (ctx.upgrade and ctx.upgrade.capacityBonus() or 0)
 	ctx.notify("Relay tower online. Grid capacity increased.", "good")
 	ctx.log("[Power] relay repaired by " .. (player and player.Name or "system"))
 	Power.markDirty()
@@ -199,7 +200,9 @@ function Power.recompute()
 	if not ctx then
 		return
 	end
-	Power.capacity = ctx.config.Power.BaseCapacity + (Power.relayRepaired and ctx.config.Power.RelayCapacityBonus or 0)
+	Power.capacity = ctx.config.Power.BaseCapacity
+		+ (Power.relayRepaired and ctx.config.Power.RelayCapacityBonus or 0)
+		+ (ctx.upgrade and ctx.upgrade.capacityBonus() or 0)
 
 	-- Trips first: flooded sockets and dead cells.
 	for key, socket in pairs(Power.sockets) do
@@ -263,6 +266,22 @@ function Power.recompute()
 			ctx.onConsumerLost(name)
 		end
 	end
+end
+
+-- Engineer rescue effect: the whole cell rack comes back to full charge.
+function Power.rechargeAll(player: Player?): number
+	local recharged = 0
+	for _, cell in pairs(Power.cells) do
+		if not cell.destroyed and cell.charge < ctx.config.Power.CellChargeMax then
+			cell.charge = ctx.config.Power.CellChargeMax
+			recharged += 1
+		end
+	end
+	Power.markDirty()
+	if recharged > 0 then
+		ctx.notify(`Engineer on board: {recharged} cell(s) recharged to full.`, "good")
+	end
+	return recharged
 end
 
 function Power.isPowered(name: string): boolean
@@ -330,6 +349,22 @@ function Power.tripSocket(socketKey: string, reason: string)
 		socket.cellId = nil
 	end
 	Power.recompute()
+end
+
+-- Clear a flood trip so a socket can be used again (engineer effect / salvage kit).
+function Power.clearTrips(reason: string?): number
+	local cleared = 0
+	for _, socket in pairs(Power.sockets) do
+		if socket.tripped and (reason == nil or socket.trippedReason == reason) then
+			socket.tripped = false
+			socket.trippedReason = nil
+			cleared += 1
+		end
+	end
+	if cleared > 0 then
+		Power.recompute()
+	end
+	return cleared
 end
 
 function Power.update(dt: number)
@@ -464,12 +499,13 @@ function Power.reset()
 		cellsFolder.Parent = ctx.worldFolder
 	end
 
-	-- The baked district already ships three cell props; adopt them so the placed geometry is
+	-- The baked district already ships four cell props; adopt them so the placed geometry is
 	-- the single source of truth (and so two sets of cells can never coexist).
 	local definitions = {
 		{ id = "Cell_A", partName = "Cell1", position = Vector3.new(-34, 1.6, -20), label = "Pump house pit" },
 		{ id = "Cell_B", partName = "Cell2", position = Vector3.new(28, 1.6, 31), label = "Clinic store room" },
 		{ id = "Cell_C", partName = "Cell3", position = Vector3.new(38, 14.9, -3), label = "Apartment roof cache" },
+		{ id = "Cell_D", partName = "Cell4", position = Vector3.new(64, 2.6, 27.5), label = "Ferry strongbox" },
 	}
 	for _, def in ipairs(definitions) do
 		local part = cellsFolder:FindFirstChild(def.partName)
