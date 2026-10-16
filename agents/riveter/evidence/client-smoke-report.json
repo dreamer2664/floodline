@@ -1,6 +1,6 @@
 {
-  "checks": 13,
-  "passed": 13,
+  "checks": 14,
+  "passed": 14,
   "failed": 0,
   "note": "Client UI construction and remote reaction only. No rendering, layout, device or latency validation.",
   "results": [
@@ -16,6 +16,7 @@
     { "name": "results screen renders a real round summary and votes for a rematch", "ok": true, "detail": "summary rendered, rematch vote path armed" },
     { "name": "ping markers render and expire, and the modifier selector reacts", "ok": true, "detail": "modifier selector, session line and 1 ping marker(s) verified" },
     { "name": "effects respond to submersion, drowning and downed states", "ok": true, "detail": "underwater tint, blur and downed grading all applied" },
-    { "name": "client bootstrap runs end to end on live payload shapes", "ok": true, "detail": "client ticked 3s of live payloads: banner=SURGE, map built, route board=Skybridge — walkable (roof route)" }
+    { "name": "client bootstrap runs end to end on live payload shapes", "ok": true, "detail": "client ticked 3s of live payloads: banner=SURGE, map built, route board=Skybridge — walkable (roof route)" },
+    { "name": "the status strip reports hauling, bleedout and the role you picked", "ok": true, "detail": "haul/bleed/role readouts verified: 'Hauling Teammate' then 'ROLE: Medic'" }
   ]
 }

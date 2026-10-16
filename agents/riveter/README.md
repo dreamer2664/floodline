@@ -16,6 +16,10 @@ Four things decide whether the district survives the round:
   speed), Engineer (crank and breaker speed, flood trips cleared on their rescue), Medic (faster
   revives and a healing aura) and Rigger (carries cells at full speed, owns the withered rigging).
   V spends the role ability, N cycles the role in the lobby.
+- **Downed crewmates.** Going down does not end your round, it starts a two-person job: anyone
+  standing over you gets a *Drag to safety* prompt, the casualty rides behind the carrier at hauling
+  speed, and the bleedout clock stretches 1.5x for as long as somebody is holding on. Q lets go.
+  Soloing means waiting out your own recovery timer instead.
 - **The survivors.** Twelve of them, with traits that change how you move them — children refuse to
   wade and must be carried, the deaf must be touched, the injured slow you down. Get a survivor down
   and they bleed out on a clock; nine of them in the water and the round is losing itself.
@@ -43,7 +47,7 @@ bash agents/riveter/tools/build_all.sh
 ```
 
 That single command (8 stages) regenerates the district, builds the place, runs every verification
-stage — place structure, Luau compilation, static wiring, 44 headless gameplay scenarios, 13 client
+stage — place structure, Luau compilation, static wiring, 45 headless gameplay scenarios, 14 client
 interface checks — then writes the verification report, the machine-readable validation gate and the
 source archive. Read `evidence/VERIFICATION.md` before quoting any claim about this build: in
 particular it states plainly that no Roblox Studio session has been run, and the bot playtests in

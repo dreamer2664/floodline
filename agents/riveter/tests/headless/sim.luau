@@ -1644,6 +1644,105 @@ scenario("no survivor starts the round already standing in a rescue zone", funct
 end)
 
 -- ============================================================
+-- Scenario 45: a downed player can be hauled out of the water by a teammate
+-- ============================================================
+-- Bleeding out alone is a sentence; being dragged is a rescue. The corpse ride has to be real:
+-- the casualty must end up where the carrier walks, the bleedout clock must stretch, and the
+-- grip must break when the carrier lets go.
+scenario("a downed player rides with whoever drags them, and the clock stretches", function()
+	freshRound(player)
+	local mate = Stub.addPlayer("Dragger")
+	local safe = part("SafeZone").Position
+	-- Both players start out in the open, well away from the shelter.
+	Stub.movePlayer(player, safe + V3(0, 0, -40))
+	Stub.movePlayer(mate, safe + V3(4, 0, -40))
+	Stub.advance(0.4)
+
+	-- Refusals first: you cannot drag somebody who is on their feet.
+	local okDown, whyDown = PlayerService.startDrag(mate, player)
+	assertTrue(not okDown, "a standing player was draggable")
+	assertTrue(whyDown ~= nil, "refusing a standing casualty gave no reason")
+
+	PlayerService.downed(player, "a live cable")
+	Stub.advance(0.4)
+
+	-- And you have to be close enough to get a grip.
+	Stub.movePlayer(mate, safe + V3(60, 0, -40))
+	Stub.advance(0.2)
+	local okFar, whyFar = PlayerService.startDrag(mate, player)
+	assertTrue(not okFar, "a casualty 60 studs away was dragged")
+
+	Stub.movePlayer(mate, part("SafeZone").Position + V3(0, 0, -36))
+	Stub.movePlayer(player, part("SafeZone").Position + V3(2, 0, -36))
+	Stub.advance(0.2)
+	-- The in-game grip is the ProximityPrompt the server puts on a downed character, so drive it
+	-- the way a player would rather than calling startDrag directly.
+	local casualtyRoot = player.Character:FindFirstChild("HumanoidRootPart")
+	local dragPrompt = casualtyRoot and casualtyRoot:FindFirstChild("DragTeammate")
+	assertTrue(dragPrompt ~= nil, "a downed player did not get a Drag prompt")
+	assertTrue(dragPrompt.ActionText == "Drag to safety", `unexpected prompt text: {dragPrompt.ActionText}`)
+	dragPrompt.Triggered:Fire(mate)
+	local started = PlayerService.dragging(mate) == player
+	assertTrue(started, "firing the Drag prompt did not take hold of the casualty")
+	assertTrue(PlayerService.dragging(mate) == player, "the dragger does not report a casualty")
+	assertTrue(PlayerService.carriedBy(player) == mate, "the casualty does not report a carrier")
+
+	-- The carrier walks slower for the load, and the number must be real: a nil drag constant here
+	-- silently broke every hauling speed update in the shipped module until the bot drill found it.
+	local haulSpeed = PlayerService.walkSpeed(mate)
+	local freeSpeed = PlayerService.walkSpeed(player)
+	assertTrue(type(haulSpeed) == "number" and haulSpeed > 0,
+		`hauling walk speed is {tostring(haulSpeed)}`)
+	assertTrue(haulSpeed < freeSpeed,
+		string.format("hauling (%.1f) is not slower than walking free (%.1f)", haulSpeed, freeSpeed))
+
+	local startDistance = (Stub.playerPosition(player) - Stub.playerPosition(mate)).Magnitude
+	assertTrue(startDistance < 9, `the casualty started {string.format("%.1f", startDistance)} studs away`)
+
+	-- Walk the carrier to the shelter: the casualty has to come along, not be left behind.
+	local walked = 0
+	for _ = 1, 40 do
+		Stub.movePlayer(mate, Stub.playerPosition(mate) + V3(0, 0, 0.6))
+		walked += 0.6
+		Stub.advance(0.1)
+	end
+	local gap = (Stub.playerPosition(player) - Stub.playerPosition(mate)).Magnitude
+	assertTrue(gap < 4.5, string.format("the casualty was left %.1f studs behind", gap))
+
+	-- The clock: a dragged casualty bleeds at 60% of the rate, so the progress bars must diverge.
+	-- A dragged casualty must bleed SLOWER than an abandoned one, and by the configured stretch.
+	local draggedBefore = PlayerService.getState(player).bleedProgress
+	Stub.advance(6)
+	local draggedGain = PlayerService.getState(player).bleedProgress - draggedBefore
+	local hauledRate = draggedGain / 6
+	local baseRate = 1 / Config.Player.DownedBleedoutSeconds
+	assertTrue(hauledRate < baseRate, string.format(
+		"being hauled bled the casualty FASTER than being abandoned (%.5f/s vs %.5f/s)", hauledRate, baseRate))
+	local expected = baseRate / 1.5
+	assertTrue(math.abs(hauledRate - expected) / expected < 0.3,
+		string.format("dragged bleed rate %.5f/s is not the configured 1.5x stretch (%.5f/s)", hauledRate, expected))
+
+	-- Letting go leaves them where they stand, and they stay down.
+	local where = Stub.playerPosition(mate)
+	local released = PlayerService.stopDrag(mate, "test")
+	assertTrue(released, "the carrier could not let go")
+	local droppedAt = Stub.playerPosition(player)
+	assertTrue((droppedAt - where).Magnitude < 5, "the released casualty was not left next to the carrier")
+	assertTrue(PlayerService.getState(player).downed, "the released casualty stood up on their own")
+
+	-- And a revive still ends it: the drag has to clear or a corpse keeps following the crew.
+	PlayerService.revivePlayer(player, mate)
+	assertTrue(PlayerService.getState(player).draggedBy == nil, "the revive left the casualty still held")
+	assertTrue(casualtyRoot:FindFirstChild("DragTeammate") == nil, "the Drag prompt survived the revive")
+	assertTrue(not PlayerService.getState(player).downed, "the revive did not pick the casualty up")
+	Stub.removePlayer(mate)
+	freshRound(player)
+	return true, string.format(
+		"carrier walked %.0f studs at %.1f (free %.1f), casualty stayed %.1fm behind, bleedout %.5f/s (base %.5f/s)",
+		walked, haulSpeed, freeSpeed, gap, hauledRate, 1 / Config.Player.DownedBleedoutSeconds)
+end)
+
+-- ============================================================
 -- report
 -- ============================================================
 local passed = #results - failures

@@ -1,7 +1,7 @@
 # FLOODLINE: Last District — verification report
 
-Artifact: `releases/FLOODLINE.rbxlx` — 909,731 bytes, SHA256 `6e22c896e03429b9c978e8dd210aa933274be9c7a45a06b4d6c80e10ba8917f5`
-Scripts: 60 compiled (6356 server, 2925 client, 810 shared lines)
+Artifact: `releases/FLOODLINE.rbxlx` — 919,467 bytes, SHA256 `a9d07bfbd5fa7f9ac477b2e07c01cd45b20937fd78f5cf975100b1074c7120fa`
+Scripts: 60 compiled (6548 server, 2982 client, 810 shared lines)
 World: 750 parts, 51 proximity prompts, 4 climbable trusses, 4 lift seats
 
 ## 1. What was verified, and how
@@ -11,9 +11,9 @@ World: 750 parts, 51 proximity prompts, 4 climbable trusses, 4 lift seats
 | Baked geometry export | `tools/build_game.luau` (Lune + Rojo) | 750 parts, 30 scripts embedded in the place |
 | Place structure | `tools/inspect_place.luau` | 647 named world objects, 0 required hooks missing |
 | Luau compilation | `tools/compile_check.luau` (`luau.compile` on every script, in both the source tree and the shipped place) | 60 checked, 0 failures |
-| Static wiring | `tools/logic_check.py` | 23/23 checks |
-| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 44/44 scenarios |
-| Client interface | `tests/headless/client_smoke.luau` | 13/13 checks |
+| Static wiring | `tools/logic_check.py` | 25/25 checks |
+| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 45/45 scenarios |
+| Client interface | `tests/headless/client_smoke.luau` | 14/14 checks |
 
 Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`.
 
@@ -45,7 +45,7 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | survivors cross the roof span on route waypoints, not through the air | crossed the span on waypoints: t 0.00 -> 0.45 over 240 ticks |
 | PASS | the service cut opens only after the collapse is dug out | cleared in 3 digs, +20 salvage, routes=ServiceCut |
 | PASS | sealing the service cut slows its flooding (it floods first when open) | cut depth open=2.02m closed=0.00m |
-| PASS | salvage crates pay out once and the bench spends the pool | crate paid 14, pool 20 -> 14, SealKit fitted |
+| PASS | salvage crates pay out once and the bench spends the pool | crate paid 20, pool 20 -> 20, SealKit fitted |
 | PASS | the capacitor upgrade lifts a real brownout | capacity 2 -> 3, brownout cleared without touching the sockets |
 | PASS | impeller and rebreather upgrades change water and air numbers | air 22s -> 31s, 12s of water: 0.10 dry, 0.03 pumped, 0.01 fitted |
 | PASS | the lift servo upgrade speeds travel and adds a passenger slot | 3s of travel: 15% -> 21%, seats 3 -> 4 |
@@ -65,6 +65,7 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | the outfall drains every sector while it is cranked and closes on its own | 8 cranks to full: district 3.62 -> 2.71, drained 3.2 studs, gate dropped 1.0m |
 | PASS | roles reset with the round and cannot be swapped mid-flood | role locked in-round, kept across a lobby reset, ability cooldown cleared |
 | PASS | no survivor starts the round already standing in a rescue zone | 12 spawn points, nearest to the safe zone is outside the 7.5 stud radius |
+| PASS | a downed player rides with whoever drags them, and the clock stretches | carrier walked 24 studs at 8.4 (free 16.0), casualty stayed 2.2m behind, bleedout 0.00889/s (base 0.01333/s) |
 
 The harness loads `FLOODLINE.rbxlx`, mirrors the 750-part district and the shipped
 module sources into a stub runtime (Instance tree, Vector3/CFrame math, AABB raycasts, DataModel
@@ -74,18 +75,20 @@ fast-forwarded through Prep → Rising → Surge → Extraction → Results.
 ## 1.2 Bot playtests (7 timed rounds)
 
 Autonomous bots play complete rounds through the shipped server modules on the virtual clock
-(`tests/headless/playtest.luau`): 4 wins, 3 fails,
+(`tests/headless/playtest.luau`): 6 wins, 1 fails,
 0 unresolved.
 
 | Crew | Modifier | Outcome | Elapsed | Reason | Rescued/Required | Lost | Salvage | Score | Grade |
 |---|---|---|---|---|---|---|---|---|---|
-| 1p | Calm | win | 970.2s | team evacuated with the required survivors | 3/3 | 4 | 159 | 745 | C |
-| 1p | Standard | fail | 909.9s | every survivor was lost | 4/5 | 9 | 184 | 1065 | B |
-| 1p | Storm | win | 1005s | extraction window closed with the quota met | 7/6 | 5 | 259 | 1570 | S |
-| 2p | Standard | win | 852s | extraction window closed with the quota met | 9/6 | 3 | 309 | 1985 | S |
-| 2p | Storm | win | 200.3s | team evacuated with the required survivors | 9/7 | 1 | 265 | 2376 | S |
-| 4p | Standard | fail | 737.9s | not enough survivors can still be saved | 4/7 | 5 | 174 | 1305 | A |
-| 4p | Catastrophe | fail | 276.9s | not enough survivors can still be saved | 7/9 | 4 | 243 | 1911 | S |
+| 1p | Calm | win | 293.8s | team evacuated with the required survivors | 4/3 | 2 | 140 | 1364 | A |
+| 1p | Standard | win | 683.8s | extraction window closed with the quota met | 8/5 | 1 | 256 | 1795 | S |
+| 1p | Storm | win | 1005.3s | extraction window closed with the quota met | 6/6 | 6 | 234 | 1345 | A |
+| 2p | Standard | win | 940.1s | extraction window closed with the quota met | 6/6 | 5 | 234 | 1415 | S |
+| 2p | Storm | win | 604s | extraction window closed with the quota met | 9/7 | 2 | 281 | 1995 | S |
+| 4p | Standard | win | 213.3s | team evacuated with the required survivors | 8/7 | 3 | 240 | 2500 | S |
+| 4p | Catastrophe | fail | 433.9s | the district drowned | 6/9 | 4 | 226 | 1966 | S |
+
+**Downed-crew drill.** A teammate is downed in standing water on purpose, and the crew has to get them out rather than kneel beside them: hauled (casualty down at 8s, grabbed 10s), hauled=True, revived=True, casualty finished 17m from the shelter.
 
 What this does **not** measure:
 
@@ -114,6 +117,7 @@ and they are not player telemetry.
 | PASS | ping markers render and expire, and the modifier selector reacts | modifier selector, session line and 1 ping marker(s) verified |
 | PASS | effects respond to submersion, drowning and downed states | underwater tint, blur and downed grading all applied |
 | PASS | client bootstrap runs end to end on live payload shapes | client ticked 3s of live payloads: banner=SURGE, map built, route board=Skybridge — walkable (roof route) |
+| PASS | the status strip reports hauling, bleedout and the role you picked | haul/bleed/role readouts verified: 'Hauling Teammate' then 'ROLE: Medic' |
 
 ### 1.4 Static wiring checks
 
@@ -142,6 +146,8 @@ and they are not player telemetry.
 | PASS | tripped breakers can be reset by hand and re-wire their prompt | resetBreaker + prompt text + config hold present |
 | PASS | client ships a crew board with role rows, an ability button and the outfall gauge | crew board widgets + role/ability remotes present in the client |
 | PASS | client remotes exist and every server service is registered in the lifecycle | undeclared=[] lifecycle=CrewService/OutfallService |
+| PASS | a downed teammate can be dragged, and the client shows who has whom | prompt + start/stop + payload + HUD readouts present |
+| PASS | hauling a casualty moves them and buys them time | casualty rides the carrier, bleed stretch x1.5 |
 
 ## 2. Bugs this process actually found and fixed
 

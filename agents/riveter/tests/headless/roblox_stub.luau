@@ -983,6 +983,12 @@ function Stub.characterPosition(player): any
 	return root and root.Position or v3(0, 0, 0)
 end
 
+function Stub.playerPosition(player)
+	local character = player and player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return root and root.Position or v3(0, 0, 0)
+end
+
 function Stub.movePlayer(player, position)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")

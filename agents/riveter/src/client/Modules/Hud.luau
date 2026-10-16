@@ -204,7 +204,7 @@ function Hud.build(): ScreenGui
 	Hud.rosterRows = {}
 
 	-- ============ status strip ============
-	local strip = panel("StatusStrip", UDim2.fromOffset(360, 86), UDim2.new(0.5, -180, 1, -98))
+	local strip = panel("StatusStrip", UDim2.fromOffset(360, 100), UDim2.new(0.5, -180, 1, -112))
 	strip.Parent = gui
 	local carrying = label("", 13, C.Text)
 	carrying.Name = "CarryingLabel"
@@ -244,9 +244,34 @@ function Hud.build(): ScreenGui
 	}, { corner(4) }) :: Frame
 	oxygen.Parent = oxygenBg
 	Hud.oxygenBar = oxygen
+	-- Bleedout bar: a downed player needs to see the clock they are on, not just the word DOWN.
+	local bleedBg = new("Frame", {
+		Name = "BleedBg",
+		Size = UDim2.new(1, -28, 0, 8),
+		Position = UDim2.fromOffset(14, 56),
+		BackgroundColor3 = C.PanelLight,
+		BorderSizePixel = 0,
+	}, { corner(4) }) :: Frame
+	bleedBg.Parent = strip
+	local bleed = new("Frame", {
+		Name = "Bleed",
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = C.Bad,
+		BorderSizePixel = 0,
+	}, { corner(4) }) :: Frame
+	bleed.Parent = bleedBg
+	Hud.bleedBar = bleed
+	Hud.bleedBg = bleedBg
+	local role = label("", 12, C.Accent)
+	role.Name = "RoleChip"
+	role.Position = UDim2.new(1, -140, 0, 8)
+	role.Size = UDim2.fromOffset(126, 18)
+	role.TextXAlignment = Enum.TextXAlignment.Right
+	role.Parent = strip
+	Hud.roleChip = role
 	local hint = label("", 12, C.TextDim)
 	hint.Name = "HintLabel"
-	hint.Position = UDim2.fromOffset(14, 56)
+	hint.Position = UDim2.fromOffset(14, 68)
 	hint.Size = UDim2.fromOffset(330, 16)
 	hint.Parent = strip
 	Hud.hintLabel = hint
@@ -737,11 +762,24 @@ function Hud.setStatus(payload: any)
 	end
 	table.sort(items)
 	local carryText = me.carrying and "Carrying: power cell" or (#items > 0 and ("Kit: " .. table.concat(items, ", ")) or "Kit: empty")
+	if me.dragging then
+		carryText = `Hauling {me.dragging} — Q to set them down`
+	end
 	if me.downed then
-		carryText = `DOWN — revive in progress {math.floor((me.reviveProgress or 0) / 4.5 * 100)}%`
+		-- A downed player gets one line, and it carries everything they need: that they are down,
+		-- who has them, and how far along the revive is.
+		local revive = math.floor((me.reviveProgress or 0) / 4.5 * 100)
+		carryText = me.draggedBy
+			and `DOWN — hauled by {me.draggedBy} · revive {revive}%`
+			or `DOWN — revive in progress {revive}%`
 	end
 	Hud.carryingLabel.Text = carryText
-	Hud.carryingLabel.TextColor3 = me.downed and C.Bad or C.Text
+	Hud.carryingLabel.TextColor3 = me.downed and C.Bad or (me.dragging and C.Warn or C.Text)
+	-- Bleedout only means anything while you are down; the bar doubles as the revive progress read.
+	local bleed = math.clamp(me.bleedProgress or 0, 0, 1)
+	Hud.bleedBar.Size = UDim2.fromScale(me.downed and bleed or 0, 1)
+	Hud.bleedBar.BackgroundColor3 = bleed > 0.7 and C.Bad or C.Warn
+	Hud.bleedBg.BackgroundTransparency = me.downed and 0 or 0.65
 	if me.submerged then
 		Hud.centrePrompt.Text = "UNDERWATER — surface for air"
 		Hud.centrePrompt.TextColor3 = C.Bad

@@ -35,7 +35,20 @@ export type PlayerState = {
 
 PlayerService.states = {} :: { [Player]: PlayerState }
 PlayerService.downedCount = 0
+-- Whoever is being hauled by whom. Dragging is what turns "someone is down in the flood" from a
+-- countdown into a job two people can actually finish.
+PlayerService.drags = {} :: { [Player]: Player }
 local ctx
+
+-- Drag tuning. These live at the top of the file because walkSpeed (defined below) reads
+-- DRAG_SPEED, and a local declared further down is simply not in scope there.
+local DRAG_RANGE = 9          -- studs: you have to be standing over them to get a grip
+local DRAG_SPEED = 0.55       -- hauling a body across a flooded street is slow work
+local DRAG_OFFSET = 2.2       -- how far behind the carrier the casualty rides
+-- Multiplier on the bleedout TIME, not the rate: heads up and out of the water buys 50% longer,
+-- so a crew that commits to the haul gets a real window. (The first cut multiplied 0.6 and made
+-- dragging bleed a player out 40% faster, which is exactly backwards.)
+local DRAG_BLEED_STRETCH = 1.5
 
 local function state(player: Player): PlayerState
 	local entry = PlayerService.states[player]
@@ -47,6 +60,8 @@ local function state(player: Player): PlayerState
 			items = {},
 			downed = false,
 			downedAt = nil,
+			dragging = nil,
+			draggedBy = nil,
 			bleedProgress = 0,
 			bleedouts = 0,
 			reviveProgress = 0,
@@ -78,6 +93,16 @@ function PlayerService.walkSpeed(player: Player): number
 		-- should feel like it.
 		local bonus = ctx.crew and ctx.crew.carryBonus(player) or 0
 		local speed = ctx.config.Player.CarryWalkSpeed + bonus
+		if ctx.crew then
+			speed *= ctx.crew.speedMultiplierAt(entry.lastPosition)
+		end
+		return speed
+	end
+	if PlayerService.drags[player] then
+		-- Hauling a body: slower than a cell, and the Rigger's carry passive applies to a person too.
+		local haul = ctx.config.Player.CarryWalkSpeed * DRAG_SPEED
+		local bonus = ctx.crew and ctx.crew.carryBonus(player) or 0
+		local speed = math.max(5, haul + bonus)
 		if ctx.crew then
 			speed *= ctx.crew.speedMultiplierAt(entry.lastPosition)
 		end
@@ -150,6 +175,48 @@ function PlayerService.addScore(player: Player, amount: number, reason: string?)
 	end
 end
 
+local function dragPromptOn(player: Player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return nil
+	end
+	return (root :: any):FindFirstChild("DragTeammate")
+end
+
+-- The prompt lives on the casualty, so a rescuer only ever sees "Drag" on somebody who is down.
+local function attachDragPrompt(casualty: Player)
+	local character = casualty.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart")) then
+		return
+	end
+	if (root :: any):FindFirstChild("DragTeammate") then
+		return
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "DragTeammate"
+	prompt.ActionText = "Drag to safety"
+	prompt.ObjectText = casualty.Name
+	prompt.HoldDuration = 0.35
+	prompt.MaxActivationDistance = DRAG_RANGE
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = root
+	prompt.Triggered:Connect(function(dragger: Player)
+		local ok, reason = PlayerService.startDrag(dragger, casualty)
+		if not ok and reason then
+			ctx.notifyPlayer(dragger, reason, "warn")
+		end
+	end)
+end
+
+local function detachDragPrompt(casualty: Player)
+	local prompt = dragPromptOn(casualty)
+	if prompt then
+		prompt:Destroy()
+	end
+end
+
 function PlayerService.downed(player: Player, cause: string)
 	local entry = state(player)
 	if entry.downed then
@@ -163,6 +230,7 @@ function PlayerService.downed(player: Player, cause: string)
 	PlayerService.downedCount += 1
 	ctx.notify(`{player.Name} is down — {cause}.`, "bad")
 	ctx.sendPlayerEvent(player, "downed", { cause = cause })
+	attachDragPrompt(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
@@ -193,6 +261,9 @@ function PlayerService.revivePlayer(player: Player, byWhom: Player?)
 	entry.reviveProgress = 0
 	entry.stamina = ctx.config.Player.StaminaMax
 	entry.spectating = false
+	entry.dragging = nil
+	entry.draggedBy = nil
+	detachDragPrompt(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
@@ -227,6 +298,9 @@ function PlayerService.bleedOut(player: Player)
 	entry.bleedProgress = 0
 	entry.downed = false
 	entry.downedAt = nil
+	entry.dragging = nil
+	entry.draggedBy = nil
+	detachDragPrompt(player)
 	entry.reviveProgress = 0
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -313,6 +387,82 @@ function PlayerService.onCharacterAdded(player: Player, character: Model)
 	ctx.sendPlayerEvent(player, "spawned", {})
 end
 
+-- ===================== dragging a downed teammate =====================
+
+function PlayerService.carriedBy(player: Player): Player?
+	return state(player).draggedBy
+end
+
+function PlayerService.dragging(player: Player): Player?
+	return PlayerService.drags[player]
+end
+
+function PlayerService.startDrag(dragger: Player, casualty: Player): (boolean, string?)
+	if dragger == casualty then
+		return false, "You cannot drag yourself."
+	end
+	local draggerEntry = state(dragger)
+	local casualtyEntry = state(casualty)
+	if draggerEntry.downed then
+		return false, "You are down."
+	end
+	if not casualtyEntry.downed then
+		return false, `{casualty.Name} is on their feet.`
+	end
+	if draggerEntry.dragging then
+		return false, `You are already dragging {draggerEntry.dragging.Name}.`
+	end
+	if casualtyEntry.draggedBy then
+		return false, `{casualtyEntry.draggedBy.Name} already has {casualty.Name}.`
+	end
+	if draggerEntry.carrying then
+		return false, "Set the cell down first - you need both hands."
+	end
+	local draggerCharacter = dragger.Character
+	local casualtyCharacter = casualty.Character
+	local draggerRoot = draggerCharacter and draggerCharacter:FindFirstChild("HumanoidRootPart")
+	local casualtyRoot = casualtyCharacter and casualtyCharacter:FindFirstChild("HumanoidRootPart")
+	if not (draggerRoot and casualtyRoot) then
+		return false, "Nobody to grab."
+	end
+	local draggerPart = draggerRoot :: BasePart
+	local casualtyPart = casualtyRoot :: BasePart
+	local distance = (draggerPart.Position - casualtyPart.Position).Magnitude
+	if distance > DRAG_RANGE then
+		return false, "Get closer to them."
+	end
+	draggerEntry.dragging = casualty
+	casualtyEntry.draggedBy = dragger
+	PlayerService.drags[dragger] = casualty
+	ctx.notify(`{dragger.Name} is hauling {casualty.Name} to safety.`, "info")
+	ctx.sendPlayerEvent(dragger, "drag", { target = casualty.Name, started = true })
+	return true, nil
+end
+
+function PlayerService.stopDrag(dragger: Player, reason: string?): boolean
+	local casualty = PlayerService.drags[dragger]
+	if not casualty then
+		return false
+	end
+	PlayerService.drags[dragger] = nil
+	state(dragger).dragging = nil
+	state(casualty).draggedBy = nil
+	-- Put the casualty down where the carrier stands rather than leaving them behind in mid-air.
+	local draggerRoot = dragger.Character and dragger.Character:FindFirstChild("HumanoidRootPart")
+	local casualtyRoot = casualty.Character and casualty.Character:FindFirstChild("HumanoidRootPart")
+	if draggerRoot and casualtyRoot then
+		local draggerPart = draggerRoot :: BasePart
+		local casualtyPart = casualtyRoot :: BasePart
+		local behind = draggerPart.CFrame * CFrame.new(0, 0, DRAG_OFFSET)
+		casualtyPart.CFrame = CFrame.new(behind.Position)
+		state(casualty).lastPosition = behind.Position
+	end
+	if reason then
+		ctx.notifyPlayer(dragger, reason, "info")
+	end
+	return true
+end
+
 function PlayerService.update(dt: number)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local entry = state(player)
@@ -326,10 +476,25 @@ function PlayerService.update(dt: number)
 				humanoid.JumpPower = 0
 				-- Self-recovery countdown for solo players is handled at down time.
 			end
-			-- Bleeding out. A medic standing over you stretches the clock; nothing else does.
+			-- Ride along with whoever has hold of you.
+			local hauler = entry.draggedBy
+			local haulerRoot = hauler and hauler.Character and hauler.Character:FindFirstChild("HumanoidRootPart")
+			if hauler and haulerRoot and root then
+				local haulerPart = haulerRoot :: BasePart
+				local rootPart = root :: BasePart
+				local trail = haulerPart.CFrame * CFrame.new(0, 0, DRAG_OFFSET)
+				rootPart.CFrame = CFrame.new(trail.Position)
+				rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+				entry.lastPosition = trail.Position
+			end
+			-- Bleeding out. A medic standing over you stretches the clock; being hauled keeps your
+			-- head above the water line, which is worth something but does not stop the bleeding.
 			local bleedout = ctx.config.Player.DownedBleedoutSeconds
 			if ctx.crew then
 				bleedout *= ctx.crew.bleedoutMultiplier(entry.lastPosition)
+			end
+			if entry.draggedBy then
+				bleedout *= DRAG_BLEED_STRETCH
 			end
 			entry.bleedProgress = (entry.bleedProgress or 0) + dt / bleedout
 			if entry.bleedProgress >= 1 then
@@ -364,6 +529,22 @@ function PlayerService.update(dt: number)
 		end
 
 		entry.lastPosition = (root :: BasePart).Position
+		-- A carrier walks their casualty; the grip is lost if they are ever wrenched apart (a lift
+		-- ride, a teleport, a dropped connection).
+		local casualty = PlayerService.drags[player]
+		if casualty then
+			if not state(casualty).downed then
+				PlayerService.stopDrag(player)
+			else
+				local casualtyRoot = casualty.Character and casualty.Character:FindFirstChild("HumanoidRootPart")
+				if casualtyRoot then
+					local gap = ((root :: BasePart).Position - (casualtyRoot :: BasePart).Position).Magnitude
+					if gap > DRAG_RANGE + 4 then
+						PlayerService.stopDrag(player, `{casualty.Name} slipped out of your grip.`)
+					end
+				end
+			end
+		end
 		humanoid.WalkSpeed = PlayerService.walkSpeed(player)
 	end
 end
@@ -378,6 +559,8 @@ function PlayerService.pushSync()
 			carrying = entry.carrying,
 			items = entry.items,
 			downed = entry.downed,
+			dragging = entry.dragging and entry.dragging.Name or nil,
+			draggedBy = entry.draggedBy and entry.draggedBy.Name or nil,
 			bleedProgress = Util.round(entry.bleedProgress or 0, 2),
 			bleedouts = entry.bleedouts or 0,
 			reviveProgress = Util.round(entry.reviveProgress, 2),
@@ -398,6 +581,9 @@ function PlayerService.reset()
 		entry.bleedProgress = 0
 		entry.bleedouts = 0
 		entry.reviveProgress = 0
+		entry.dragging = nil
+		entry.draggedBy = nil
+		detachDragPrompt(player)
 		entry.score = 0
 		entry.deaths = 0
 		entry.waterSeconds = 0

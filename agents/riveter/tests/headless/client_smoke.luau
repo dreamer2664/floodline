@@ -576,6 +576,50 @@ check("client bootstrap runs end to end on live payload shapes", function()
 		string.format("client ticked 3s of live payloads: banner=%s, map built, route board=%s", stateLabel.Text, skyText)
 end)
 
+check("the status strip reports hauling, bleedout and the role you picked", function()
+	local gui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
+	local strip = gui:FindFirstChild("StatusStrip")
+	assert(strip, "status strip missing")
+	local carrying = strip:FindFirstChild("CarryingLabel")
+	local bleed = strip:FindFirstChild("BleedBg"):FindFirstChild("Bleed")
+	local chip = strip:FindFirstChild("RoleChip")
+	assert(carrying and bleed and chip, "status strip is missing the carry line, bleed bar or role chip")
+
+	local function state(payload)
+		netFolder:FindFirstChild("StateSync").OnClientEvent:Fire(payload)
+	end
+
+	-- Hauling a teammate reads as a job you are doing, and it is the carrier's own line.
+	state({ ClientTester = { stamina = 100, oxygen = 20, items = {}, downed = false, dragging = "Teammate" } })
+	assert(string.find(carrying.Text, "Hauling Teammate", 1, true) ~= nil,
+		"hauling was not shown: " .. carrying.Text)
+
+	-- Being hauled is a different sentence, and it belongs to the casualty.
+	state({ ClientTester = { stamina = 0, oxygen = 20, items = {}, downed = true, draggedBy = "Teammate", bleedProgress = 0.5, reviveProgress = 1.5 } })
+	assert(string.find(carrying.Text, "DOWN", 1, true) ~= nil, "a downed player is not told they are down")
+	assert(string.find(carrying.Text, "hauled by Teammate", 1, true) ~= nil,
+		"being hauled was not shown: " .. carrying.Text)
+	assert(string.find(carrying.Text, "revive 33%", 1, true) ~= nil,
+		"the revive percentage is missing from the downed line: " .. carrying.Text)
+
+	-- The bleed bar is the clock: half bled must read as half a bar.
+	assert(math.abs(bleed.Size.X.Scale - 0.5) < 0.01,
+		string.format("bleed bar shows %.2f for a half-bled player", bleed.Size.X.Scale))
+
+	-- Standing up again clears both the bar and the label.
+	state({ ClientTester = { stamina = 60, oxygen = 20, items = {}, downed = false, bleedProgress = 0 } })
+	assert(bleed.Size.X.Scale == 0, "the bleed bar did not clear on revive")
+
+	-- The role chip mirrors the crew board, so nobody has to open a panel to remember their job.
+	netFolder:FindFirstChild("CrewSync").OnClientEvent:Fire({
+		players = { ClientTester = { role = "Medic", readyIn = 4, ability = "Triage" } },
+		order = Config.Crew.Order,
+	})
+	assert(string.find(chip.Text, "ROLE:", 1, true) ~= nil, "role chip is empty: " .. chip.Text)
+	assert(string.find(chip.Text, "Medic", 1, true) ~= nil, "role chip does not name the role: " .. chip.Text)
+	return true, string.format("haul/bleed/role readouts verified: '%s' then '%s'", "Hauling Teammate", chip.Text)
+end)
+
 local passed = 0
 for _, entry in ipairs(checks) do
 	if entry.ok then

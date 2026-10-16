@@ -42,10 +42,13 @@ local Power = module("PowerService")
 local Crew = module("CrewService")
 -- Module scope: BOT:targets is defined at this level, so anything it mutates must live here.
 local outfallCranks = 0
+local dragsStarted = 0
+local dragsHauled = 0
 -- Prompt hold durations the bots have to respect (read from the baked Config at boot).
 local Holds = { outfallHold = Config.Outfall.HoldSeconds, socketHold = 1.0 }
 local Outfall = module("OutfallService")
 local Flood = module("FloodService")
+local WorldService = module("WorldService")
 local Rescue = module("RescueService")
 local Lift = module("LiftService")
 local Route = module("RouteService")
@@ -305,7 +308,40 @@ function BOT:targets()
 			local character = other.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
 			if root then
-				local here = self:position()
+				-- Someone already has them: help by standing on the revive, not by grabbing an arm.
+				if otherState.draggedBy and otherState.draggedBy ~= self.player then
+					return { goal = (root :: any).Position, label = `revive {other.Name}`, arrive = 7,
+						act = function(bot, tick)
+							PlayerService.progressRevive(bot.player, other, tick)
+						end }
+				end
+				-- If they are down in the flood, the answer is to haul them out of it, not to kneel
+				-- in the water next to them. Bots only drag while the casualty is actually wet.
+				local theirs = PlayerService.dragging(self.player)
+				local wet = Flood.depthAt((root :: any).Position) > 0.9
+				if wet and not theirs then
+					return { goal = (root :: any).Position, label = `drag {other.Name}`, arrive = 6,
+						act = function(bot)
+							local ok = PlayerService.startDrag(bot.player, other)
+							if ok then
+								dragsStarted += 1
+								bot:note(`grabbing {other.Name}`)
+							end
+						end }
+				end
+				if theirs == other then
+					local safeZone = part("SafeZone")
+					return { goal = safeZone.Position, label = `haul {other.Name} to safety`, arrive = 9,
+						act = function(bot)
+							-- Arrived at the shelter: the casualty is safe, so set them down.
+							if (bot:position() - safeZone.Position).Magnitude < 11 then
+								if PlayerService.stopDrag(bot.player) then
+									dragsHauled += 1
+									bot:note(`hauled {other.Name} clear`)
+								end
+							end
+						end }
+				end
 				return { goal = (root :: any).Position, label = `revive {other.Name}`, arrive = 7,
 					act = function(bot, tick)
 						PlayerService.progressRevive(bot.player, other, tick)
@@ -478,6 +514,16 @@ local limitations = {
 	"Rendering, audio and framerate are not exercised at all.",
 }
 
+-- Downed players get dragged back to the shelter, so a round that ends mid-haul must not leave a
+-- grip held into the next round.
+local function releaseAllDrags(bots)
+	for _, bot in ipairs(bots) do
+		if PlayerService.dragging(bot.player) then
+			PlayerService.stopDrag(bot.player)
+		end
+	end
+end
+
 local function runRound(crew: number, modifier: string)
 	local bots = {}
 	for index = 1, crew do
@@ -522,6 +568,8 @@ local function runRound(crew: number, modifier: string)
 		playerDowns = 0,
 		roles = {},
 		casualties = {},
+		dragsStarted = 0,
+		dragsHauled = 0,
 		survivorDowns = 0,
 		abilitiesUsed = 0,
 		outfallOpens = 0,
@@ -532,6 +580,8 @@ local function runRound(crew: number, modifier: string)
 	}
 
 	local abilitiesUsed = 0
+	dragsStarted = 0
+	dragsHauled = 0
 	local casualties = {}
 	local seenNotes = {}
 	local downs = 0
@@ -675,6 +725,7 @@ local function runRound(crew: number, modifier: string)
 	record.survivorDowns = downs
 	record.abilitiesUsed = abilitiesUsed
 	record.outfallCranks = outfallCranks
+	releaseAllDrags(bots)
 	record.roles = {}
 	for _, bot in ipairs(bots) do
 		table.insert(record.roles, { name = bot.name, role = Crew.roleOf(bot.player) })
@@ -686,6 +737,7 @@ local function runRound(crew: number, modifier: string)
 		table.insert(record.botLogs, { name = bot.name, steps = #bot.log, lastAction = bot.lastAction, stuckFor = bot.stuckFor })
 	end
 
+	releaseAllDrags(bots)
 	for _, bot in ipairs(bots) do
 		Stub.removePlayer(bot.player)
 	end
@@ -709,6 +761,124 @@ local plan = {
 	{ crew = 4, modifier = "Catastrophe" },
 }
 
+-- ============================================================
+-- Drill: a teammate goes down mid-round and the crew has to haul them
+-- ============================================================
+-- The bots are careful enough that nobody goes down on their own, so this drill injects the injury
+-- the engine would have dealt (a live cable, a fall) and then watches the crew deal with it: the
+-- casualty has to be dragged, arrive at the shelter, and the round has to carry on.
+local function runDownedCrewDrill(modifier: string)
+	local bots = { newBot("Drill1", 1), newBot("Drill2", 2), newBot("Drill3", 3) }
+	local lead = bots[1]
+	Round.resetToLobby()
+	Session_setModifier(modifier)
+	Crew.set(bots[1].player, "Rigger")
+	Crew.set(bots[2].player, "Medic")
+	Crew.set(bots[3].player, "Engineer")
+	Round.requestStart(lead.player)
+
+	local casualty = bots[3]
+	local started = clock()
+	local injected = false
+	local surges = 0
+	local lastSurgeAt = nil
+	local dragged = false
+	local hauled = false
+	local revived = false
+	local downedAt = nil
+	local freedAt = nil
+	local guard = 0
+	local lastNote = 0
+	while clock() - started < 600 do
+		guard += 1
+		if guard > 250000 then
+			break
+		end
+		for _, bot in ipairs(bots) do
+			-- The casualty cannot walk while down, so the drill keeps them where they fell.
+			if bot ~= casualty or not PlayerService.getState(casualty.player).downed then
+				bot:step(TICK)
+			end
+		end
+		-- Inject the injury once the casualty is standing in deep enough water for the difference
+		-- between a revive and a haul to matter. A downed player on dry ground is a kneel-and-fix;
+		-- the drill is about the other case, so it waits for real water and nudges the storm along.
+		if not injected then
+			local elapsed = clock() - started
+			-- Drill-controlled flood: raise the sector the casualty is standing in until they are
+			-- genuinely in deep water. Waiting for the storm is not deterministic (a fast crew wins
+			-- the round first), and the point is to test the rescue, not the rain.
+			if elapsed > 6 then
+				local sector = WorldService.sectorAt(Stub.playerPosition(casualty.player))
+				local depth = Flood.depthAt(Stub.playerPosition(casualty.player))
+				local tries = 0
+				while depth < 1.2 and tries < 8 do
+					Flood.surge(2.4, sector)
+					surges += 1
+					tries += 1
+					Stub.advance(0.3)
+					depth = Flood.depthAt(Stub.playerPosition(casualty.player))
+				end
+				lead:note(`drill: {surges} surges put the district at {string.format("%.1f", Flood.level)}m`)
+				if depth >= 1.2 then
+					injected = true
+					downedAt = clock() - started
+					PlayerService.downed(casualty.player, "a live cable (drill)")
+					lead:note(`drill: Drill3 is down in {string.format("%.1f", depth)}m of water`)
+				end
+			end
+		end
+		if injected and not dragged then
+			for _, bot in ipairs(bots) do
+				if PlayerService.dragging(bot.player) == casualty.player then
+					dragged = true
+					freedAt = clock() - started
+					lead:note(`drill: {bot.name} has hold of Drill3`)
+				end
+			end
+		end
+		if dragged and not hauled and not PlayerService.carriedBy(casualty.player) then
+			hauled = true
+			lead:note("drill: Drill3 is clear")
+		end
+		if injected and not revived and not PlayerService.getState(casualty.player).downed then
+			revived = true
+			lead:note(`drill: Drill3 back on their feet after {math.floor((clock() - started) - (downedAt or 0))}s`)
+		end
+		Stub.advance(TICK)
+		if (clock() - started) - lastNote > 30 then
+			lastNote = clock() - started
+		end
+		if Round.state == "Results" or Round.state == "Intermission" then
+			break
+		end
+	end
+
+	releaseAllDrags(bots)
+	local position = Stub.playerPosition(casualty.player)
+	local safe = part("SafeZone").Position
+	local distance = position and (position - safe).Magnitude or 999
+	local record = {
+		crew = 3,
+		modifier = modifier,
+		outcome = dragged and "hauled" or "never grabbed",
+		reason = `casualty down at {math.floor((downedAt or 0))}s, grabbed {dragged and math.floor(freedAt or 0) .. "s" or "never"}`,
+		elapsedSeconds = math.floor((clock() - started) * 10) / 10,
+		dragsStarted = dragged and 1 or 0,
+		dragsHauled = hauled and 1 or 0,
+		revived = revived,
+		distanceToShelter = math.floor(distance * 10) / 10,
+		injected = injected,
+		surges = surges,
+		log = lead.log,
+	}
+	for _, bot in ipairs(bots) do
+		Stub.removePlayer(bot.player)
+	end
+	Round.resetToLobby()
+	return record
+end
+
 local filter = process.env.FLOODLINE_PLAN
 for _, entry in ipairs(plan) do
 	local label = `{entry.crew}p-{entry.modifier}`
@@ -721,6 +891,14 @@ for _, entry in ipairs(plan) do
 		string.upper(record.outcome), record.crew, record.modifier, record.reason or "",
 		record.elapsedSeconds, record.rescued, record.required, record.lost,
 		#record.routes > 0 and table.concat(record.routes, "+") or "-", record.score, tostring(record.grade)))
+end
+
+-- The downed-crew drill runs on its own round so a win or a loss elsewhere cannot hide it.
+local drill = nil
+if not filter or filter == "" or string.find("drill", filter, 1, true) then
+	drill = runDownedCrewDrill("Standard")
+	print(string.format("[DRILL] downed teammate: %s (%s), hauled=%s, revived=%s",
+		drill.outcome, drill.reason, tostring(drill.dragsHauled == 1), tostring(drill.revived)))
 end
 
 -- ===================== report =====================
@@ -790,6 +968,7 @@ local report = {
 	unresolved = unresolved,
 	note = "Bots play the shipped server modules on a virtual clock. Timings are a lower bound for a competent crew; engine physics, input and rendering are NOT exercised.",
 	limitations = limitations,
+	downedCrewDrill = drill,
 	results = runs,
 }
 for _, record in ipairs(report.results) do

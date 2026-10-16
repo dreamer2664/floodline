@@ -159,6 +159,19 @@ local function wireRemotes()
 		remotes.CrewSync.OnClientEvent:Connect(function(snapshot: any)
 			state.crew = snapshot
 			Systems.setState({ crew = snapshot })
+			-- Status strip role chip: the crew board is fine, but a player should not have to open
+			-- a panel to remember which role they are playing.
+			local mine = snapshot and snapshot.players and snapshot.players[player.Name]
+			if Hud.roleChip then
+				if mine and mine.role then
+					local def = Config.Crew[mine.role]
+					Hud.roleChip.Text = `ROLE: {def and def.Label or mine.role}`
+					Hud.roleChip.TextColor3 = mine.readyIn and mine.readyIn > 0 and C.TextDim or C.Accent
+				else
+					Hud.roleChip.Text = "ROLE: pick one (N)"
+					Hud.roleChip.TextColor3 = C.TextDim
+				end
+			end
 		end)
 	end
 
@@ -266,6 +279,12 @@ local function nearestSurvivor(): (string?, number)
 end
 
 local function handleSurvivorKey()
+	local me = state.status and state.status[player.Name]
+	if me and me.dragging then
+		table.insert(lines, `[Q] set {me.dragging} down`)
+	elseif me and me.draggedBy then
+		table.insert(lines, `{me.draggedBy} is hauling you`)
+	end
 	local name, distance = nearestSurvivor()
 	if not name or distance > 10 then
 		Hud.showCentrePrompt("No survivor within reach", "warn")
@@ -482,7 +501,7 @@ local function updateHints(dt: number)
 		table.insert(lines, `[F] {name} ({math.floor(distance)}m)`)
 	end
 	Hud.hintLabel.Text = #lines > 0 and table.concat(lines, "  ·  ")
-		or "E grab/use · F survivor · G lift · Q drop · V ability · N role · 1-4 ping · M map · B systems"
+		or "E grab/use · F survivor · G lift · Q drop/let go · V ability · N role · 1-4 ping · M map · B systems"
 end
 
 local function updateCamera(dt: number)

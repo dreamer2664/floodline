@@ -58,6 +58,16 @@ def main() -> int:
             for row in playtest["results"]
         )
         limits = "\n".join(f"- {line}" for line in playtest.get("limitations", []))
+        drill = playtest.get("downedCrewDrill")
+        drill_line = ""
+        if drill:
+            drill_line = (
+                f"\n**Downed-crew drill.** A teammate is downed in standing water on purpose, and the crew "
+                f"has to get them out rather than kneel beside them: {drill['outcome']} "
+                f"({drill['reason']}), hauled={bool(drill.get('dragsHauled'))}, "
+                f"revived={bool(drill.get('revived'))}, casualty finished "
+                f"{drill.get('distanceToShelter')}m from the shelter.\n"
+            )
         playtest_section = f"""## 1.2 Bot playtests ({playtest['runs']} timed rounds)
 
 Autonomous bots play complete rounds through the shipped server modules on the virtual clock
@@ -67,7 +77,7 @@ Autonomous bots play complete rounds through the shipped server modules on the v
 | Crew | Modifier | Outcome | Elapsed | Reason | Rescued/Required | Lost | Salvage | Score | Grade |
 |---|---|---|---|---|---|---|---|---|---|
 {rows}
-
+{drill_line}
 What this does **not** measure:
 
 {limits}

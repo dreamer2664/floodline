@@ -249,6 +249,12 @@ remotes.RequestSprint.OnServerEvent:Connect(function(player: Player, sprinting: 
 end)
 
 remotes.RequestDrop.OnServerEvent:Connect(function(player: Player)
+	-- Q lets go of whatever you are holding: a casualty first, then a cell, then a survivor.
+	local casualty = PlayerService.dragging(player)
+	if casualty then
+		PlayerService.stopDrag(player, `You set {casualty.Name} down.`)
+		return
+	end
 	local cell = PowerService.cellByHolder(player)
 	if cell then
 		PowerService.drop(player)

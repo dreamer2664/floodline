@@ -250,6 +250,25 @@ def main() -> int:
           and {"CrewService", "OutfallService"} <= server_services,
           f"undeclared={sorted(used - declared)} lifecycle={world_modules.get('Crew')}/{world_modules.get('Outfall')}")
 
+    # ---- 23. dragging a downed teammate is wired from the prompt to the readout ----
+    player_service = read(SRC / "server" / "Modules" / "PlayerService.luau")
+    hud_client = read(SRC / "client" / "Modules" / "Hud.luau")
+    bootstrap = read(SRC / "server" / "Bootstrap.server.luau")
+    check("a downed teammate can be dragged, and the client shows who has whom",
+          all(token in player_service for token in
+              ("startDrag", "stopDrag", "DragTeammate", "draggedBy", "detachDragPrompt"))
+          and "PlayerService.dragging(player)" in bootstrap
+          and all(token in hud_client for token in ("me.dragging", "me.draggedBy", "Hud.bleedBar")),
+          "prompt + start/stop + payload + HUD readouts present")
+
+    # ---- 24. the drag actually moves the casualty and stretches the bleedout window ----
+    stretch = re.search(r"DRAG_BLEED_STRETCH = ([\d.]+)", player_service)
+    check("hauling a casualty moves them and buys them time",
+          "rootPart.CFrame = CFrame.new(trail.Position)" in player_service
+          and stretch is not None and float(stretch.group(1)) > 1.0
+          and "PlayerService.drags[player]" in player_service,
+          f"casualty rides the carrier, bleed stretch x{stretch.group(1) if stretch else '?'}")
+
     failures = [c for c in checks if not c["ok"]]
     report = {
         "checks": checks,

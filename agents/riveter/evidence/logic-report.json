@@ -114,9 +114,19 @@
       "check": "client remotes exist and every server service is registered in the lifecycle",
       "ok": true,
       "detail": "undeclared=[] lifecycle=CrewService/OutfallService"
+    },
+    {
+      "check": "a downed teammate can be dragged, and the client shows who has whom",
+      "ok": true,
+      "detail": "prompt + start/stop + payload + HUD readouts present"
+    },
+    {
+      "check": "hauling a casualty moves them and buys them time",
+      "ok": true,
+      "detail": "casualty rides the carrier, bleed stretch x1.5"
     }
   ],
-  "passed": 23,
+  "passed": 25,
   "failed": 0,
   "sourceFiles": {
     "server": [
