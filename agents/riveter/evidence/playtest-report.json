@@ -1,64 +1,56 @@
 {
   "downedCrewDrill": {
     "crew": 3,
-    "distanceToShelter": 16.1,
+    "distanceToShelter": 12.9,
     "dragsHauled": 1,
     "dragsStarted": 1,
-    "elapsedSeconds": 248.5,
+    "elapsedSeconds": 467,
     "injected": true,
     "log": [
       {
-        "t": 2340.4,
+        "t": 1171,
         "text": "powered Pump"
       },
       {
-        "t": 2341.4,
+        "t": 1172,
         "text": "powered Lift"
       },
       {
-        "t": 2342.1,
+        "t": 1172.7,
         "text": "powered Winch"
       },
       {
-        "t": 2342.9,
+        "t": 1173.5,
         "text": "powered Bridge"
       },
       {
-        "t": 2347,
-        "text": "drill: 7 surges put the district at 10.1m"
+        "t": 1177.3,
+        "text": "drill: 6 surges put the district at 8.7m"
       },
       {
-        "t": 2347,
-        "text": "drill: Drill3 is down in 3.1m of water"
+        "t": 1177.3,
+        "text": "drill: Drill3 is down in 1.5m of water"
       },
       {
-        "t": 2348.5,
-        "text": "grabbing Drill3"
+        "t": 1177.8,
+        "text": "drill: Drill2 has hold of Drill3"
       },
       {
-        "t": 2348.5,
-        "text": "drill: Drill1 has hold of Drill3"
-      },
-      {
-        "t": 2352.2,
+        "t": 1182.5,
         "text": "drill: Drill3 is clear"
       },
       {
-        "t": 2352.2,
+        "t": 1182.5,
         "text": "drill: Drill3 back on their feet after 5s"
-      },
-      {
-        "t": 2441.5,
-        "text": "revived Survivor10"
       }
     ],
     "modifier": "Standard",
     "outcome": "hauled",
-    "reason": "casualty down at 8s, grabbed 9s",
+    "reason": "casualty down at 8s, grabbed 8s",
     "revived": true,
-    "surges": 7
+    "surges": 6
   },
-  "fails": 2,
+  "fails": 1,
   "limitations": [
     "No engine physics: bots teleport in straight lines at the server-set walk speed (0.5x past waist depth).",
     "No client input latency, no camera, no fumbling a hold, no missed prompts.",
@@ -70,14 +62,22 @@
   "results": [
     {
       "abilitiesUsed": 0,
-      "casualties": [],
+      "casualties": [
+        {
+          "cause": "the water",
+          "depth": 2.89,
+          "level": 0.29,
+          "name": "Survivor12",
+          "t": 111
+        }
+      ],
       "cellsDocked": 4,
       "crew": 1,
-      "dead": 0,
+      "dead": 1,
       "dragsHauled": 0,
       "dragsStarted": 0,
       "elapsedSeconds": 111.8,
-      "evacuationAt": 56.8,
+      "evacuationAt": 56.3,
       "firstPowerAt": 4.2,
       "grade": "S",
       "log": [
@@ -110,15 +110,27 @@
           "text": "whistled 2 survivors in"
         },
         {
-          "t": 58.5,
+          "t": 53.5,
+          "text": "escorting Survivor2 (Injured)"
+        },
+        {
+          "t": 58,
           "text": "evacuation called"
         },
         {
-          "t": 60.3,
-          "text": "escorting Survivor5 (Deaf)"
+          "t": 61.8,
+          "text": "carrying Survivor4"
+        },
+        {
+          "t": 90.5,
+          "text": "whistled 1 survivors in"
+        },
+        {
+          "t": 104.8,
+          "text": "revived Survivor12"
         }
       ],
-      "lost": 0,
+      "lost": 1,
       "modifier": "Calm",
       "modifierApplied": true,
       "outcome": "win",
@@ -126,11 +138,11 @@
       "outfallOpens": 0,
       "padAt": 111.8,
       "playerDowns": 0,
-      "quotaAt": 53,
+      "quotaAt": 52.5,
       "reason": "team evacuated with the required survivors",
       "recovered": 0,
       "required": 3,
-      "rescued": 4,
+      "rescued": 9,
       "roles": [
         {
           "name": "Bot1",
@@ -138,10 +150,10 @@
         }
       ],
       "routes": [],
-      "salvage": 140,
-      "score": 1468,
+      "salvage": 265,
+      "score": 2448,
       "startedAt": 0,
-      "survivorDowns": 0,
+      "survivorDowns": 1,
       "upgrades": [],
       "waterCurve": [
         {
@@ -157,7 +169,7 @@
           "t": 60
         },
         {
-          "level": 0.18,
+          "level": 0.19,
           "t": 80
         },
         {
@@ -169,21 +181,29 @@
           "t": 111
         }
       ],
-      "waterPeak": 0.293,
-      "whistledSurvivors": 2,
-      "whistles": 1,
+      "waterPeak": 0.294,
+      "whistledSurvivors": 3,
+      "whistles": 2,
       "winchCranks": 0
     },
     {
       "abilitiesUsed": 0,
-      "casualties": [],
+      "casualties": [
+        {
+          "cause": "the water",
+          "depth": 2.87,
+          "level": 0.27,
+          "name": "Survivor12",
+          "t": 71.5
+        }
+      ],
       "cellsDocked": 4,
       "crew": 1,
-      "dead": 0,
+      "dead": 1,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 236.8,
-      "evacuationAt": 117,
+      "elapsedSeconds": 148.1,
+      "evacuationAt": 28.3,
       "firstPowerAt": 1.9,
       "grade": "S",
       "log": [
@@ -216,35 +236,35 @@
           "text": "whistled 2 survivors in"
         },
         {
-          "t": 141.4,
-          "text": "escorting Survivor6 (Dog)"
+          "t": 137.1,
+          "text": "escorting Survivor2 (Injured)"
         },
         {
-          "t": 223.6,
-          "text": "revived Survivor5"
-        },
-        {
-          "t": 232.6,
+          "t": 143.9,
           "text": "evacuation called"
         },
         {
-          "t": 234.9,
-          "text": "escorting Survivor7 (Injured)"
+          "t": 147.6,
+          "text": "carrying Survivor4"
+        },
+        {
+          "t": 174.6,
+          "text": "whistled 1 survivors in"
         }
       ],
-      "lost": 0,
+      "lost": 1,
       "modifier": "Standard",
       "modifierApplied": true,
       "outcome": "win",
       "outfallCranks": 0,
       "outfallOpens": 0,
-      "padAt": 236.8,
+      "padAt": 148.1,
       "playerDowns": 0,
-      "quotaAt": 113,
+      "quotaAt": 24.3,
       "reason": "extraction window closed with the quota met",
       "recovered": 0,
       "required": 5,
-      "rescued": 6,
+      "rescued": 8,
       "roles": [
         {
           "name": "Bot1",
@@ -252,10 +272,10 @@
         }
       ],
       "routes": [],
-      "salvage": 190,
-      "score": 1657,
+      "salvage": 240,
+      "score": 2139,
       "startedAt": 0,
-      "survivorDowns": 1,
+      "survivorDowns": 0,
       "upgrades": [],
       "waterCurve": [
         {
@@ -263,53 +283,37 @@
           "t": 20
         },
         {
-          "level": 0.1,
+          "level": 0.13,
           "t": 40
         },
         {
-          "level": 0.14,
+          "level": 0.22,
           "t": 60
         },
         {
-          "level": 0.19,
+          "level": 0.31,
           "t": 80
         },
         {
-          "level": 0.24,
+          "level": 0.4,
           "t": 100
         },
         {
-          "level": 0.46,
+          "level": 0.49,
           "t": 120
         },
         {
-          "level": 0.56,
+          "level": 0.59,
           "t": 140
         },
         {
-          "level": 0.65,
-          "t": 160
-        },
-        {
-          "level": 0.74,
-          "t": 180
-        },
-        {
-          "level": 0.83,
-          "t": 200
-        },
-        {
-          "level": 0.92,
-          "t": 220
-        },
-        {
-          "level": 1,
-          "t": 236
+          "level": 0.62,
+          "t": 148
         }
       ],
-      "waterPeak": 1.004,
-      "whistledSurvivors": 2,
-      "whistles": 1,
+      "waterPeak": 0.626,
+      "whistledSurvivors": 3,
+      "whistles": 2,
       "winchCranks": 0
     },
     {
@@ -320,281 +324,65 @@
       "dead": 0,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 426,
-      "evacuationAt": 306,
+      "elapsedSeconds": 148.6,
+      "evacuationAt": 28.8,
       "firstPowerAt": 2,
       "grade": "S",
       "log": [
         {
-          "t": 356.4,
+          "t": 267.7,
           "text": "powered Pump"
         },
         {
-          "t": 357.4,
+          "t": 268.7,
           "text": "powered Lift"
         },
         {
-          "t": 358.2,
+          "t": 269.4,
           "text": "powered Winch"
         },
         {
-          "t": 358.9,
+          "t": 270.2,
           "text": "powered Bridge"
         },
         {
-          "t": 369.3,
+          "t": 280.5,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 370.5,
+          "t": 281.8,
           "text": "escorting Survivor8 (Worker)"
         },
         {
-          "t": 373,
+          "t": 284.3,
           "text": "whistled 2 survivors in"
         },
         {
-          "t": 379,
-          "text": "escorting Survivor6 (Dog)"
+          "t": 288,
+          "text": "escorting Survivor2 (Injured)"
         },
         {
-          "t": 494,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 494.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 495,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 495.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 495.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 495.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 496,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 496.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 496.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 496.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 497,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 497.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 497.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 498,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 498.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 498.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 498.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 499,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 499.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 499.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 499.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 500,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 500.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 500.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 500.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 501,
-          "text": "revived Survivor6"
-        },
-        {
-          "t": 516.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 517,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 517.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 517.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 518,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 518.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 518.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 518.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 519,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 519.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 519.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 519.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 520,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 520.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 520.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 520.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 521,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 521.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 521.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 521.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 522,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 522.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 522.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 523,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 523.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 523.5,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 523.8,
-          "text": "revived Survivor6"
-        },
-        {
-          "t": 643.8,
-          "text": "revived Survivor2"
-        },
-        {
-          "t": 652,
-          "text": "whistled 2 survivors in"
-        },
-        {
-          "t": 660.5,
+          "t": 294.5,
           "text": "evacuation called"
         },
         {
-          "t": 663.8,
+          "t": 297,
+          "text": "escorting Survivor7 (Injured)"
+        },
+        {
+          "t": 306.3,
           "text": "escorting Survivor3 (Elderly)"
         }
       ],
-      "lost": 1,
+      "lost": 0,
       "modifier": "Storm",
       "modifierApplied": true,
       "outcome": "win",
       "outfallCranks": 0,
       "outfallOpens": 0,
-      "padAt": 426,
+      "padAt": 148.6,
       "playerDowns": 0,
-      "quotaAt": 302,
+      "quotaAt": 25.1,
       "reason": "extraction window closed with the quota met",
       "recovered": 0,
       "required": 6,
@@ -606,10 +394,10 @@
         }
       ],
       "routes": [],
-      "salvage": 248,
-      "score": 1895,
+      "salvage": 240,
+      "score": 2123,
       "startedAt": 0,
-      "survivorDowns": 2,
+      "survivorDowns": 0,
       "upgrades": [],
       "waterCurve": [
         {
@@ -617,93 +405,37 @@
           "t": 20
         },
         {
-          "level": 0.12,
+          "level": 0.15,
           "t": 40
         },
         {
-          "level": 0.18,
+          "level": 0.26,
           "t": 60
         },
         {
-          "level": 0.23,
+          "level": 0.38,
           "t": 80
         },
         {
-          "level": 0.42,
+          "level": 0.49,
           "t": 100
         },
         {
-          "level": 0.96,
+          "level": 0.6,
           "t": 120
         },
         {
-          "level": 1.49,
+          "level": 0.71,
           "t": 140
         },
         {
-          "level": 1.52,
-          "t": 160
-        },
-        {
-          "level": 1.5,
-          "t": 180
-        },
-        {
-          "level": 1.58,
-          "t": 200
-        },
-        {
-          "level": 1.66,
-          "t": 220
-        },
-        {
-          "level": 1.49,
-          "t": 241
-        },
-        {
-          "level": 1.49,
-          "t": 261
-        },
-        {
-          "level": 1.54,
-          "t": 281
-        },
-        {
-          "level": 1.62,
-          "t": 301
-        },
-        {
-          "level": 1.5,
-          "t": 322
-        },
-        {
-          "level": 1.49,
-          "t": 342
-        },
-        {
-          "level": 1.49,
-          "t": 362
-        },
-        {
-          "level": 1.49,
-          "t": 382
-        },
-        {
-          "level": 1.49,
-          "t": 403
-        },
-        {
-          "level": 1.49,
-          "t": 423
-        },
-        {
-          "level": 1.49,
-          "t": 426
+          "level": 0.76,
+          "t": 148
         }
       ],
-      "waterPeak": 1.789,
-      "whistledSurvivors": 4,
-      "whistles": 2,
+      "waterPeak": 0.765,
+      "whistledSurvivors": 2,
+      "whistles": 1,
       "winchCranks": 0
     },
     {
@@ -711,10 +443,10 @@
       "casualties": [
         {
           "cause": "the water",
-          "depth": 2.72,
-          "level": 0.42,
-          "name": "Survivor4",
-          "t": 106.8
+          "depth": 2.9,
+          "level": 0.3,
+          "name": "Survivor12",
+          "t": 64.8
         }
       ],
       "cellsDocked": 4,
@@ -722,104 +454,296 @@
       "dead": 1,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 267.8,
-      "evacuationAt": 147.8,
-      "firstPowerAt": 1.9,
+      "elapsedSeconds": 137.3,
+      "evacuationAt": 17.6,
+      "firstPowerAt": 2,
       "grade": "S",
       "log": [
         {
-          "t": 786.5,
+          "t": 420.3,
           "text": "powered Pump"
         },
         {
-          "t": 787.5,
+          "t": 421.3,
           "text": "powered Lift"
         },
         {
-          "t": 788.2,
+          "t": 422,
           "text": "powered Winch"
         },
         {
-          "t": 789,
+          "t": 422.8,
           "text": "powered Bridge"
         },
         {
-          "t": 799.3,
+          "t": 433.1,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 800.6,
-          "text": "escorting Survivor8 (Worker)"
-        },
-        {
-          "t": 804.8,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 888.3,
-          "text": "revived Survivor4"
-        },
-        {
-          "t": 923.6,
-          "text": "revived Survivor2"
-        },
-        {
-          "t": 932.3,
+          "t": 435.9,
           "text": "evacuation called"
         },
         {
-          "t": 935.6,
-          "text": "escorting Survivor3 (Elderly)"
+          "t": 458.6,
+          "text": "whistled 1 survivors in"
         },
         {
-          "t": 949.1,
-          "text": "escorting Survivor3 (Elderly)"
-        },
-        {
-          "t": 949.6,
-          "text": "revived Survivor3"
-        },
-        {
-          "t": 956.6,
-          "text": "revived Survivor3"
-        },
-        {
-          "t": 969.6,
-          "text": "escorting Survivor3 (Elderly)"
-        },
-        {
-          "t": 969.8,
-          "text": "escorting Survivor3 (Elderly)"
-        },
-        {
-          "t": 970.3,
-          "text": "escorting Survivor3 (Elderly)"
-        },
-        {
-          "t": 970.8,
-          "text": "escorting Survivor3 (Elderly)"
-        },
-        {
-          "t": 971.1,
-          "text": "escorting Survivor3 (Elderly)"
-        },
-        {
-          "t": 971.3,
-          "text": "revived Survivor3"
+          "t": 472.9,
+          "text": "revived Survivor12"
         }
       ],
-      "lost": 2,
+      "lost": 1,
       "modifier": "Standard",
       "modifierApplied": true,
       "outcome": "win",
       "outfallCranks": 0,
       "outfallOpens": 0,
-      "padAt": 267.8,
+      "padAt": 137.3,
       "playerDowns": 0,
-      "quotaAt": 143.8,
+      "quotaAt": 6.2,
       "reason": "extraction window closed with the quota met",
       "recovered": 0,
       "required": 6,
+      "rescued": 8,
+      "roles": [
+        {
+          "name": "Bot1",
+          "role": "Engineer"
+        },
+        {
+          "name": "Bot2",
+          "role": "Diver"
+        }
+      ],
+      "routes": [],
+      "salvage": 240,
+      "score": 2177,
+      "startedAt": 0,
+      "survivorDowns": 1,
+      "upgrades": [],
+      "waterCurve": [
+        {
+          "level": 0.07,
+          "t": 20
+        },
+        {
+          "level": 0.17,
+          "t": 40
+        },
+        {
+          "level": 0.27,
+          "t": 60
+        },
+        {
+          "level": 0.37,
+          "t": 80
+        },
+        {
+          "level": 0.48,
+          "t": 100
+        },
+        {
+          "level": 0.58,
+          "t": 120
+        },
+        {
+          "level": 0.67,
+          "t": 137
+        }
+      ],
+      "waterPeak": 0.675,
+      "whistledSurvivors": 3,
+      "whistles": 2,
+      "winchCranks": 0
+    },
+    {
+      "abilitiesUsed": 0,
+      "casualties": [
+        {
+          "cause": "their injuries",
+          "depth": 1.13,
+          "level": 0.63,
+          "name": "Survivor12",
+          "t": 107.5
+        }
+      ],
+      "cellsDocked": 4,
+      "crew": 2,
+      "dead": 1,
+      "dragsHauled": 0,
+      "dragsStarted": 0,
+      "elapsedSeconds": 137.5,
+      "evacuationAt": 17.5,
+      "firstPowerAt": 1.9,
+      "grade": "S",
+      "log": [
+        {
+          "t": 561.6,
+          "text": "powered Pump"
+        },
+        {
+          "t": 562.6,
+          "text": "powered Lift"
+        },
+        {
+          "t": 563.4,
+          "text": "powered Winch"
+        },
+        {
+          "t": 564.1,
+          "text": "powered Bridge"
+        },
+        {
+          "t": 574.5,
+          "text": "relay repaired (+1 capacity)"
+        },
+        {
+          "t": 577.2,
+          "text": "evacuation called"
+        },
+        {
+          "t": 581,
+          "text": "carrying Survivor4"
+        },
+        {
+          "t": 600,
+          "text": "whistled 1 survivors in"
+        },
+        {
+          "t": 615.5,
+          "text": "revived Survivor12"
+        },
+        {
+          "t": 622.5,
+          "text": "revived Survivor12"
+        }
+      ],
+      "lost": 1,
+      "modifier": "Storm",
+      "modifierApplied": true,
+      "outcome": "win",
+      "outfallCranks": 0,
+      "outfallOpens": 0,
+      "padAt": 137.5,
+      "playerDowns": 0,
+      "quotaAt": 7.2,
+      "reason": "extraction window closed with the quota met",
+      "recovered": 0,
+      "required": 7,
+      "rescued": 8,
+      "roles": [
+        {
+          "name": "Bot1",
+          "role": "Engineer"
+        },
+        {
+          "name": "Bot2",
+          "role": "Diver"
+        }
+      ],
+      "routes": [],
+      "salvage": 240,
+      "score": 2252,
+      "startedAt": 0,
+      "survivorDowns": 3,
+      "upgrades": [],
+      "waterCurve": [
+        {
+          "level": 0.08,
+          "t": 20
+        },
+        {
+          "level": 0.21,
+          "t": 40
+        },
+        {
+          "level": 0.34,
+          "t": 60
+        },
+        {
+          "level": 0.46,
+          "t": 80
+        },
+        {
+          "level": 0.59,
+          "t": 101
+        },
+        {
+          "level": 0.72,
+          "t": 121
+        },
+        {
+          "level": 0.82,
+          "t": 137
+        }
+      ],
+      "waterPeak": 0.824,
+      "whistledSurvivors": 3,
+      "whistles": 2,
+      "winchCranks": 0
+    },
+    {
+      "abilitiesUsed": 3,
+      "casualties": [
+        {
+          "cause": "the water",
+          "depth": 2.61,
+          "level": 0.31,
+          "name": "Survivor4",
+          "t": 59.5
+        }
+      ],
+      "cellsDocked": 4,
+      "crew": 4,
+      "dead": 1,
+      "dragsHauled": 0,
+      "dragsStarted": 0,
+      "elapsedSeconds": 136.2,
+      "evacuationAt": 16.3,
+      "firstPowerAt": 1.7,
+      "grade": "S",
+      "log": [
+        {
+          "t": 706.9,
+          "text": "powered Pump"
+        },
+        {
+          "t": 707.9,
+          "text": "powered Lift"
+        },
+        {
+          "t": 708.7,
+          "text": "powered Winch"
+        },
+        {
+          "t": 709.4,
+          "text": "powered Bridge"
+        },
+        {
+          "t": 718.8,
+          "text": "relay repaired (+1 capacity)"
+        },
+        {
+          "t": 721.5,
+          "text": "evacuation called"
+        },
+        {
+          "t": 745.5,
+          "text": "whistled 1 survivors in"
+        }
+      ],
+      "lost": 0,
+      "modifier": "Standard",
+      "modifierApplied": true,
+      "outcome": "win",
+      "outfallCranks": 0,
+      "outfallOpens": 0,
+      "padAt": 136.2,
+      "playerDowns": 0,
+      "quotaAt": 7.2,
+      "reason": "extraction window closed with the quota met",
+      "recovered": 0,
+      "required": 7,
       "rescued": 10,
       "roles": [
         {
@@ -829,791 +753,6 @@
         {
           "name": "Bot2",
           "role": "Diver"
-        }
-      ],
-      "routes": [],
-      "salvage": 290,
-      "score": 2645,
-      "startedAt": 0,
-      "survivorDowns": 9,
-      "upgrades": [],
-      "waterCurve": [
-        {
-          "level": 0.06,
-          "t": 20
-        },
-        {
-          "level": 0.11,
-          "t": 40
-        },
-        {
-          "level": 0.16,
-          "t": 60
-        },
-        {
-          "level": 0.21,
-          "t": 80
-        },
-        {
-          "level": 0.34,
-          "t": 101
-        },
-        {
-          "level": 0.86,
-          "t": 121
-        },
-        {
-          "level": 1.15,
-          "t": 141
-        },
-        {
-          "level": 1.49,
-          "t": 161
-        },
-        {
-          "level": 1.49,
-          "t": 182
-        },
-        {
-          "level": 1.49,
-          "t": 202
-        },
-        {
-          "level": 1.49,
-          "t": 222
-        },
-        {
-          "level": 1.49,
-          "t": 242
-        },
-        {
-          "level": 1.49,
-          "t": 263
-        },
-        {
-          "level": 1.49,
-          "t": 267
-        }
-      ],
-      "waterPeak": 1.5,
-      "whistledSurvivors": 2,
-      "whistles": 1,
-      "winchCranks": 0
-    },
-    {
-      "abilitiesUsed": 1,
-      "casualties": [
-        {
-          "cause": "the water",
-          "depth": 2.68,
-          "level": 5.97,
-          "name": "Survivor6",
-          "t": 765.7
-        },
-        {
-          "cause": "the water",
-          "depth": 2.72,
-          "level": 6.09,
-          "name": "Survivor2",
-          "t": 766.5
-        },
-        {
-          "cause": "the water",
-          "depth": 3.32,
-          "level": 6.17,
-          "name": "Survivor3",
-          "t": 767
-        },
-        {
-          "cause": "the water",
-          "depth": 2.88,
-          "level": 6.17,
-          "name": "Survivor5",
-          "t": 767
-        },
-        {
-          "cause": "the water",
-          "depth": 3.76,
-          "level": 7.14,
-          "name": "Survivor7",
-          "t": 772.9
-        },
-        {
-          "cause": "the water",
-          "depth": 6,
-          "level": 9.76,
-          "name": "Survivor12",
-          "t": 785.8
-        }
-      ],
-      "cellsDocked": 4,
-      "crew": 2,
-      "dead": 6,
-      "dragsHauled": 0,
-      "dragsStarted": 0,
-      "elapsedSeconds": 785.8,
-      "firstPowerAt": 1.9,
-      "grade": "B",
-      "log": [
-        {
-          "t": 1058.3,
-          "text": "powered Pump"
-        },
-        {
-          "t": 1059.3,
-          "text": "powered Lift"
-        },
-        {
-          "t": 1060.1,
-          "text": "powered Winch"
-        },
-        {
-          "t": 1060.8,
-          "text": "powered Bridge"
-        },
-        {
-          "t": 1071.2,
-          "text": "relay repaired (+1 capacity)"
-        },
-        {
-          "t": 1072.4,
-          "text": "escorting Survivor8 (Worker)"
-        },
-        {
-          "t": 1076.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1163.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1163.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1163.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1164.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1164.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1165.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1165.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1166.2,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1166.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1174.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1174.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1174.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1175.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1175.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1176.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1176.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1178.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1179.2,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1179.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1179.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1180.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1180.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1182.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1182.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1182.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1183.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1183.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1184.2,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1184.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1186.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1186.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1187.4,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1187.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1188.2,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1188.7,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1189.2,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1190.4,
-          "text": "revived Survivor2"
-        },
-        {
-          "t": 1500.9,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 1531.9,
-          "text": "revived Survivor3"
-        },
-        {
-          "t": 1722.2,
-          "text": "revived Survivor5"
-        },
-        {
-          "t": 1803.9,
-          "text": "ability Engineer"
-        },
-        {
-          "t": 1820.5,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1822.1,
-          "text": "whistled 3 survivors in"
-        },
-        {
-          "t": 1822.6,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1822.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1825.1,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 1833.7,
-          "text": "carrying Survivor4"
-        }
-      ],
-      "lost": 6,
-      "modifier": "Storm",
-      "modifierApplied": true,
-      "outcome": "fail",
-      "outfallCranks": 7,
-      "outfallOpens": 0,
-      "padAt": 785.8,
-      "playerDowns": 0,
-      "reason": "not enough survivors can still be saved",
-      "recovered": 0,
-      "required": 7,
-      "rescued": 4,
-      "roles": [
-        {
-          "name": "Bot1",
-          "role": "Engineer"
-        },
-        {
-          "name": "Bot2",
-          "role": "Diver"
-        }
-      ],
-      "routes": [],
-      "salvage": 174,
-      "score": 1050,
-      "startedAt": 0,
-      "survivorDowns": 6,
-      "upgrades": [],
-      "waterCurve": [
-        {
-          "level": 0.07,
-          "t": 20
-        },
-        {
-          "level": 0.14,
-          "t": 40
-        },
-        {
-          "level": 0.2,
-          "t": 60
-        },
-        {
-          "level": 0.26,
-          "t": 80
-        },
-        {
-          "level": 0.55,
-          "t": 101
-        },
-        {
-          "level": 1.5,
-          "t": 121
-        },
-        {
-          "level": 1.63,
-          "t": 141
-        },
-        {
-          "level": 1.7,
-          "t": 161
-        },
-        {
-          "level": 1.5,
-          "t": 182
-        },
-        {
-          "level": 1.52,
-          "t": 202
-        },
-        {
-          "level": 1.59,
-          "t": 222
-        },
-        {
-          "level": 1.66,
-          "t": 242
-        },
-        {
-          "level": 1.49,
-          "t": 263
-        },
-        {
-          "level": 1.87,
-          "t": 283
-        },
-        {
-          "level": 1.85,
-          "t": 303
-        },
-        {
-          "level": 1.83,
-          "t": 323
-        },
-        {
-          "level": 2.2,
-          "t": 344
-        },
-        {
-          "level": 1.95,
-          "t": 364
-        },
-        {
-          "level": 1.93,
-          "t": 384
-        },
-        {
-          "level": 1.91,
-          "t": 404
-        },
-        {
-          "level": 1.89,
-          "t": 425
-        },
-        {
-          "level": 1.64,
-          "t": 445
-        },
-        {
-          "level": 1.62,
-          "t": 465
-        },
-        {
-          "level": 1.6,
-          "t": 485
-        },
-        {
-          "level": 1.63,
-          "t": 506
-        },
-        {
-          "level": 1.7,
-          "t": 526
-        },
-        {
-          "level": 1.5,
-          "t": 546
-        },
-        {
-          "level": 1.9,
-          "t": 566
-        },
-        {
-          "level": 1.89,
-          "t": 587
-        },
-        {
-          "level": 1.87,
-          "t": 607
-        },
-        {
-          "level": 1.61,
-          "t": 627
-        },
-        {
-          "level": 1.59,
-          "t": 647
-        },
-        {
-          "level": 1.58,
-          "t": 668
-        },
-        {
-          "level": 1.63,
-          "t": 688
-        },
-        {
-          "level": 1.7,
-          "t": 708
-        },
-        {
-          "level": 1.56,
-          "t": 728
-        },
-        {
-          "level": 2.71,
-          "t": 749
-        },
-        {
-          "level": 6.74,
-          "t": 770
-        },
-        {
-          "level": 9.76,
-          "t": 785
-        }
-      ],
-      "waterPeak": 9.766,
-      "whistledSurvivors": 5,
-      "whistles": 2,
-      "winchCranks": 0
-    },
-    {
-      "abilitiesUsed": 4,
-      "casualties": [],
-      "cellsDocked": 4,
-      "crew": 4,
-      "dead": 0,
-      "dragsHauled": 0,
-      "dragsStarted": 0,
-      "elapsedSeconds": 224.5,
-      "evacuationAt": 169.5,
-      "firstPowerAt": 1.7,
-      "grade": "S",
-      "log": [
-        {
-          "t": 1852,
-          "text": "powered Pump"
-        },
-        {
-          "t": 1853,
-          "text": "powered Lift"
-        },
-        {
-          "t": 1853.7,
-          "text": "powered Winch"
-        },
-        {
-          "t": 1854.5,
-          "text": "powered Bridge"
-        },
-        {
-          "t": 1863.8,
-          "text": "relay repaired (+1 capacity)"
-        },
-        {
-          "t": 1865.1,
-          "text": "escorting Survivor8 (Worker)"
-        },
-        {
-          "t": 1869.1,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 1876.8,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 1964.1,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 1971.1,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 1978.1,
-          "text": "revived Survivor10"
-        },
-        {
-          "t": 1983.6,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 1984.3,
-          "text": "revived Survivor12"
-        },
-        {
-          "t": 1986.1,
-          "text": "revived Survivor3"
-        },
-        {
-          "t": 1989.3,
-          "text": "revived Survivor10"
-        },
-        {
-          "t": 1991.6,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 1993.1,
-          "text": "revived Survivor3"
-        },
-        {
-          "t": 1996.3,
-          "text": "revived Survivor10"
-        },
-        {
-          "t": 1998.6,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 2000.1,
-          "text": "revived Survivor3"
-        },
-        {
-          "t": 2003.3,
-          "text": "revived Survivor10"
-        },
-        {
-          "t": 2005.6,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 2007.1,
-          "text": "revived Survivor3"
-        },
-        {
-          "t": 2014.6,
-          "text": "revived Survivor10"
-        },
-        {
-          "t": 2019.8,
-          "text": "evacuation called"
-        },
-        {
-          "t": 2024.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2025.1,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2025.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2025.6,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2025.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2026.1,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2026.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2026.6,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2026.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2027.1,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2027.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2027.6,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2027.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2028.1,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2028.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2028.6,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2028.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2029.1,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2029.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2029.6,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2029.8,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2030.1,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2030.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2030.6,
-          "text": "revived Survivor6"
-        },
-        {
-          "t": 2048.6,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2049.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2049.6,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2051.3,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 2052.8,
-          "text": "whistled 1 survivors in"
-        }
-      ],
-      "lost": 5,
-      "modifier": "Standard",
-      "modifierApplied": true,
-      "outcome": "win",
-      "outfallCranks": 0,
-      "outfallOpens": 0,
-      "padAt": 224.5,
-      "playerDowns": 0,
-      "quotaAt": 165.5,
-      "reason": "team evacuated with the required survivors",
-      "recovered": 0,
-      "required": 7,
-      "rescued": 11,
-      "roles": [
-        {
-          "name": "Bot1",
-          "role": "Engineer"
-        },
-        {
-          "name": "Bot2",
-          "role": "Diver"
         },
         {
           "name": "Bot3",
@@ -1625,96 +764,76 @@
         }
       ],
       "routes": [],
-      "salvage": 315,
-      "score": 3697,
+      "salvage": 325,
+      "score": 2803,
       "startedAt": 0,
-      "survivorDowns": 23,
+      "survivorDowns": 1,
       "upgrades": [],
       "waterCurve": [
         {
-          "level": 0.07,
+          "level": 0.08,
           "t": 20
         },
         {
-          "level": 0.13,
+          "level": 0.2,
           "t": 40
         },
         {
-          "level": 0.19,
+          "level": 0.32,
           "t": 60
         },
         {
-          "level": 0.25,
+          "level": 0.44,
           "t": 80
         },
         {
-          "level": 0.52,
+          "level": 0.56,
           "t": 101
         },
         {
-          "level": 1.09,
+          "level": 0.68,
           "t": 121
         },
         {
-          "level": 1.49,
-          "t": 141
-        },
-        {
-          "level": 1.7,
-          "t": 161
-        },
-        {
-          "level": 1.49,
-          "t": 182
-        },
-        {
-          "level": 1.49,
-          "t": 202
-        },
-        {
-          "level": 1.49,
-          "t": 222
-        },
-        {
-          "level": 1.49,
-          "t": 224
+          "level": 0.77,
+          "t": 136
         }
       ],
-      "waterPeak": 1.74,
-      "whistledSurvivors": 8,
-      "whistles": 5,
+      "waterPeak": 0.773,
+      "whistledSurvivors": 3,
+      "whistles": 2,
       "winchCranks": 0
     },
     {
-      "abilitiesUsed": 5,
+      "abilitiesUsed": 6,
       "casualties": [
         {
           "cause": "the water",
-          "depth": 1.72,
-          "level": 5.02,
-          "name": "Survivor6",
-          "t": 245.8
+          "depth": 1.71,
+          "level": 4.28,
+          "name": "Survivor12",
+          "t": 289.1
         },
         {
           "cause": "the water",
-          "depth": 2.02,
-          "level": 5.02,
-          "name": "Survivor7",
-          "t": 245.8
+          "depth": 2.01,
+          "level": 4.28,
+          "name": "Survivor3",
+          "t": 289.1
         },
         {
           "cause": "the water",
           "depth": 2.32,
-          "level": 5.32,
-          "name": "Survivor3",
-          "t": 249.5
+          "level": 4.87,
+          "name": "Survivor5",
+          "t": 293.7
         },
         {
           "cause": "the water",
-          "depth": 4.03,
-          "level": 5.32,
-          "name": "Survivor4",
-          "t": 249.5
+          "depth": 4.79,
+          "level": 7.07,
+          "name": "Survivor10",
+          "t": 313.4
         }
       ],
       "cellsDocked": 4,
@@ -1722,151 +841,71 @@
       "dead": 4,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 249.5,
+      "elapsedSeconds": 313.4,
       "firstPowerAt": 1.7,
       "grade": "S",
       "log": [
         {
-          "t": 2084.6,
+          "t": 851.2,
           "text": "powered Pump"
         },
         {
-          "t": 2085.6,
+          "t": 852.2,
           "text": "powered Lift"
         },
         {
-          "t": 2086.3,
+          "t": 853,
           "text": "powered Winch"
         },
         {
-          "t": 2087.1,
+          "t": 853.7,
           "text": "powered Bridge"
         },
         {
-          "t": 2096.4,
+          "t": 863.1,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 2097.4,
-          "text": "escorting Survivor8 (Worker)"
-        },
-        {
-          "t": 2100.9,
-          "text": "escorting Survivor2 (Injured)"
-        },
-        {
-          "t": 2108.2,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 2115.4,
+          "t": 865.8,
           "text": "escorting Survivor7 (Injured)"
         },
         {
-          "t": 2169.2,
-          "text": "escorting Survivor7 (Injured)"
+          "t": 874.1,
+          "text": "escorting Survivor3 (Elderly)"
         },
         {
-          "t": 2169.4,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2169.9,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2170.4,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2170.7,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2171.2,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2176.2,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2176.7,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2176.9,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2177.4,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2177.9,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2178.4,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2183.9,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2184.2,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2184.7,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2185.2,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2185.4,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2185.9,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2186.4,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 2303.9,
+          "t": 1114.1,
           "text": "ability Engineer"
         },
         {
-          "t": 2323.3,
-          "text": "escorting Survivor7 (Injured)"
+          "t": 1138.1,
+          "text": "whistled 2 survivors in"
         },
         {
-          "t": 2326.2,
-          "text": "escorting Survivor7 (Injured)"
+          "t": 1160.1,
+          "text": "escorting Survivor10 (Engineer)"
         },
         {
-          "t": 2326.7,
-          "text": "escorting Survivor7 (Injured)"
+          "t": 1160.3,
+          "text": "escorting Survivor10 (Engineer)"
+        },
+        {
+          "t": 1160.6,
+          "text": "escorting Survivor10 (Engineer)"
         }
       ],
-      "lost": 5,
+      "lost": 4,
       "modifier": "Catastrophe",
       "modifierApplied": true,
       "outcome": "fail",
-      "outfallCranks": 3,
+      "outfallCranks": 6,
       "outfallOpens": 0,
-      "padAt": 249.5,
+      "padAt": 313.4,
       "playerDowns": 0,
       "reason": "not enough survivors can still be saved",
       "recovered": 0,
       "required": 9,
-      "rescued": 5,
+      "rescued": 6,
       "roles": [
         {
           "name": "Bot1",
@@ -1886,10 +925,10 @@
         }
       ],
       "routes": [],
-      "salvage": 193,
-      "score": 1583,
+      "salvage": 218,
+      "score": 1690,
       "startedAt": 0,
-      "survivorDowns": 1,
+      "survivorDowns": 0,
       "upgrades": [],
       "waterCurve": [
         {
@@ -1897,61 +936,73 @@
           "t": 20
         },
         {
-          "level": 0.18,
+          "level": 0.19,
           "t": 40
         },
         {
-          "level": 0.98,
+          "level": 0.99,
           "t": 60
         },
         {
-          "level": 1.45,
+          "level": 1.47,
           "t": 80
         },
         {
-          "level": 1.62,
-          "t": 100
+          "level": 1.61,
+          "t": 101
         },
         {
           "level": 1.73,
-          "t": 120
+          "t": 121
         },
         {
-          "level": 1.85,
-          "t": 140
-        },
-        {
-          "level": 1.96,
-          "t": 160
-        },
-        {
-          "level": 1.83,
-          "t": 180
+          "level": 1.84,
+          "t": 141
         },
         {
           "level": 1.95,
-          "t": 200
+          "t": 161
         },
         {
-          "level": 2.06,
-          "t": 220
+          "level": 1.82,
+          "t": 182
         },
         {
-          "level": 4.59,
-          "t": 240
+          "level": 1.93,
+          "t": 202
         },
         {
-          "level": 5.32,
-          "t": 249
+          "level": 2.05,
+          "t": 222
+        },
+        {
+          "level": 2.16,
+          "t": 242
+        },
+        {
+          "level": 2.03,
+          "t": 263
+        },
+        {
+          "level": 3.83,
+          "t": 283
+        },
+        {
+          "level": 5.6,
+          "t": 303
+        },
+        {
+          "level": 7.07,
+          "t": 313
         }
       ],
-      "waterPeak": 5.328,
-      "whistledSurvivors": 6,
-      "whistles": 3,
+      "waterPeak": 7.078,
+      "whistledSurvivors": 4,
+      "whistles": 2,
       "winchCranks": 0
     }
   ],
   "runs": 7,
   "unresolved": 0,
-  "wins": 5
+  "wins": 6
 }

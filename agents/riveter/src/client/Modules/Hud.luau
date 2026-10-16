@@ -177,27 +177,30 @@ function Hud.build(): ScreenGui
 	Hud.cellInfo = cellInfo
 
 	-- ============ survivors ============
-	local roster = panel("Roster", UDim2.fromOffset(272, 196), UDim2.new(0, 14, 1, -210))
+	-- Twelve survivors have to fit: compact 15px rows, a header, and rescued or dead people folded
+	-- into the header count instead of taking a row of their own.
+	local roster = panel("Roster", UDim2.fromOffset(272, 248), UDim2.new(0, 14, 1, -262))
 	roster.Parent = gui
 	local rosterTitle = label("SURVIVORS", 13, C.Accent, Config.Ui.FontBold)
 	rosterTitle.Name = "Title"
 	rosterTitle.Position = UDim2.fromOffset(14, 8)
-	rosterTitle.Size = UDim2.fromOffset(200, 18)
+	rosterTitle.Size = UDim2.fromOffset(96, 18)
 	rosterTitle.Parent = roster
-	local rosterCount = label("", 12, C.TextDim)
+	local rosterCount = label("", 11, C.TextDim)
 	rosterCount.Name = "CountLabel"
-	rosterCount.Position = UDim2.fromOffset(150, 8)
-	rosterCount.Size = UDim2.fromOffset(110, 18)
+	rosterCount.Position = UDim2.fromOffset(100, 8)
+	rosterCount.Size = UDim2.fromOffset(162, 18)
 	rosterCount.TextXAlignment = Enum.TextXAlignment.Right
+	rosterCount.TextTruncate = Enum.TextTruncate.AtEnd
 	rosterCount.Parent = roster
 	Hud.rosterCount = rosterCount
 	local rosterList = new("Frame", {
 		Name = "List",
-		Size = UDim2.new(1, -20, 1, -36),
-		Position = UDim2.fromOffset(10, 30),
+		Size = UDim2.new(1, -20, 1, -40),
+		Position = UDim2.fromOffset(10, 32),
 		BackgroundTransparency = 1,
 	}, {
-		new("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }),
+		new("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
 	}) :: Frame
 	rosterList.Parent = roster
 	Hud.rosterList = rosterList
@@ -568,84 +571,115 @@ function Hud.updateSurvivors(snapshot: any)
 	-- Company is the point of the huddle rules, so the roster says it out loud: how many are being
 	-- held together right now, and what each survivor is standing next to.
 	local steadied = 0
+	local seeking = 0
+	local waiting = 0
 	for _, entry in ipairs(list) do
 		if entry.grouped then
 			steadied += 1
 		end
+		if entry.comfortTarget then
+			seeking += 1
+		end
+		-- People already out of the district are counted in the header, not rostered: the panel
+		-- earns its space by showing who is still in the water.
+		if entry.state ~= "Rescued" and entry.state ~= "Dead" then
+			waiting += 1
+		end
 	end
 	local companyText = steadied > 0 and `  ·  {steadied} steadied` or ""
-	Hud.rosterCount.Text = `{snapshot.rescued}/{snapshot.total} out  ·  need {snapshot.required}{whistleText}{companyText}`
-	for index, entry in ipairs(list) do
-		local row = Hud.rosterRows[index]
-		if not row then
-			row = new("Frame", {
-				Name = entry.name,
-				Size = UDim2.new(1, 0, 0, 19),
-				BackgroundTransparency = 1,
-				LayoutOrder = index,
-			}) :: Frame
-			row.Parent = Hud.rosterList
-			local dot = new("Frame", {
-				Name = "Dot",
-				Size = UDim2.fromOffset(8, 8),
-				Position = UDim2.fromOffset(2, 6),
-				BackgroundColor3 = C.TextDim,
-				BorderSizePixel = 0,
-			}, { corner(4) }) :: Frame
-			dot.Parent = row
-			local name = label("", 11, C.Text)
-			name.Name = "Name"
-			name.Position = UDim2.fromOffset(16, 0)
-			name.Size = UDim2.fromOffset(140, 19)
-			name.Parent = row
-			local status = label("", 11, C.TextDim)
-			status.Name = "Status"
-			status.Position = UDim2.fromOffset(156, 0)
-			status.Size = UDim2.fromOffset(60, 19)
-			status.Parent = row
-			local panicBg = new("Frame", {
-				Name = "PanicBg",
-				Size = UDim2.fromOffset(38, 5),
-				Position = UDim2.new(1, -42, 0, 7),
-				BackgroundColor3 = C.PanelLight,
-				BorderSizePixel = 0,
-			}, { corner(2) }) :: Frame
-			panicBg.Parent = row
-			local panic = new("Frame", {
-				Name = "Panic",
-				Size = UDim2.fromScale(0, 1),
-				BackgroundColor3 = C.Warn,
-				BorderSizePixel = 0,
-			}, { corner(2) }) :: Frame
-			panic.Parent = panicBg
-			Hud.rosterRows[index] = row
+	local seekText = seeking > 0 and `  ·  {seeking} walking in` or ""
+	Hud.rosterCount.Text = `{snapshot.rescued}/{snapshot.total} out  ·  need {snapshot.required}{companyText}{seekText}  ·  whistle {whistle > 0 and math.ceil(whistle) or 0}s`
+	-- Rows are keyed by survivor name: the pair for a survivor who is out of the district has to be
+	-- free for the next one who needs it, and this keeps a row's identity stable while it lives.
+	local used = {}
+	local order = 0
+	for _, entry in ipairs(list) do
+		if entry.state ~= "Rescued" and entry.state ~= "Dead" then
+			order += 1
+			used[entry.name] = true
+			local row = Hud.rosterRows[entry.name]
+			if not row then
+				row = new("Frame", {
+					Name = entry.name,
+					Size = UDim2.new(1, 0, 0, 15),
+					BackgroundTransparency = 1,
+					LayoutOrder = order,
+				}) :: Frame
+				row.Parent = Hud.rosterList
+				local dot = new("Frame", {
+					Name = "Dot",
+					Size = UDim2.fromOffset(6, 6),
+					Position = UDim2.fromOffset(2, 5),
+					BackgroundColor3 = C.TextDim,
+					BorderSizePixel = 0,
+				}, { corner(3) }) :: Frame
+				dot.Parent = row
+				local name = label("", 11, C.Text)
+				name.Name = "Name"
+				name.Position = UDim2.fromOffset(12, 0)
+				name.Size = UDim2.fromOffset(148, 15)
+				name.TextTruncate = Enum.TextTruncate.AtEnd
+				name.Parent = row
+				local status = label("", 11, C.TextDim)
+				status.Name = "Status"
+				status.Position = UDim2.fromOffset(162, 0)
+				status.Size = UDim2.fromOffset(88, 15)
+				status.TextTruncate = Enum.TextTruncate.AtEnd
+				status.Parent = row
+				-- Panic runs along the bottom of the row: the whole width is the clock.
+				local panicBg = new("Frame", {
+					Name = "PanicBg",
+					Size = UDim2.new(1, -4, 0, 2),
+					Position = UDim2.new(0, 2, 1, -2),
+					BackgroundColor3 = C.PanelLight,
+					BorderSizePixel = 0,
+				}, { corner(1) }) :: Frame
+				panicBg.Parent = row
+				local panic = new("Frame", {
+					Name = "Panic",
+					Size = UDim2.fromScale(0, 1),
+					BackgroundColor3 = C.Warn,
+					BorderSizePixel = 0,
+				}, { corner(1) }) :: Frame
+				panic.Parent = panicBg
+				Hud.rosterRows[entry.name] = row
+			end
+			row.LayoutOrder = order
+			row.Visible = true
+			local dot = row:FindFirstChild("Dot") :: Frame
+			local name = row:FindFirstChild("Name") :: TextLabel
+			local status = row:FindFirstChild("Status") :: TextLabel
+			local panic = (row:FindFirstChild("PanicBg") :: Frame):FindFirstChild("Panic") :: Frame
+			name.Text = `{entry.label} [{entry.trait}]`
+			local colors = {
+				Idle = C.TextDim,
+				Following = C.Accent,
+				Assisting = C.Water,
+				Downed = C.Bad,
+				Carried = C.Water,
+				Lost = C.Warn,
+				Rescued = C.Good,
+				Dead = C.Bad,
+			}
+			dot.BackgroundColor3 = colors[entry.state] or C.TextDim
+			-- "+2" reads as company; "→Mara" reads as somebody the survivor is walking toward. The
+			-- arrow is more urgent, so it wins when both apply.
+			local suffix = ""
+			if entry.comfortTarget then
+				suffix = ` →{tostring(entry.comfortTarget):sub(1, 7)}`
+			elseif entry.grouped and (entry.groupCount or 0) > 0 then
+				suffix = ` +{entry.groupCount}`
+			end
+			status.Text = entry.state .. suffix
+			status.TextColor3 = entry.comfortTarget and C.Warn or (colors[entry.state] or C.TextDim)
+			panic.Size = UDim2.fromScale(math.clamp(entry.panic / 100, 0, 1), 1)
+			panic.BackgroundColor3 = entry.panic > 70 and C.Bad or C.Warn
 		end
-		local dot = row:FindFirstChild("Dot") :: Frame
-		local name = row:FindFirstChild("Name") :: TextLabel
-		local status = row:FindFirstChild("Status") :: TextLabel
-		local panic = (row:FindFirstChild("PanicBg") :: Frame):FindFirstChild("Panic") :: Frame
-		name.Text = `{entry.label} [{entry.trait}]`
-		local colors = {
-			Idle = C.TextDim,
-			Following = C.Accent,
-			Assisting = C.Water,
-			Downed = C.Bad,
-			Carried = C.Water,
-			Lost = C.Warn,
-			Rescued = C.Good,
-			Dead = C.Bad,
-		}
-		dot.BackgroundColor3 = colors[entry.state] or C.TextDim
-		-- "+2" reads as company: rescuers and neighbours holding this survivor steady.
-		local company = (entry.grouped and (entry.groupCount or 0) > 0) and ` +{entry.groupCount}` or ""
-		status.Text = entry.state .. company
-		status.TextColor3 = colors[entry.state] or C.TextDim
-		panic.Size = UDim2.fromScale(math.clamp(entry.panic / 100, 0, 1), 1)
-		panic.BackgroundColor3 = entry.panic > 70 and C.Bad or C.Warn
 	end
-	for index = #list + 1, #(Hud.rosterRows :: any) do
-		Hud.rosterRows[index].Parent = nil
-		Hud.rosterRows[index] = nil
+	for key, row in pairs(Hud.rosterRows) do
+		if not used[key] then
+			row.Visible = false
+		end
 	end
 end
 

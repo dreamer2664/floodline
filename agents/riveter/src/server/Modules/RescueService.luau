@@ -64,6 +64,7 @@ Rescue.recoveredCount = 0
 Rescue.dirty = true
 Rescue.rallies = 0            -- whistles blown this round
 Rescue.ralliedSurvivors = 0   -- people who answered one
+Rescue.heardSurvivors = 0     -- people who heard one from further out and started walking
 Rescue.lastRallyAt = -math.huge
 Rescue.lastSnapshots = {} :: { [string]: any }
 
@@ -133,6 +134,15 @@ function Rescue.speedFor(trait: string): number
 	local factor = def and def.Speed or 1
 	local base = ctx.config.Survivors.FollowSpeed.Base
 	return base * factor
+end
+
+-- Difficulty has an opinion about how far people look for each other. A calm tide keeps the district
+-- in touch; a catastrophe scatters it, and the crew has to do the gathering by hand again.
+local function nerveMultiplier(): number
+	local session = ctx.session
+	local name = session and session.modifier or "Standard"
+	local mod = ctx.config.modifier(name)
+	return (mod and mod.NerveMultiplier) or 1
 end
 
 -- Is a survivor with this role currently following this player?
@@ -280,6 +290,7 @@ function Rescue.reset()
 	-- Fresh survivors, fresh whistle: the cooldown must not carry across rounds.
 	Rescue.rallies = 0
 	Rescue.ralliedSurvivors = 0
+	Rescue.heardSurvivors = 0
 	Rescue.lastRallyAt = -math.huge
 	local world = ctx.worldFolder
 	local folder = world:FindFirstChild("Survivors")
@@ -356,14 +367,39 @@ function Rescue.rally(player: Player, now: number?): (boolean, string?)
 			ctx.notify(`{NAMES[survivor.name] or survivor.name} answers the whistle but refuses the water — {cfg.ChildCarryNote}.`, "warn")
 		end
 	end
+	-- A whistle carries much further than the gather: everyone out past arm's reach but inside
+	-- earshot starts walking toward the caller, so one shout is the beginning of a huddle rather
+	-- than a single lucky grab.
+	local heard = 0
+	local leaderPosition = leaderPart.Position
+	local hearing = cfg.HearingRadius * nerveMultiplier()
+	for _, survivor in ipairs(Rescue.order) do
+		if survivor.state ~= "Rescued" and survivor.state ~= "Dead" and survivor.state ~= "Downed" then
+			if not survivor.leader and not survivor.carriedBy and not survivor.boarding then
+				local distance = (survivor.position - leaderPosition).Magnitude
+				if distance > cfg.Radius and distance <= hearing then
+					survivor.comfortUntil = clockNow + cfg.SeekSeconds
+					survivor.comfortCaller = player
+					survivor.comfortTarget = nil
+					survivor.panic = math.max(0, survivor.panic - cfg.HeardPanicRelief)
+					heard += 1
+				end
+			end
+		end
+	end
 	Rescue.lastRallyAt = clockNow
 	Rescue.rallies += 1
 	Rescue.ralliedSurvivors += gathered
+	Rescue.heardSurvivors += heard
 	Rescue.dirty = true
 	ctx.addScore(player, cfg.ScorePerSurvivor * gathered, "gathered survivors")
 	ctx.notify(`You whistle — {gathered} survivor(s) fall in behind you.`, "good")
+	if heard > 0 then
+		ctx.notify(`{heard} more heard the whistle and are on their way.`, "info")
+	end
 	local note = carried and " (one still needs carrying)" or ""
-	return true, `{gathered} answered{note}`
+	local heardNote = heard > 0 and `, {heard} walking in` or ""
+	return true, `{gathered} answered{heardNote}{note}`
 end
 
 function Rescue.rallyReadyIn(now: number?): number
@@ -399,6 +435,10 @@ function Rescue.lead(player: Player, name: string): (boolean, string?)
 		end
 	end
 	survivor.leader = player
+	-- They are with you now: no need to keep walking toward a whistle that has already been answered.
+	survivor.comfortUntil = nil
+	survivor.comfortCaller = nil
+	survivor.comfortTarget = nil
 	if survivor.state ~= "Following" then
 		survivor.state = "Following"
 		survivor.notes = {}
@@ -850,6 +890,89 @@ end
 
 -- How many players are close enough to steady this survivor (downed players do not count: a
 -- casualty on the ground is not reassurance).
+-- ===================== company seeking =====================
+-- The other half of the huddle rule: people who are losing their nerve walk toward other people.
+-- A survivor, a rescuer, or the sound of the whistle will do; anywhere with someone in it beats a
+-- doorstep on your own.
+local function anchorIsLive(other: Survivor): boolean
+	return other.state ~= "Dead" and other.state ~= "Rescued" and other.state ~= "Downed"
+end
+
+local function nearestCompany(survivor: Survivor): (Vector3?, string?, number)
+	local cfg = ctx.config.Survivors
+	local bestPosition, bestLabel, bestDistance = nil, nil, cfg.ComfortSeekRadius * nerveMultiplier()
+	for _, other in ipairs(Rescue.order) do
+		if other ~= survivor and anchorIsLive(other) then
+			local distance = (other.position - survivor.position).Magnitude
+			if distance < bestDistance then
+				bestPosition, bestLabel, bestDistance = other.position, (NAMES[other.name] or other.name), distance
+			end
+		end
+	end
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if root and humanoid and humanoid.Health > 0 then
+			local position = (root :: BasePart).Position
+			local distance = (position - survivor.position).Magnitude
+			if distance < bestDistance then
+				bestPosition, bestLabel, bestDistance = position, player.Name, distance
+			end
+		end
+	end
+	return bestPosition, bestLabel, bestDistance
+end
+
+-- True when this survivor is being walked somewhere by the company rule, so the caller must not
+-- also drive them home.
+local function seekCompany(survivor: Survivor, dt: number): boolean
+	local cfg = ctx.config.Survivors
+	local now = os.clock()
+	local anchor, label, distance = nil, nil, nil
+	-- A shout travels: for a few seconds after a whistle, everybody in earshot walks to the caller.
+	if survivor.comfortUntil and now < survivor.comfortUntil then
+		local caller = survivor.comfortCaller
+		local character = caller and caller.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root then
+			anchor = (root :: BasePart).Position
+			label = caller.Name
+			distance = (anchor - survivor.position).Magnitude
+		else
+			survivor.comfortUntil = nil
+			survivor.comfortCaller = nil
+		end
+	end
+	if not anchor and survivor.panic >= cfg.ComfortSeekPanic then
+		anchor, label, distance = nearestCompany(survivor)
+	end
+	if not anchor then
+		if survivor.comfortTarget then
+			survivor.comfortTarget = nil
+			Rescue.dirty = true
+		end
+		return false
+	end
+	-- Close enough to be company: stand with them and let the huddle do the calming.
+	if (distance or math.huge) <= cfg.HuddleRadius * 0.6 then
+		if survivor.comfortTarget then
+			survivor.comfortTarget = nil
+			Rescue.dirty = true
+		end
+		applyRig(survivor, survivor.position, survivor.yaw, false, dt)
+		return true
+	end
+	if survivor.comfortTarget ~= label then
+		survivor.comfortTarget = label
+		survivor.comfortNoted = label
+		ctx.telemetry.note("comfort", `{survivor.name} is walking to {label}`)
+		Rescue.dirty = true
+	end
+	moveToward(survivor, anchor, dt, cfg.ComfortSeekSpeed)
+	return true
+end
+
 local function rescuersNear(position: Vector3): number
 	local cfg = ctx.config.Survivors
 	local count = 0
@@ -1140,6 +1263,8 @@ function Rescue.update(dt: number)
 				end
 				survivor.panic = math.max(0, survivor.panic - ctx.config.Survivors.PanicCalmPerSecond * 0.45 * dt)
 			end
+		elseif seekCompany(survivor, dt) then
+			-- They are looking for company: the helper moved or held them.
 		else
 			-- Idle patrol around their spawn.
 			local offset = Vector3.new(math.sin(os.clock() * 0.4 + survivor.homePosition.X) * 2.2, 0, math.cos(os.clock() * 0.35 + survivor.position.Z) * 2.2)

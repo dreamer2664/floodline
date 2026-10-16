@@ -2014,6 +2014,240 @@ scenario("a rescuer beside a survivor steadies them, and a group steadies each o
 end)
 
 -- ============================================================
+-- Scenario 49: people run to people — a survivor losing their nerve walks to company
+-- ============================================================
+-- Panic is what turns a survivor into a loss, so the district should not make every one of them
+-- wait to be collected by hand. A survivor whose nerve is going looks for the nearest other person
+-- and walks to them; the huddle rule then does the calming.
+scenario("a survivor losing their nerve walks to the nearest company", function()
+	freshRound(player)
+	local cfg = Config.Survivors
+	local corner = V3(-33, 1.6, 18)
+	local friendSpot = V3(-33, 1.6, 34)
+	local nobodyNear = V3(0, 1.6, 60)
+	local farCorner = V3(-72, 1.6, -58)
+	local function holdWaterDown()
+		Flood.level = 0.05
+		for index = 1, #Flood.sectorLevels do
+			Flood.sectorLevels[index] = 0.05
+		end
+	end
+	local function wind(seconds: number)
+		local left = seconds
+		while left > 0 do
+			local slice = math.min(0.2, left)
+			holdWaterDown()
+			Stub.advance(slice)
+			left -= slice
+		end
+		holdWaterDown()
+	end
+	local subject, friend = Rescue.order[1], Rescue.order[2]
+	local function park(survivor, spot, panic)
+		survivor.homePosition = spot
+		survivor.shelter = nil
+		survivor.leader = nil
+		survivor.state = "Idle"
+		survivor.panic = panic
+		Stub.moveSurvivor(survivor, spot)
+	end
+	-- Everybody else is parked in a far corner: the only company on the table is the pair under test.
+	for index = 3, #Rescue.order do
+		park(Rescue.order[index], farCorner + V3(0, 0, index * 3), 5)
+	end
+	park(friend, friendSpot, 8)
+	park(subject, corner, 80)
+	Stub.movePlayer(player, nobodyNear)
+	-- Read the distance the moment they are parked: the walk starts on the next heartbeat.
+	local startDistance = (subject.position - friend.position).Magnitude
+	assertTrue(startDistance > cfg.HuddleRadius + 4, string.format(
+		"the subject started already in a huddle (%.1f studs)", startDistance))
+	assertTrue(startDistance < cfg.ComfortSeekRadius, string.format(
+		"the subject started out of reach of the friend (%.1f studs)", startDistance))
+	-- Half a second later they should be under way, not standing where they started.
+	wind(0.6)
+	assertTrue(subject.comfortTarget ~= nil,
+		"a panicking survivor did not set out for company")
+	local closing = (subject.position - friend.position).Magnitude
+	assertTrue(closing < startDistance - 2, string.format(
+		"the subject is not actually walking toward the friend (%.1f -> %.1f studs)", startDistance, closing))
+	wind(1.6)
+	local settled = (subject.position - friend.position).Magnitude
+	assertTrue(settled <= cfg.HuddleRadius * 0.7, string.format(
+		"the subject stopped %.1f studs from the friend instead of standing with them", settled))
+	assertTrue(subject.comfortTarget == nil, "the subject is still walking now that they have arrived")
+	assertTrue(subject.grouped == true, "the district does not count the two of them as company")
+	assertTrue((subject.groupCount or 0) >= 1, "the pair reports no company at all")
+	return true, string.format("walked from %.1f studs away to %.1f and grouped up", startDistance, settled)
+end)
+
+-- ============================================================
+-- Scenario 50: a whistle carries much further than an arm's reach
+-- ============================================================
+-- The gather only ever picked up the people standing on top of you, which made one shout worth less
+-- than one escort. Now the shout travels: everybody in earshot who was not gathered starts walking
+-- in, so the whistle begins a huddle instead of grabbing a single lucky survivor.
+scenario("a whistle carries, and the survivors outside arm's reach walk in", function()
+	freshRound(player)
+	local cfg = Config.Survivors.Rally
+	local callerSpot = V3(-33, 1.6, 18)
+	local nearSpot = V3(-33, 1.6, 26)      -- 8 studs: gathered on the spot
+	local ringSpot = V3(-33, 1.6, 58)      -- 40 studs: outside the gather, inside earshot
+	local deafSpot = V3(-33, 1.6, 100)     -- 82 studs: out of earshot entirely
+	local function holdWaterDown()
+		Flood.level = 0.05
+		for index = 1, #Flood.sectorLevels do
+			Flood.sectorLevels[index] = 0.05
+		end
+	end
+	local function wind(seconds: number)
+		local left = seconds
+		while left > 0 do
+			local slice = math.min(0.2, left)
+			holdWaterDown()
+			Stub.advance(slice)
+			left -= slice
+		end
+		holdWaterDown()
+	end
+	local near, ring, outOfEarshot = Rescue.order[1], Rescue.order[2], Rescue.order[3]
+	local function park(survivor, spot, panic)
+		survivor.homePosition = spot
+		survivor.shelter = nil
+		survivor.leader = nil
+		survivor.state = "Idle"
+		survivor.panic = panic
+		survivor.comfortUntil = nil
+		survivor.comfortCaller = nil
+		survivor.comfortTarget = nil
+		Stub.moveSurvivor(survivor, spot)
+	end
+	for index = 4, #Rescue.order do
+		park(Rescue.order[index], V3(-72, 1.6, -58 + index * 3), 5)
+	end
+	park(near, nearSpot, 40)
+	park(ring, ringSpot, 40)
+	park(outOfEarshot, deafSpot, 40)
+	Stub.movePlayer(player, callerSpot)
+	wind(0.5)
+	local heardBefore = Rescue.heardSurvivors
+	local ringDistanceBefore = (ring.position - callerSpot).Magnitude
+	local ok, message = Rescue.rally(player)
+	assertTrue(ok, `the whistle was refused: {tostring(message)}`)
+	assertTrue((Rescue.heardSurvivors - heardBefore) >= 1, "nobody outside the gather radius heard the whistle")
+	assertTrue(string.find(tostring(message), "walking in", 1, true) ~= nil,
+		`the whistle says nothing about the people walking in: {tostring(message)}`)
+	assertTrue(near.state == "Following", "the survivor standing beside the caller did not answer the shout")
+	assertTrue(outOfEarshot.comfortUntil == nil, "a survivor 82 studs away heard a whistle")
+	assertTrue(outOfEarshot.comfortTarget == nil, "a survivor out of earshot is walking to the caller")
+	wind(2.4)
+	local ringDistanceAfter = (ring.position - callerSpot).Magnitude
+	assertTrue(ringDistanceAfter < ringDistanceBefore - 8, string.format(
+		"the survivor in earshot did not walk in (%.1f -> %.1f studs)", ringDistanceBefore, ringDistanceAfter))
+	assertTrue(outOfEarshot.comfortTarget == nil, "a survivor out of earshot is still coming")
+	assertTrue((outOfEarshot.position - deafSpot).Magnitude < 12, "the survivor out of earshot walked off anyway")
+	return true, string.format("gathered %s, heard %d, the ring survivor closed %.1f -> %.1f studs",
+		tostring(message), Rescue.heardSurvivors - heardBefore, ringDistanceBefore, ringDistanceAfter)
+end)
+
+-- ============================================================
+-- Scenario 51: the difficulty has an opinion about nerve — a catastrophe scatters people
+-- ============================================================
+-- Company seeking and the whistle's reach are what made the district survivable without escorting
+-- one person at a time. That is a Calm and Standard luxury: raise the difficulty and people stop
+-- finding each other, which is the crew's job again.
+scenario("a catastrophe scatters people, a calm tide keeps them in touch", function()
+	freshRound(player)
+	local cfg = Config.Survivors
+	local Session = module("SessionService")
+	local nearSpot = V3(-33, 1.6, 18)
+	local midSpot = V3(-33, 1.6, 44)     -- 26 studs: in reach on a calm tide, out of it in a catastrophe
+	local ringSpot = V3(-33, 1.6, 58)    -- 40 studs from the caller
+	local farCorner = V3(-72, 1.6, -58)
+	local nobodyNear = V3(0, 1.6, 60)
+	local function holdWaterDown()
+		Flood.level = 0.05
+		for index = 1, #Flood.sectorLevels do
+			Flood.sectorLevels[index] = 0.05
+		end
+	end
+	local function wind(seconds: number)
+		local left = seconds
+		while left > 0 do
+			local slice = math.min(0.2, left)
+			holdWaterDown()
+			Stub.advance(slice)
+			left -= slice
+		end
+		holdWaterDown()
+	end
+	local subject, friend, ring = Rescue.order[1], Rescue.order[2], Rescue.order[3]
+	local function park(survivor, spot, panic)
+		survivor.homePosition = spot
+		survivor.shelter = nil
+		survivor.leader = nil
+		survivor.state = "Idle"
+		survivor.panic = panic
+		survivor.comfortUntil = nil
+		survivor.comfortCaller = nil
+		survivor.comfortTarget = nil
+		Stub.moveSurvivor(survivor, spot)
+	end
+	for index = 4, #Rescue.order do
+		park(Rescue.order[index], farCorner + V3(0, 0, index * 3), 5)
+	end
+	local calmReach = cfg.ComfortSeekRadius * Config.modifier("Calm").NerveMultiplier
+	local catastropheReach = cfg.ComfortSeekRadius * Config.modifier("Catastrophe").NerveMultiplier
+	local gap = (midSpot - nearSpot).Magnitude
+	assertTrue(gap > catastropheReach and gap < calmReach, string.format(
+		"the test gap of %.1f studs is not between the two reaches (%.1f calm, %.1f catastrophe)",
+		gap, calmReach, catastropheReach))
+
+	-- A calm tide: twenty-six studs of empty street is nothing, and they walk over.
+	assertTrue(Session.setModifier("Calm"), "the difficulty could not be set to Calm")
+	park(friend, nearSpot, 8)
+	park(subject, midSpot, 80)
+	Stub.movePlayer(player, nobodyNear)
+	wind(0.6)
+	assertTrue(subject.comfortTarget ~= nil, "nobody went looking for company on a calm tide")
+
+	-- A catastrophe: the same street, the same panic, and nobody moves.
+	assertTrue(Session.setModifier("Catastrophe"), "the difficulty could not be set to Catastrophe")
+	park(friend, nearSpot, 8)
+	park(subject, midSpot, 80)
+	Stub.movePlayer(player, nobodyNear)
+	wind(0.6)
+	assertTrue(subject.comfortTarget == nil, string.format(
+		"a survivor crossed %.1f studs for company in a catastrophe", gap))
+	local moved = (subject.position - midSpot).Magnitude
+	assertTrue(moved < 3, string.format("the survivor wandered %.1f studs instead of waiting", moved))
+
+	-- And the whistle stops carrying: the same shout reaches the ring on a calm tide only.
+	local function shoutReaches(modifier: string): number
+		assertTrue(Session.setModifier(modifier), `the difficulty could not be set to {modifier}`)
+		park(friend, V3(-33, 1.6, 26), 40)   -- 8 studs from the caller: gathered, so the shout lands
+		park(ring, ringSpot, 40)
+		park(subject, V3(-70, 1.6, -40), 40) -- well out of earshot either way
+		Stub.movePlayer(player, V3(-33, 1.6, 18))
+		wind(0.4)
+		-- The whistle's cooldown is scenario 46's business: this one measures how far the sound goes.
+		Rescue.lastRallyAt = -math.huge
+		local before = Rescue.heardSurvivors
+		local ok = Rescue.rally(player)
+		assertTrue(ok, "the whistle was refused with a survivor standing beside the caller")
+		return Rescue.heardSurvivors - before
+	end
+	local heardCalm = shoutReaches("Calm")
+	local heardCatastrophe = shoutReaches("Catastrophe")
+	assertTrue(heardCalm >= 1, "the whistle did not carry on a calm tide")
+	assertTrue(heardCatastrophe < heardCalm, string.format(
+		"the whistle carried just as far in a catastrophe (%d vs %d)", heardCatastrophe, heardCalm))
+	Session.setModifier("Standard")
+	return true, string.format("reach %.1f calm vs %.1f catastrophe; whistle heard %d vs %d",
+		calmReach, catastropheReach, heardCalm, heardCatastrophe)
+end)
+
+-- ============================================================
 -- report
 -- ============================================================
 local passed = #results - failures

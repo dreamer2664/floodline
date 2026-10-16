@@ -1,7 +1,7 @@
 # FLOODLINE: Last District — verification report
 
-Artifact: `releases/FLOODLINE.rbxlx` — 937,858 bytes, SHA256 `34766844bd2fa9d0d856704ffdc4160178a5e5730efac50f707e01a86173b35b`
-Scripts: 60 compiled (6872 server, 3021 client, 848 shared lines)
+Artifact: `releases/FLOODLINE.rbxlx` — 945,387 bytes, SHA256 `3f5b85be4771d523b30fd6a35f32185149b6d730aae7416daee2504f44a143b8`
+Scripts: 60 compiled (6997 server, 3055 client, 863 shared lines)
 World: 754 parts, 51 proximity prompts, 4 climbable trusses, 4 lift seats
 
 ## 1. What was verified, and how
@@ -11,9 +11,9 @@ World: 754 parts, 51 proximity prompts, 4 climbable trusses, 4 lift seats
 | Baked geometry export | `tools/build_game.luau` (Lune + Rojo) | 754 parts, 30 scripts embedded in the place |
 | Place structure | `tools/inspect_place.luau` | 651 named world objects, 0 required hooks missing |
 | Luau compilation | `tools/compile_check.luau` (`luau.compile` on every script, in both the source tree and the shipped place) | 60 checked, 0 failures |
-| Static wiring | `tools/logic_check.py` | 28/28 checks |
-| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 48/48 scenarios |
-| Client interface | `tests/headless/client_smoke.luau` | 15/15 checks |
+| Static wiring | `tools/logic_check.py` | 30/30 checks |
+| Headless gameplay | `tests/headless/sim.luau` (real geometry + real scripts + stub engine + virtual clock) | 51/51 scenarios |
+| Client interface | `tests/headless/client_smoke.luau` | 16/16 checks |
 
 Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`.
 
@@ -45,7 +45,7 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | survivors cross the roof span on route waypoints, not through the air | crossed the span on waypoints: t 0.00 -> 0.45 over 240 ticks |
 | PASS | the service cut opens only after the collapse is dug out | cleared in 3 digs, +20 salvage, routes=ServiceCut |
 | PASS | sealing the service cut slows its flooding (it floods first when open) | cut depth open=2.02m closed=0.00m |
-| PASS | salvage crates pay out once and the bench spends the pool | crate paid 17, pool 20 -> 17, SealKit fitted |
+| PASS | salvage crates pay out once and the bench spends the pool | crate paid 13, pool 20 -> 13, SealKit fitted |
 | PASS | the capacitor upgrade lifts a real brownout | capacity 2 -> 3, brownout cleared without touching the sockets |
 | PASS | impeller and rebreather upgrades change water and air numbers | air 22s -> 31s, 12s of water: 0.10 dry, 0.03 pumped, 0.01 fitted |
 | PASS | the lift servo upgrade speeds travel and adds a passenger slot | 3s of travel: 15% -> 21%, seats 3 -> 4 |
@@ -69,6 +69,9 @@ Everything above runs with one command: `bash agents/riveter/tools/build_all.sh`
 | PASS | the whistle gathers three survivors at once and then goes on cooldown | 3 gathered inside 26 studs, a survivor at 140 studs ignored, cooldown 40s enforced, 2 shouts |
 | PASS | the hand winch lifts the car with no power, and slips when nobody turns | 11 holds wound the car to the tower with the grid dark, drum slips 0.05/s |
 | PASS | a rescuer beside a survivor steadies them, and a group steadies each other | alone 17.5, beside a rescuer 36.8 (x2.1), in a huddle 23.6 (x1.3) over 2.5s windows |
+| PASS | a survivor losing their nerve walks to the nearest company | walked from 16.0 studs away to 5.0 and grouped up |
+| PASS | a whistle carries, and the survivors outside arm's reach walk in | gathered 1 answered, 2 walking in, heard 2, the ring survivor closed 40.4 -> 13.8 studs |
+| PASS | a catastrophe scatters people, a calm tide keeps them in touch | reach 37.5 calm vs 16.5 catastrophe; whistle heard 7 vs 0 |
 
 The harness loads `FLOODLINE.rbxlx`, mirrors the 754-part district and the shipped
 module sources into a stub runtime (Instance tree, Vector3/CFrame math, AABB raycasts, DataModel
@@ -78,20 +81,20 @@ fast-forwarded through Prep → Rising → Surge → Extraction → Results.
 ## 1.2 Bot playtests (7 timed rounds)
 
 Autonomous bots play complete rounds through the shipped server modules on the virtual clock
-(`tests/headless/playtest.luau`): 5 wins, 2 fails,
+(`tests/headless/playtest.luau`): 6 wins, 1 fails,
 0 partial (quota met, lift missed), 0 unresolved.
 
 | Crew | Modifier | Outcome | Elapsed | Reason | Rescued/Required | Lost | Salvage | Score | Grade |
 |---|---|---|---|---|---|---|---|---|---|
-| 1p | Calm | win | 111.8s | team evacuated with the required survivors | 4/3 | 0 | 140 | 1468 | S |
-| 1p | Standard | win | 236.8s | extraction window closed with the quota met | 6/5 | 0 | 190 | 1657 | S |
-| 1p | Storm | win | 426s | extraction window closed with the quota met | 8/6 | 1 | 248 | 1895 | S |
-| 2p | Standard | win | 267.8s | extraction window closed with the quota met | 10/6 | 2 | 290 | 2645 | S |
-| 2p | Storm | fail | 785.8s | not enough survivors can still be saved | 4/7 | 6 | 174 | 1050 | B |
-| 4p | Standard | win | 224.5s | team evacuated with the required survivors | 11/7 | 5 | 315 | 3697 | S |
-| 4p | Catastrophe | fail | 249.5s | not enough survivors can still be saved | 5/9 | 5 | 193 | 1583 | S |
+| 1p | Calm | win | 111.8s | team evacuated with the required survivors | 9/3 | 1 | 265 | 2448 | S |
+| 1p | Standard | win | 148.1s | extraction window closed with the quota met | 8/5 | 1 | 240 | 2139 | S |
+| 1p | Storm | win | 148.6s | extraction window closed with the quota met | 8/6 | 0 | 240 | 2123 | S |
+| 2p | Standard | win | 137.3s | extraction window closed with the quota met | 8/6 | 1 | 240 | 2177 | S |
+| 2p | Storm | win | 137.5s | extraction window closed with the quota met | 8/7 | 1 | 240 | 2252 | S |
+| 4p | Standard | win | 136.2s | extraction window closed with the quota met | 10/7 | 0 | 325 | 2803 | S |
+| 4p | Catastrophe | fail | 313.4s | not enough survivors can still be saved | 6/9 | 4 | 218 | 1690 | S |
 
-**Downed-crew drill.** A teammate is downed in standing water on purpose, and the crew has to get them out rather than kneel beside them: hauled (casualty down at 8s, grabbed 9s), hauled=True, revived=True, casualty finished 16.1m from the shelter.
+**Downed-crew drill.** A teammate is downed in standing water on purpose, and the crew has to get them out rather than kneel beside them: hauled (casualty down at 8s, grabbed 8s), hauled=True, revived=True, casualty finished 12.9m from the shelter.
 
 What this does **not** measure:
 
@@ -110,7 +113,8 @@ and they are not player telemetry.
 | PASS | client scripts are present in the shipped place | modules=true minimap=true systems=true client=true |
 | PASS | HUD builds its full interface tree | 8 panels built |
 | PASS | objective + power + roster panels accept live payloads | power rows=5 roster rows=4 |
-| PASS | the roster says who has company, and how much | status='Following +2' roster='2/8 out  ·  need 3  ·  whistle ready  ·  1 steadied' |
+| PASS | the roster says who has company, and how much | grouped='Following +2' walking='Idle →Mara' header='2/8 out  ·  need 3  ·  1 steadied  ·  1 walking in  ·  whistle 0s' |
+| PASS | the roster fits the district, and folds the rescued away | roster rows=3 panel=248 needed=244 |
 | PASS | state/water/tick updates drive the banner, gauge and status strip | timer=01:32 gauge=0.36 carry='Carrying: power cell' |
 | PASS | notifications stack and expire | notes 1 -> 3, 1 after expiry |
 | PASS | world markers bind to survivors and the active objective | markers=3, objective anchor=true |
@@ -153,6 +157,8 @@ and they are not player telemetry.
 | PASS | a downed teammate can be dragged, and the client shows who has whom | prompt + start/stop + payload + HUD readouts present |
 | PASS | hauling a casualty moves them and buys them time | casualty rides the carrier, bleed stretch x1.5 |
 | PASS | the hand winch is a real unpowered way up the tower | parts=['WinchDrum', 'WinchHandle', 'WinchPost'] net climb per hold=0.085 |
+| PASS | people run to people: company seeking is real, and configurable | a panicking survivor walks to the nearest company, and a whistle pulls in the ring beyond it |
+| PASS | the roster fits twelve survivors and says who is walking to whom | roster rows are keyed and compact, rescued survivors fold into the header, and a survivor walking to company is named on their row |
 | PASS | survivors stand on the district, never on each other | the survivor ground ray ignores every body, so a huddle cannot levitate |
 | PASS | a hand-wound car cannot be finished by the electric motor | Moving/Returning honour the manual flag |
 

@@ -126,6 +126,7 @@ check("objective + power + roster panels accept live payloads", function()
 			{ name = "Survivor1", label = "Mara (duty engineer)", trait = "Worker", state = "Following", health = 88, panic = 42, grouped = true, groupCount = 2, position = Stub.v3(-9, 1.2, -12) },
 			{ name = "Survivor2", label = "Tobin (crushed leg)", trait = "Injured", state = "Downed", health = 0, panic = 96, position = Stub.v3(-33, 1.2, -18) },
 			{ name = "Survivor3", label = "Idris (caretaker)", trait = "Elderly", state = "Rescued", health = 100, panic = 0, position = Stub.v3(0, 1, -12) },
+			{ name = "Survivor4", label = "Nell (schoolteacher)", trait = "Deaf", state = "Idle", health = 74, panic = 88, comfortTarget = "Mara", position = Stub.v3(-24, 1.2, -6) },
 		},
 	})
 	local power = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud"):FindFirstChild("PowerGrid")
@@ -140,11 +141,43 @@ check("the roster says who has company, and how much", function()
 	local gui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
 	local roster = gui:FindFirstChild("Roster")
 	local count = roster:FindFirstChild("CountLabel") :: TextLabel
-	local row = roster:FindFirstChild("List"):FindFirstChild("Survivor1") :: Frame
-	assert(row, "the rostered survivor has no row")
-	local status = row:FindFirstChild("Status") :: TextLabel
-	return status.Text == "Following +2" and string.find(count.Text, "1 steadied", 1, true) ~= nil,
-		string.format("status=%q roster=%q", status.Text, count.Text)
+	local list = roster:FindFirstChild("List") :: Frame
+	local groupedRow = list:FindFirstChild("Survivor1") :: Frame
+	local walkingRow = list:FindFirstChild("Survivor4") :: Frame
+	assert(groupedRow, "the rostered survivor has no row")
+	assert(walkingRow, "the survivor walking to company has no row")
+	local grouped = groupedRow:FindFirstChild("Status") :: TextLabel
+	local walking = walkingRow:FindFirstChild("Status") :: TextLabel
+	assert(grouped.Text == "Following +2", `a grouped survivor reads {grouped.Text}`)
+	assert(walking.Text == "Idle →Mara", `a survivor walking to company reads {walking.Text}`)
+	assert(string.find(count.Text, "1 steadied", 1, true) ~= nil, `the header does not count company: {count.Text}`)
+	assert(string.find(count.Text, "1 walking in", 1, true) ~= nil, `the header does not count walkers: {count.Text}`)
+	return true, string.format("grouped=%q walking=%q header=%q", grouped.Text, walking.Text, count.Text)
+end)
+
+check("the roster fits the district, and folds the rescued away", function()
+	local gui = player:FindFirstChild("PlayerGui"):FindFirstChild("FloodlineHud")
+	local roster = gui:FindFirstChild("Roster") :: Frame
+	local list = roster:FindFirstChild("List") :: Frame
+	local rows = 0
+	local stale = 0
+	for _, child in ipairs(list:GetChildren()) do
+		if child:IsA("Frame") then
+			rows += 1
+			if child.Visible == false then
+				stale += 1
+			end
+		end
+	end
+	local hidden = list:FindFirstChild("Survivor3")
+	-- Survivor3 is out of the district: counted in the header, no row of its own.
+	assert(hidden == nil, "a rescued survivor still takes a row")
+	-- Twelve compact rows plus the header have to fit inside the panel.
+	local needed = (Config and Config.Survivors.Total or 12) * 17 + 40
+	assert(roster.Size.Y.Offset >= needed,
+		`the roster panel is too short for the district ({roster.Size.Y.Offset} < {needed})`)
+	assert(stale == 0, `{stale} roster row(s) are hidden but still parented`)
+	return rows == 3, string.format("roster rows=%d panel=%d needed=%d", rows, roster.Size.Y.Offset, needed)
 end)
 
 check("state/water/tick updates drive the banner, gauge and status strip", function()

@@ -289,6 +289,24 @@ def main() -> int:
           and "RequestWinch" in read(SRC / "shared" / "Net.luau")
           and net > 0.01,
           f"parts={winch_names} net climb per hold={net:.3f}")
+    config_text = read(SRC / "shared" / "Config.luau")
+    check("people run to people: company seeking is real, and configurable",
+          all(token in config_text for token in
+              ("ComfortSeekPanic", "ComfortSeekRadius", "ComfortSeekSpeed",
+               "HearingRadius", "HeardPanicRelief", "SeekSeconds"))
+          and config_text.count("NerveMultiplier =") == 4
+          and all(token in rescue_service for token in
+                  ("nearestCompany", "seekCompany", "elseif seekCompany(survivor, dt) then",
+                   "survivor.comfortTarget", "comfortUntil", "heardSurvivors", "nerveMultiplier")),
+          "a panicking survivor walks to the nearest company, and a whistle pulls in the ring beyond it")
+
+    check("the roster fits twelve survivors and says who is walking to whom",
+          all(token in hud_client for token in
+              ("comfortTarget", "→", 'entry.state ~= "Rescued"', 'panel("Roster", UDim2.fromOffset(272, 248)',
+               "walking in", "steadied")),
+          "roster rows are keyed and compact, rescued survivors fold into the header, and a survivor "
+          "walking to company is named on their row")
+
     check("survivors stand on the district, never on each other",
           "groundIgnore" in rescue_service
           and 'FindFirstChild("Survivors")' in rescue_service

@@ -6,7 +6,7 @@ local Config = {}
 
 Config.Game = {
 	Name = "FLOODLINE: Last District",
-	Version = "r10",
+	Version = "r11",
 	MaxPlayers = 4,
 	MinPlayersToStart = 1,
 	LobbyAutoStartSeconds = 10,
@@ -256,6 +256,12 @@ Config.Survivors = {
 	HuddleRadius = 9,
 	HuddleCalmMultiplier = 1.35,
 	HuddleHealPerSecond = 1.1,
+	-- People also run to people. A survivor whose nerve is going looks for company before they look
+	-- for a corner: past this panic they walk to the nearest other soul in reach, which is how a
+	-- crew that shouts once ends up with a huddle it never had to assemble by hand.
+	ComfortSeekPanic = 55,
+	ComfortSeekRadius = 30, -- scaled by the difficulty's NerveMultiplier: panic scatters people
+	ComfortSeekSpeed = 1.05,
 	LostAfterPanicSeconds = 12,
 	-- The whistle: the answer to "I can only ever move one person at a time". Three survivors within
 	-- earshot join you at once, panicking survivors calm down when they hear it, and the cooldown is
@@ -267,6 +273,11 @@ Config.Survivors = {
 		PanicRelief = 24,
 		ScorePerSurvivor = 15,
 		ChildCarryNote = "still needs carrying",
+		-- A whistle carries much further than an arm's reach: outside the gather radius but inside
+		-- earshot, survivors start walking toward the caller and steady up a little on the way.
+		HearingRadius = 58,
+		HeardPanicRelief = 10,
+		SeekSeconds = 25,
 	},
 	ReviveSeconds = 6.5,
 	DownedBleedoutSeconds = 75, -- long enough that a crew can cross the district for someone
@@ -438,6 +449,7 @@ Config.Modifiers = {
 		QuotaDelta = -0.1,
 		PrepBonus = 20,
 		ScoreMultiplier = 0.8,
+		NerveMultiplier = 1.25,
 	},
 	Standard = {
 		Label = "Standard Surge",
@@ -448,26 +460,29 @@ Config.Modifiers = {
 		QuotaDelta = 0,
 		PrepBonus = 0,
 		ScoreMultiplier = 1.0,
+		NerveMultiplier = 1.0,
 	},
 	Storm = {
 		Label = "Storm Season",
-		Blurb = "Faster rise, more debris, thinner air.",
+		Blurb = "Faster rise, more debris, thinner air — and nerves that fray.",
 		RiseMultiplier = 1.22,
 		HazardMultiplier = 1.35,
 		OxygenMultiplier = 0.85,
 		QuotaDelta = 0.1,
 		PrepBonus = -10,
 		ScoreMultiplier = 1.35,
+		NerveMultiplier = 0.75,
 	},
 	Catastrophe = {
 		Label = "Catastrophe",
-		Blurb = "The dam is already gone. Expect losses.",
+		Blurb = "The district is coming apart, and so is everybody in it: survivors scatter instead of looking for each other.",
 		RiseMultiplier = 1.45,
 		HazardMultiplier = 1.7,
 		OxygenMultiplier = 0.72,
 		QuotaDelta = 0.2,
 		PrepBonus = -25,
 		ScoreMultiplier = 1.8,
+		NerveMultiplier = 0.55,
 	},
 }
 

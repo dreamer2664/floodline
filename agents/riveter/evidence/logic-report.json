@@ -131,6 +131,16 @@
       "detail": "parts=['WinchDrum', 'WinchHandle', 'WinchPost'] net climb per hold=0.085"
     },
     {
+      "check": "people run to people: company seeking is real, and configurable",
+      "ok": true,
+      "detail": "a panicking survivor walks to the nearest company, and a whistle pulls in the ring beyond it"
+    },
+    {
+      "check": "the roster fits twelve survivors and says who is walking to whom",
+      "ok": true,
+      "detail": "roster rows are keyed and compact, rescued survivors fold into the header, and a survivor walking to company is named on their row"
+    },
+    {
       "check": "survivors stand on the district, never on each other",
       "ok": true,
       "detail": "the survivor ground ray ignores every body, so a huddle cannot levitate"
@@ -141,7 +151,7 @@
       "detail": "Moving/Returning honour the manual flag"
     }
   ],
-  "passed": 28,
+  "passed": 30,
   "failed": 0,
   "sourceFiles": {
     "server": [

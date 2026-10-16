@@ -28,6 +28,11 @@ Four things decide whether the district survives the round:
   survivors standing together within 9 studs calm each other 1.35x. The roster says who has company
   (`Idle +2`) and how many are being steadied; the whistle (H) is how you build that company without
   standing there holding hands.
+- **People run to people.** Survivors are not furniture. Past 55 panic an unclaimed survivor stops
+  waiting where they were left and walks to the nearest other soul within 30 studs — another survivor
+  or a rescuer — and the roster names them while they walk (`Idle →Mara`). The whistle carries much
+  further than it gathers: everyone inside 58 studs who is not in arm's reach starts walking in, so
+  one shout is the beginning of a huddle rather than a single lucky grab.
 
 ## Layout
 
@@ -52,8 +57,8 @@ bash agents/riveter/tools/build_all.sh
 ```
 
 That single command (8 stages) regenerates the district, builds the place, runs every verification
-stage — place structure, Luau compilation, static wiring, 48 headless gameplay scenarios, 28 static
-checks, 15 client interface checks — then writes the verification report, the machine-readable validation gate and the
+stage — place structure, Luau compilation, 30 static wiring checks, 50 headless gameplay scenarios,
+16 client interface checks — then writes the verification report, the machine-readable validation gate and the
 source archive. Read `evidence/VERIFICATION.md` before quoting any claim about this build: in
 particular it states plainly that no Roblox Studio session has been run, and the bot playtests in
 `evidence/playtest-report.json` are a lower bound played by straight-line bots on a virtual clock,
