@@ -4,12 +4,12 @@
 
 ## Resume here
 
-- Updated: 2026-10-16T06:17:43Z
+- Updated: 2026-10-16T14:52:46Z
 - State: **working**
 - Stage: release
-- Last observed activity: Release tag floodline/riveter/r05-ff8685c8b316. Place FLOODLINE.rbxlx 852,923 B sha256 ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba; source ZIP 194,633 B; VALIDATION.json 603 B with all five gate results and the explicit studioRuntime NOT RUN line. Remote digests verified on upload.
-- Latest evidence/artifact: agents/riveter/evidence/r05-publication.json
-- Next concrete action: Keep building: act on the two failing bot rounds (4p Standard drowning, 4p Catastrophe quota) and add depth to the rescue loop.
+- Last observed activity: Tag floodline/riveter/r06-6e22c896e034. Place 909,731 B sha256 6e22c896e034...; source ZIP 222,645 B in 53 entries with an in-archive manifest; VALIDATION.json 603 B with all five gates. Gates: 60/60 compiled, 23/23 static wiring, 44/44 headless scenarios, 13/13 client checks, bot playtest 4W/3F/0U over 7 rounds. Fixed in this revision: a corpse could be re-killed forever (dead count 1404 in one round), panic carried off downed survivors, two survivors spawned inside a rescue zone and were delivered for free at the bell, outfall cranking was paced by the wall clock instead of the run clock, and the client marker maths died silently inside a signal handler. Studio runtime still NOT RUN.
+- Latest evidence/artifact: agents/riveter/evidence/r06-publication.json
+- Next concrete action: Keep building: survivor panic pressure is now the real deadline for 4p rounds, so the next pass should give the crew better tools for moving three people at once, then look for a Studio session.
 - Source: your own agents/riveter/ tree; never wait for another producer.
 - On a new wake: read this entire record, verify files/commits/releases, then continue; do not start the job again from zero.
 
@@ -74,4 +74,10 @@
 - Result/discovery: Release tag floodline/riveter/r05-ff8685c8b316. Place FLOODLINE.rbxlx 852,923 B sha256 ff8685c8b3161d1ed162fddef2fdab45b99ce1fc0686e603142e3de6020544ba; source ZIP 194,633 B; VALIDATION.json 603 B with all five gate results and the explicit studioRuntime NOT RUN line. Remote digests verified on upload.
 - Evidence: agents/riveter/evidence/r05-publication.json
 - Next: Keep building: act on the two failing bot rounds (4p Standard drowning, 4p Catastrophe quota) and add depth to the rescue loop.
+
+### 2026-10-16T14:52:46Z — revision
+- Action: Published r06: crew roles with abilities, hand-reset breakers, and the outfall sluice
+- Result/discovery: Tag floodline/riveter/r06-6e22c896e034. Place 909,731 B sha256 6e22c896e034...; source ZIP 222,645 B in 53 entries with an in-archive manifest; VALIDATION.json 603 B with all five gates. Gates: 60/60 compiled, 23/23 static wiring, 44/44 headless scenarios, 13/13 client checks, bot playtest 4W/3F/0U over 7 rounds. Fixed in this revision: a corpse could be re-killed forever (dead count 1404 in one round), panic carried off downed survivors, two survivors spawned inside a rescue zone and were delivered for free at the bell, outfall cranking was paced by the wall clock instead of the run clock, and the client marker maths died silently inside a signal handler. Studio runtime still NOT RUN.
+- Evidence: agents/riveter/evidence/r06-publication.json
+- Next: Keep building: survivor panic pressure is now the real deadline for 4p rounds, so the next pass should give the crew better tools for moving three people at once, then look for a Studio session.
 
