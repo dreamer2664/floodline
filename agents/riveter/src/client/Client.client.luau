@@ -398,6 +398,14 @@ local function bindInput()
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.F)
 
+	-- J turns the hand winch: the lift's unpowered way up.
+	ContextActionService:BindAction("FloodlineWinch", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			remotes.RequestWinch:FireServer()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.J)
+
 	-- H calls the survivors in earshot: three of them, if the whistle is off cooldown.
 	ContextActionService:BindAction("FloodlineRally", function(_, inputState)
 		if inputState == Enum.UserInputState.Begin then
@@ -516,7 +524,7 @@ local function updateHints(dt: number)
 		table.insert(lines, `[F] {name} ({math.floor(distance)}m)`)
 	end
 	Hud.hintLabel.Text = #lines > 0 and table.concat(lines, "  ·  ")
-		or "E grab/use · F survivor · H whistle · G lift · Q drop/let go · V ability · N role · 1-4 ping · M map"
+		or "E grab/use · F survivor · H whistle · J winch · G lift · Q drop/let go · V ability · N role · 1-4 ping"
 end
 
 local function updateCamera(dt: number)

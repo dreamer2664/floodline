@@ -267,6 +267,14 @@ remotes.RequestDrop.OnServerEvent:Connect(function(player: Player)
 	end
 end)
 
+-- The hand winch on the lift platform: a second, unpowered way up the tower.
+remotes.RequestWinch.OnServerEvent:Connect(function(player: Player)
+	local ok, reason = LiftService.crank(player)
+	if not ok then
+		ctx.notifyPlayer(player, reason or "The winch will not turn.", "warn")
+	end
+end)
+
 -- The whistle: one shout, three survivors.
 remotes.RequestRally.OnServerEvent:Connect(function(player: Player)
 	local ok, reason = RescueService.rally(player)

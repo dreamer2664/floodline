@@ -78,6 +78,16 @@ function World.sectorAt(position: Vector3): number
 	return 1
 end
 
+-- The hand winch lives on the lift car itself.
+function World.winchHandle(): BasePart?
+	local lift = World.lift
+	if not lift then
+		return nil
+	end
+	local handle = lift:FindFirstChild("WinchHandle")
+	return handle and handle:IsA("BasePart") and handle or nil
+end
+
 function World.liftTravelPosition(): Vector3
 	return World.lift and World.lift:GetPivot().Position or Vector3.new(0, 0, 0)
 end

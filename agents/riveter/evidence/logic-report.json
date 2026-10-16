@@ -13,7 +13,7 @@
     {
       "check": "all remote usages are declared",
       "ok": true,
-      "detail": "32 remotes used, all declared"
+      "detail": "33 remotes used, all declared"
     },
     {
       "check": "bootstrap modules exported",
@@ -124,9 +124,19 @@
       "check": "hauling a casualty moves them and buys them time",
       "ok": true,
       "detail": "casualty rides the carrier, bleed stretch x1.5"
+    },
+    {
+      "check": "the hand winch is a real unpowered way up the tower",
+      "ok": true,
+      "detail": "parts=['WinchDrum', 'WinchHandle', 'WinchPost'] net climb per hold=0.085"
+    },
+    {
+      "check": "a hand-wound car cannot be finished by the electric motor",
+      "ok": true,
+      "detail": "Moving/Returning honour the manual flag"
     }
   ],
-  "passed": 25,
+  "passed": 27,
   "failed": 0,
   "sourceFiles": {
     "server": [

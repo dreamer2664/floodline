@@ -46,8 +46,13 @@ local dragsStarted = 0
 local dragsHauled = 0
 local whistles = 0
 local whistledSurvivors = 0
+local winchCranks = 0
 -- Prompt hold durations the bots have to respect (read from the baked Config at boot).
-local Holds = { outfallHold = Config.Outfall.HoldSeconds, socketHold = 1.0 }
+local Holds = {
+	outfallHold = Config.Outfall.HoldSeconds,
+	winchHold = Config.Lift.Winch.HoldSeconds,
+	socketHold = 1.0,
+}
 local Outfall = module("OutfallService")
 local Flood = module("FloodService")
 local WorldService = module("WorldService")
@@ -514,6 +519,27 @@ function BOT:targets()
 		return { goal = safeZone.Position, label = `escort {survivor.name}`, arrive = 9, act = function() end }
 	end
 
+	-- 5c. The hand winch. Once the evacuation is called and the lift is dark, somebody has to turn
+	--     the handle: it is the only way off the tower without a cell.
+	if Round.radioCalled and not Power.isPowered("Lift") and not Lift.onWinchHandle() then
+		if Lift.progress <= 0 and not Lift.isAtBase() then
+			-- The car is on its way down under power; nothing to turn yet.
+		else
+			local handle = part("WinchHandle")
+			if handle then
+				return { goal = handle.Position, label = "turn the winch", arrive = 6, act = function(bot)
+					if (bot.nextCrankAt or 0) > clock() then
+						return
+					end
+					if bot:use(handle) then
+						winchCranks += 1
+						bot.nextCrankAt = clock() + Holds.winchHold
+					end
+				end }
+			end
+		end
+	end
+
 	-- 6. Salvage: the conductor loots and buys when there is nobody left to fetch.
 	local bench = part("UpgradeBench")
 	if bench then
@@ -605,6 +631,7 @@ local function runRound(crew: number, modifier: string)
 		dragsHauled = 0,
 		whistles = 0,
 		whistledSurvivors = 0,
+		winchCranks = 0,
 		survivorDowns = 0,
 		abilitiesUsed = 0,
 		outfallOpens = 0,
@@ -619,6 +646,7 @@ local function runRound(crew: number, modifier: string)
 	dragsHauled = 0
 	whistles = 0
 	whistledSurvivors = 0
+	winchCranks = 0
 	local casualties = {}
 	local seenNotes = {}
 	local downs = 0
@@ -766,6 +794,7 @@ local function runRound(crew: number, modifier: string)
 	record.dragsHauled = dragsHauled
 	record.whistles = whistles
 	record.whistledSurvivors = whistledSurvivors
+	record.winchCranks = winchCranks
 	releaseAllDrags(bots)
 	record.roles = {}
 	for _, bot in ipairs(bots) do

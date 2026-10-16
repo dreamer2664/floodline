@@ -1,56 +1,60 @@
 {
   "downedCrewDrill": {
     "crew": 3,
-    "distanceToShelter": 15.4,
+    "distanceToShelter": 14.3,
     "dragsHauled": 1,
     "dragsStarted": 1,
-    "elapsedSeconds": 263,
+    "elapsedSeconds": 214.6,
     "injected": true,
     "log": [
       {
-        "t": 3605.6,
+        "t": 4462.6,
         "text": "powered Pump"
       },
       {
-        "t": 3606.6,
+        "t": 4463.6,
         "text": "powered Lift"
       },
       {
-        "t": 3607.3,
+        "t": 4464.3,
         "text": "powered Winch"
       },
       {
-        "t": 3608.1,
+        "t": 4465.1,
         "text": "powered Bridge"
       },
       {
-        "t": 3612.2,
+        "t": 4468.9,
         "text": "drill: 7 surges put the district at 10.1m"
       },
       {
-        "t": 3612.2,
-        "text": "drill: Drill3 is down in 2.6m of water"
+        "t": 4468.9,
+        "text": "drill: Drill3 is down in 2.9m of water"
       },
       {
-        "t": 3613.9,
-        "text": "drill: Drill2 has hold of Drill3"
+        "t": 4470.4,
+        "text": "grabbing Drill3"
       },
       {
-        "t": 3618.4,
+        "t": 4470.4,
+        "text": "drill: Drill1 has hold of Drill3"
+      },
+      {
+        "t": 4473.9,
         "text": "drill: Drill3 is clear"
       },
       {
-        "t": 3618.4,
-        "text": "drill: Drill3 back on their feet after 6s"
+        "t": 4473.9,
+        "text": "drill: Drill3 back on their feet after 5s"
       }
     ],
     "modifier": "Standard",
     "outcome": "hauled",
-    "reason": "casualty down at 8s, grabbed 10s",
+    "reason": "casualty down at 8s, grabbed 9s",
     "revived": true,
     "surges": 7
   },
-  "fails": 2,
+  "fails": 1,
   "limitations": [
     "No engine physics: bots teleport in straight lines at the server-set walk speed (0.5x past waist depth).",
     "No client input latency, no camera, no fumbling a hold, no missed prompts.",
@@ -163,47 +167,55 @@
       ],
       "waterPeak": 0.293,
       "whistledSurvivors": 2,
-      "whistles": 1
+      "whistles": 1,
+      "winchCranks": 0
     },
     {
       "abilitiesUsed": 2,
       "casualties": [
         {
           "cause": "the water",
-          "depth": 11.07,
-          "level": 14.39,
-          "name": "Survivor3",
-          "t": 858.1
+          "depth": 6.99,
+          "level": 10.88,
+          "name": "Survivor4",
+          "t": 835.3
         },
         {
           "cause": "the water",
-          "depth": 2.32,
-          "level": 19.88,
-          "name": "Survivor7",
-          "t": 907
+          "depth": 6.63,
+          "level": 11.11,
+          "name": "Survivor12",
+          "t": 837.3
         },
         {
           "cause": "the water",
-          "depth": 5.89,
-          "level": 19.9,
+          "depth": 13.07,
+          "level": 17.44,
           "name": "Survivor10",
-          "t": 908.2
+          "t": 876.1
         },
         {
           "cause": "the water",
-          "depth": 10.71,
-          "level": 19.97,
+          "depth": 16.2,
+          "level": 20.43,
           "name": "Survivor5",
-          "t": 912.4
+          "t": 916.5
+        },
+        {
+          "cause": "the water",
+          "depth": 15.67,
+          "level": 20.43,
+          "name": "Survivor7",
+          "t": 916.7
         }
       ],
       "cellsDocked": 2,
       "crew": 1,
-      "dead": 4,
+      "dead": 5,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 1015.2,
-      "evacuationAt": 895.1,
+      "elapsedSeconds": 1015.1,
+      "evacuationAt": 895.2,
       "firstPowerAt": 1.9,
       "grade": "S",
       "log": [
@@ -240,192 +252,20 @@
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 263.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 264.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 264.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 265.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 265.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 265.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 265.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 266.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 266.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 266.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 266.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 267.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 267.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 267.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 267.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 268.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 268.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 268.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 268.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 269.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 269.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 269.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 269.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 270.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 270.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 270.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 270.9,
-          "text": "escorting Survivor6 (Dog)"
+          "t": 223.6,
+          "text": "revived Survivor3"
         },
         {
           "t": 271.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 271.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 271.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 272.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 272.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 272.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 272.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 273.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 273.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 273.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 273.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 274.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 274.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 276.9,
-          "text": "revived Survivor2"
-        },
-        {
-          "t": 279.2,
           "text": "revived Survivor6"
         },
         {
-          "t": 294.4,
+          "t": 278.4,
           "text": "revived Survivor6"
         },
         {
-          "t": 316.7,
+          "t": 285.4,
           "text": "revived Survivor6"
-        },
-        {
-          "t": 339.9,
-          "text": "revived Survivor6"
-        },
-        {
-          "t": 550.4,
-          "text": "revived Survivor12"
-        },
-        {
-          "t": 550.9,
-          "text": "revived Survivor4"
         },
         {
           "t": 831.9,
@@ -436,23 +276,27 @@
           "text": "ability Engineer"
         },
         {
-          "t": 965.8,
-          "text": "revived Survivor3"
+          "t": 984.8,
+          "text": "revived Survivor10"
+        },
+        {
+          "t": 1025.2,
+          "text": "revived Survivor7"
         }
       ],
-      "lost": 4,
+      "lost": 7,
       "modifier": "Standard",
       "modifierApplied": true,
       "outcome": "win",
-      "outfallCranks": 23,
+      "outfallCranks": 22,
       "outfallOpens": 0,
-      "padAt": 1015.2,
+      "padAt": 1015.1,
       "playerDowns": 0,
       "quotaAt": 719.8,
       "reason": "extraction window closed with the quota met",
       "recovered": 0,
       "required": 5,
-      "rescued": 8,
+      "rescued": 7,
       "roles": [
         {
           "name": "Bot1",
@@ -462,10 +306,10 @@
       "routes": [
         "Skybridge"
       ],
-      "salvage": 284,
-      "score": 1810,
+      "salvage": 259,
+      "score": 1600,
       "startedAt": 0,
-      "survivorDowns": 8,
+      "survivorDowns": 6,
       "upgrades": [],
       "waterCurve": [
         {
@@ -485,23 +329,23 @@
           "t": 80
         },
         {
-          "level": 0.45,
+          "level": 0.24,
           "t": 100
         },
         {
-          "level": 0.7,
+          "level": 0.49,
           "t": 120
         },
         {
-          "level": 1.2,
+          "level": 0.98,
           "t": 140
         },
         {
-          "level": 1.5,
+          "level": 1.47,
           "t": 160
         },
         {
-          "level": 1.63,
+          "level": 1.78,
           "t": 180
         },
         {
@@ -573,15 +417,15 @@
           "t": 521
         },
         {
-          "level": 1.83,
+          "level": 1.67,
           "t": 541
         },
         {
-          "level": 1.5,
+          "level": 1.71,
           "t": 562
         },
         {
-          "level": 1.49,
+          "level": 1.59,
           "t": 582
         },
         {
@@ -601,7 +445,7 @@
           "t": 663
         },
         {
-          "level": 1.66,
+          "level": 1.49,
           "t": 683
         },
         {
@@ -629,342 +473,377 @@
           "t": 804
         },
         {
-          "level": 9.42,
+          "level": 9.64,
           "t": 824
         },
         {
-          "level": 12.28,
+          "level": 12.49,
           "t": 844
         },
         {
-          "level": 15.16,
+          "level": 15.38,
           "t": 864
         },
         {
-          "level": 18.05,
+          "level": 18.46,
           "t": 884
         },
         {
-          "level": 19.87,
-          "t": 905
+          "level": 20.28,
+          "t": 904
         },
         {
-          "level": 20.09,
-          "t": 925
+          "level": 20.52,
+          "t": 924
         },
         {
-          "level": 20.33,
-          "t": 945
+          "level": 20.76,
+          "t": 944
         },
         {
-          "level": 20.61,
+          "level": 21.05,
           "t": 965
         },
         {
-          "level": 20.95,
+          "level": 21.38,
           "t": 985
         },
         {
-          "level": 21.28,
+          "level": 21.71,
           "t": 1005
         },
         {
-          "level": 21.43,
+          "level": 21.87,
           "t": 1015
         }
       ],
-      "waterPeak": 21.44,
+      "waterPeak": 21.871,
       "whistledSurvivors": 2,
-      "whistles": 1
+      "whistles": 1,
+      "winchCranks": 0
     },
     {
-      "abilitiesUsed": 2,
-      "casualties": [
-        {
-          "cause": "the water",
-          "depth": 6.85,
-          "level": 11.04,
-          "name": "Survivor4",
-          "t": 819.6
-        },
-        {
-          "cause": "the water",
-          "depth": 10.18,
-          "level": 11.42,
-          "name": "Survivor12",
-          "t": 822.4
-        },
-        {
-          "cause": "the water",
-          "depth": 1.74,
-          "level": 14.2,
-          "name": "Survivor10",
-          "t": 837.9
-        },
-        {
-          "cause": "the water",
-          "depth": 5.21,
-          "level": 18.49,
-          "name": "Survivor2",
-          "t": 860.5
-        },
-        {
-          "cause": "the water",
-          "depth": 2.93,
-          "level": 20.3,
-          "name": "Survivor9",
-          "t": 872.9
-        },
-        {
-          "cause": "the water",
-          "depth": 19.32,
-          "level": 20.79,
-          "name": "Survivor5",
-          "t": 876.1
-        },
-        {
-          "cause": "the water",
-          "depth": 5.68,
-          "level": 21.41,
-          "name": "Survivor7",
-          "t": 876.9
-        }
-      ],
-      "cellsDocked": 2,
+      "abilitiesUsed": 0,
+      "casualties": [],
+      "cellsDocked": 4,
       "crew": 1,
-      "dead": 7,
+      "dead": 0,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 876.9,
+      "elapsedSeconds": 505.5,
+      "evacuationAt": 385.5,
       "firstPowerAt": 1.9,
-      "grade": "A",
+      "grade": "S",
       "log": [
         {
-          "t": 1134.8,
+          "t": 1134.7,
           "text": "powered Pump"
         },
         {
-          "t": 1135.8,
+          "t": 1135.7,
           "text": "powered Lift"
         },
         {
-          "t": 1136.6,
+          "t": 1136.4,
           "text": "powered Winch"
         },
         {
-          "t": 1137.3,
+          "t": 1137.2,
           "text": "powered Bridge"
         },
         {
-          "t": 1147.7,
+          "t": 1147.5,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 1148.9,
+          "t": 1148.8,
           "text": "escorting Survivor8 (Worker)"
         },
         {
-          "t": 1151.4,
+          "t": 1151.3,
           "text": "whistled 2 survivors in"
         },
         {
-          "t": 1157.9,
+          "t": 1158.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1272.4,
+          "t": 1272.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1272.9,
+          "t": 1272.8,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1273.2,
+          "t": 1273,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1273.4,
+          "t": 1273.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1273.7,
+          "t": 1273.5,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1273.9,
+          "t": 1273.8,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1274.2,
+          "t": 1274,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1274.4,
+          "t": 1274.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1274.7,
+          "t": 1274.5,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1274.9,
+          "t": 1274.8,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1275.2,
+          "t": 1275,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1275.4,
+          "t": 1275.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1275.7,
+          "t": 1275.5,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1275.9,
+          "t": 1275.8,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1276.2,
+          "t": 1276,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1276.4,
+          "t": 1276.3,
           "text": "revived Survivor6"
         },
         {
-          "t": 1281.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 1282.4,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 1282.7,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 1282.9,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 1283.2,
-          "text": "escorting Survivor6 (Dog)"
-        },
-        {
-          "t": 1283.4,
+          "t": 1283.3,
           "text": "revived Survivor6"
         },
         {
-          "t": 1290.4,
+          "t": 1290.3,
           "text": "revived Survivor6"
         },
         {
-          "t": 1297.4,
+          "t": 1297.3,
           "text": "revived Survivor6"
         },
         {
-          "t": 1304.4,
+          "t": 1304.3,
           "text": "revived Survivor6"
         },
         {
-          "t": 1311.4,
+          "t": 1311.3,
           "text": "revived Survivor6"
         },
         {
-          "t": 1326.2,
+          "t": 1328.5,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1326.9,
+          "t": 1329.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1327.2,
+          "t": 1329.8,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1327.7,
+          "t": 1330,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1327.9,
+          "t": 1330.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1328.2,
+          "t": 1330.5,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1328.4,
+          "t": 1330.8,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1328.7,
+          "t": 1331,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1328.9,
+          "t": 1331.3,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1329.2,
+          "t": 1331.5,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1329.4,
+          "t": 1331.8,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1329.7,
+          "t": 1332,
           "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1331.7,
-          "text": "revived Survivor3"
+          "t": 1332.3,
+          "text": "escorting Survivor6 (Dog)"
         },
         {
-          "t": 1334.4,
+          "t": 1332.5,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1332.8,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1333,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1333.3,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1333.5,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1333.8,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1334,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1334.3,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1334.5,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1334.8,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1335,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1335.3,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1335.5,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1335.8,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1336,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1336.3,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1336.5,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1336.8,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1337,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1337.3,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1337.5,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1337.8,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1338,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1338.3,
+          "text": "escorting Survivor6 (Dog)"
+        },
+        {
+          "t": 1338.5,
           "text": "revived Survivor6"
         },
         {
-          "t": 1849.2,
-          "text": "ability Engineer"
+          "t": 1502.3,
+          "text": "revived Survivor2"
         },
         {
-          "t": 1919.4,
-          "text": "ability Engineer"
+          "t": 1509.5,
+          "text": "whistled 2 survivors in"
+        },
+        {
+          "t": 1518.3,
+          "text": "evacuation called"
+        },
+        {
+          "t": 1521.5,
+          "text": "escorting Survivor3 (Elderly)"
         }
       ],
-      "lost": 8,
+      "lost": 1,
       "modifier": "Storm",
       "modifierApplied": true,
-      "outcome": "fail",
-      "outfallCranks": 14,
+      "outcome": "win",
+      "outfallCranks": 0,
       "outfallOpens": 0,
-      "padAt": 876.9,
+      "padAt": 505.5,
       "playerDowns": 0,
-      "reason": "every survivor was lost",
+      "quotaAt": 381.5,
+      "reason": "extraction window closed with the quota met",
       "recovered": 0,
       "required": 6,
-      "rescued": 5,
+      "rescued": 8,
       "roles": [
         {
           "name": "Bot1",
           "role": "Engineer"
         }
       ],
-      "routes": [
-        "Skybridge"
-      ],
-      "salvage": 209,
-      "score": 1270,
+      "routes": [],
+      "salvage": 248,
+      "score": 1925,
       "startedAt": 0,
-      "survivorDowns": 6,
+      "survivorDowns": 7,
       "upgrades": [],
       "waterCurve": [
         {
@@ -996,11 +875,11 @@
           "t": 141
         },
         {
-          "level": 1.51,
+          "level": 1.49,
           "t": 161
         },
         {
-          "level": 1.5,
+          "level": 1.49,
           "t": 182
         },
         {
@@ -1008,19 +887,19 @@
           "t": 202
         },
         {
-          "level": 1.64,
+          "level": 1.93,
           "t": 222
         },
         {
-          "level": 1.73,
+          "level": 1.88,
           "t": 242
         },
         {
-          "level": 1.49,
+          "level": 1.58,
           "t": 263
         },
         {
-          "level": 1.51,
+          "level": 1.53,
           "t": 283
         },
         {
@@ -1044,225 +923,135 @@
           "t": 384
         },
         {
-          "level": 1.64,
+          "level": 1.49,
           "t": 404
         },
         {
-          "level": 1.73,
-          "t": 425
+          "level": 1.49,
+          "t": 424
         },
         {
-          "level": 1.72,
+          "level": 1.5,
           "t": 445
         },
         {
-          "level": 1.67,
+          "level": 1.49,
           "t": 465
         },
         {
-          "level": 1.61,
+          "level": 1.49,
           "t": 485
         },
         {
-          "level": 1.68,
-          "t": 506
-        },
-        {
-          "level": 1.5,
-          "t": 526
-        },
-        {
-          "level": 1.5,
-          "t": 546
-        },
-        {
-          "level": 1.56,
-          "t": 566
-        },
-        {
-          "level": 1.64,
-          "t": 587
-        },
-        {
-          "level": 1.72,
-          "t": 607
-        },
-        {
-          "level": 1.5,
-          "t": 627
-        },
-        {
-          "level": 1.78,
-          "t": 647
-        },
-        {
-          "level": 1.73,
-          "t": 668
-        },
-        {
-          "level": 1.68,
-          "t": 688
-        },
-        {
-          "level": 1.5,
-          "t": 708
-        },
-        {
-          "level": 2.36,
-          "t": 728
-        },
-        {
-          "level": 3.79,
-          "t": 750
-        },
-        {
-          "level": 5.01,
-          "t": 770
-        },
-        {
-          "level": 6.3,
-          "t": 790
-        },
-        {
-          "level": 9.28,
-          "t": 811
-        },
-        {
-          "level": 13.19,
-          "t": 831
-        },
-        {
-          "level": 16.61,
-          "t": 851
-        },
-        {
-          "level": 20.04,
-          "t": 871
-        },
-        {
-          "level": 21.41,
-          "t": 876
+          "level": 1.49,
+          "t": 505
         }
       ],
-      "waterPeak": 21.418,
-      "whistledSurvivors": 2,
-      "whistles": 1
+      "waterPeak": 1.942,
+      "whistledSurvivors": 4,
+      "whistles": 2,
+      "winchCranks": 0
     },
     {
       "abilitiesUsed": 2,
       "casualties": [
         {
           "cause": "the water",
-          "depth": 2.42,
-          "level": 1.49,
+          "depth": 2.29,
+          "level": 4.05,
+          "name": "Survivor7",
+          "t": 744.2
+        },
+        {
+          "cause": "the water",
+          "depth": 2.03,
+          "level": 5.32,
           "name": "Survivor4",
-          "t": 162.5
+          "t": 753.7
+        },
+        {
+          "cause": "the water",
+          "depth": 4.61,
+          "level": 6.9,
+          "name": "Survivor12",
+          "t": 761.8
+        },
+        {
+          "cause": "the water",
+          "depth": 9.86,
+          "level": 11.81,
+          "name": "Survivor10",
+          "t": 791
         }
       ],
-      "cellsDocked": 3,
+      "cellsDocked": 2,
       "crew": 2,
-      "dead": 1,
+      "dead": 4,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 843,
-      "evacuationAt": 723.3,
+      "elapsedSeconds": 940.2,
+      "evacuationAt": 820,
       "firstPowerAt": 1.9,
       "grade": "S",
       "log": [
         {
-          "t": 2015.8,
+          "t": 1644.3,
           "text": "powered Pump"
         },
         {
-          "t": 2016.8,
+          "t": 1645.3,
           "text": "powered Lift"
         },
         {
-          "t": 2017.5,
+          "t": 1646,
           "text": "powered Winch"
         },
         {
-          "t": 2018.3,
+          "t": 1646.8,
           "text": "powered Bridge"
         },
         {
-          "t": 2028.6,
+          "t": 1657.1,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 2029.9,
-          "text": "escorting Survivor8 (Worker)"
+          "t": 1659.4,
+          "text": "escorting Survivor2 (Injured)"
         },
         {
-          "t": 2033.9,
+          "t": 1746.1,
           "text": "escorting Survivor5 (Deaf)"
         },
         {
-          "t": 2173.4,
-          "text": "escorting Survivor5 (Deaf)"
+          "t": 1794.6,
+          "text": "revived Survivor6"
         },
         {
-          "t": 2173.9,
-          "text": "escorting Survivor5 (Deaf)"
+          "t": 2025.6,
+          "text": "revived Survivor3"
         },
         {
-          "t": 2178.6,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 2183.6,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 2186.6,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 2190.1,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 2282.4,
-          "text": "revived Survivor10"
-        },
-        {
-          "t": 2374.4,
-          "text": "revived Survivor7"
-        },
-        {
-          "t": 2730.1,
+          "t": 2358.6,
           "text": "ability Engineer"
         },
         {
-          "t": 2733.6,
-          "text": "powered Pump"
-        },
-        {
-          "t": 2737.1,
-          "text": "evacuation called"
-        },
-        {
-          "t": 2743.6,
-          "text": "escorting Survivor9 (Medic)"
-        },
-        {
-          "t": 2800.4,
+          "t": 2428.7,
           "text": "ability Engineer"
         }
       ],
-      "lost": 3,
+      "lost": 5,
       "modifier": "Standard",
       "modifierApplied": true,
       "outcome": "win",
-      "outfallCranks": 0,
+      "outfallCranks": 23,
       "outfallOpens": 0,
-      "padAt": 843,
+      "padAt": 940.2,
       "playerDowns": 0,
-      "quotaAt": 719.5,
+      "quotaAt": 719.3,
       "reason": "extraction window closed with the quota met",
       "recovered": 0,
       "required": 6,
-      "rescued": 11,
+      "rescued": 8,
       "roles": [
         {
           "name": "Bot1",
@@ -1276,8 +1065,8 @@
       "routes": [
         "Skybridge"
       ],
-      "salvage": 359,
-      "score": 2380,
+      "salvage": 284,
+      "score": 1785,
       "startedAt": 0,
       "survivorDowns": 3,
       "upgrades": [],
@@ -1299,165 +1088,182 @@
           "t": 80
         },
         {
-          "level": 0.33,
-          "t": 100
+          "level": 0.34,
+          "t": 101
         },
         {
-          "level": 0.85,
-          "t": 120
+          "level": 0.86,
+          "t": 121
         },
         {
-          "level": 1.13,
-          "t": 140
+          "level": 1.15,
+          "t": 141
         },
         {
-          "level": 1.49,
-          "t": 160
+          "level": 1.6,
+          "t": 161
         },
         {
-          "level": 1.56,
-          "t": 180
-        },
-        {
-          "level": 1.65,
-          "t": 200
-        },
-        {
-          "level": 1.5,
-          "t": 220
-        },
-        {
-          "level": 1.72,
-          "t": 240
-        },
-        {
-          "level": 1.64,
-          "t": 260
+          "level": 1.53,
+          "t": 182
         },
         {
           "level": 1.62,
-          "t": 280
+          "t": 202
         },
         {
           "level": 1.71,
-          "t": 300
+          "t": 222
         },
         {
-          "level": 1.49,
-          "t": 320
-        },
-        {
-          "level": 1.49,
-          "t": 340
-        },
-        {
-          "level": 1.59,
-          "t": 360
-        },
-        {
-          "level": 1.68,
-          "t": 380
-        },
-        {
-          "level": 1.49,
-          "t": 400
-        },
-        {
-          "level": 1.5,
-          "t": 420
-        },
-        {
-          "level": 1.56,
-          "t": 440
-        },
-        {
-          "level": 1.94,
-          "t": 460
+          "level": 1.7,
+          "t": 242
         },
         {
           "level": 1.62,
-          "t": 480
+          "t": 263
+        },
+        {
+          "level": 1.57,
+          "t": 283
+        },
+        {
+          "level": 1.67,
+          "t": 303
+        },
+        {
+          "level": 1.49,
+          "t": 323
+        },
+        {
+          "level": 1.73,
+          "t": 344
+        },
+        {
+          "level": 1.64,
+          "t": 364
+        },
+        {
+          "level": 1.62,
+          "t": 384
+        },
+        {
+          "level": 1.71,
+          "t": 404
+        },
+        {
+          "level": 1.49,
+          "t": 425
+        },
+        {
+          "level": 1.49,
+          "t": 445
+        },
+        {
+          "level": 1.58,
+          "t": 465
+        },
+        {
+          "level": 1.68,
+          "t": 485
+        },
+        {
+          "level": 1.49,
+          "t": 505
+        },
+        {
+          "level": 1.49,
+          "t": 525
         },
         {
           "level": 1.55,
-          "t": 500
+          "t": 545
+        },
+        {
+          "level": 1.64,
+          "t": 565
+        },
+        {
+          "level": 1.49,
+          "t": 585
+        },
+        {
+          "level": 1.49,
+          "t": 605
         },
         {
           "level": 1.52,
-          "t": 520
+          "t": 625
         },
         {
-          "level": 1.62,
-          "t": 540
+          "level": 1.9,
+          "t": 645
         },
         {
-          "level": 1.83,
-          "t": 560
+          "level": 1.82,
+          "t": 665
         },
         {
           "level": 1.51,
-          "t": 580
+          "t": 685
         },
         {
-          "level": 1.49,
-          "t": 600
+          "level": 1.77,
+          "t": 705
         },
         {
-          "level": 1.59,
-          "t": 620
+          "level": 2.3,
+          "t": 725
         },
         {
-          "level": 1.68,
-          "t": 640
+          "level": 4.19,
+          "t": 745
         },
         {
-          "level": 1.49,
-          "t": 660
+          "level": 7.37,
+          "t": 765
         },
         {
-          "level": 1.49,
-          "t": 680
+          "level": 10.56,
+          "t": 785
         },
         {
-          "level": 1.56,
-          "t": 700
+          "level": 14.29,
+          "t": 805
         },
         {
-          "level": 1.89,
-          "t": 720
+          "level": 16.28,
+          "t": 825
         },
         {
-          "level": 1.49,
-          "t": 740
+          "level": 16.57,
+          "t": 846
         },
         {
-          "level": 1.49,
-          "t": 760
+          "level": 16.88,
+          "t": 867
         },
         {
-          "level": 1.49,
-          "t": 780
+          "level": 17.23,
+          "t": 887
         },
         {
-          "level": 1.49,
-          "t": 800
+          "level": 17.6,
+          "t": 907
         },
         {
-          "level": 1.49,
-          "t": 820
+          "level": 17.97,
+          "t": 927
         },
         {
-          "level": 1.49,
-          "t": 840
-        },
-        {
-          "level": 1.49,
-          "t": 843
+          "level": 18.21,
+          "t": 940
         }
       ],
-      "waterPeak": 2.022,
-      "whistledSurvivors": 6,
-      "whistles": 3
+      "waterPeak": 18.21,
+      "whistledSurvivors": 4,
+      "whistles": 2,
+      "winchCranks": 0
     },
     {
       "abilitiesUsed": 0,
@@ -1467,42 +1273,58 @@
       "dead": 0,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 90.5,
-      "evacuationAt": 35.8,
+      "elapsedSeconds": 692.8,
+      "evacuationAt": 573,
       "firstPowerAt": 2,
       "grade": "S",
       "log": [
         {
-          "t": 2862.9,
+          "t": 2588.6,
           "text": "powered Pump"
         },
         {
-          "t": 2863.9,
+          "t": 2589.6,
           "text": "powered Lift"
         },
         {
-          "t": 2864.6,
+          "t": 2590.3,
           "text": "powered Winch"
         },
         {
-          "t": 2865.6,
+          "t": 2591.1,
           "text": "powered Bridge"
         },
         {
-          "t": 2876,
+          "t": 2601.4,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 2878.5,
-          "text": "escorting Survivor2 (Injured)"
+          "t": 2602.7,
+          "text": "escorting Survivor8 (Worker)"
         },
         {
-          "t": 2887,
-          "text": "carrying Survivor4"
+          "t": 2606.9,
+          "text": "escorting Survivor5 (Deaf)"
         },
         {
-          "t": 2896.7,
+          "t": 2847.2,
+          "text": "revived Survivor4"
+        },
+        {
+          "t": 2903.9,
+          "text": "revived Survivor10"
+        },
+        {
+          "t": 3151.2,
+          "text": "revived Survivor2"
+        },
+        {
+          "t": 3159.7,
           "text": "evacuation called"
+        },
+        {
+          "t": 3162.9,
+          "text": "escorting Survivor3 (Elderly)"
         }
       ],
       "lost": 0,
@@ -1511,13 +1333,13 @@
       "outcome": "win",
       "outfallCranks": 0,
       "outfallOpens": 0,
-      "padAt": 90.5,
+      "padAt": 692.8,
       "playerDowns": 0,
-      "quotaAt": 29,
-      "reason": "team evacuated with the required survivors",
+      "quotaAt": 569,
+      "reason": "extraction window closed with the quota met",
       "recovered": 0,
       "required": 7,
-      "rescued": 7,
+      "rescued": 11,
       "roles": [
         {
           "name": "Bot1",
@@ -1529,10 +1351,10 @@
         }
       ],
       "routes": [],
-      "salvage": 215,
-      "score": 2098,
+      "salvage": 339,
+      "score": 2330,
       "startedAt": 0,
-      "survivorDowns": 0,
+      "survivorDowns": 4,
       "upgrades": [],
       "waterCurve": [
         {
@@ -1540,97 +1362,292 @@
           "t": 20
         },
         {
-          "level": 0.15,
+          "level": 0.14,
           "t": 40
         },
         {
-          "level": 0.28,
+          "level": 0.2,
           "t": 60
         },
         {
-          "level": 0.4,
+          "level": 0.26,
           "t": 80
         },
         {
-          "level": 0.47,
-          "t": 90
+          "level": 0.93,
+          "t": 100
+        },
+        {
+          "level": 1.74,
+          "t": 120
+        },
+        {
+          "level": 1.72,
+          "t": 140
+        },
+        {
+          "level": 2.1,
+          "t": 160
+        },
+        {
+          "level": 1.84,
+          "t": 180
+        },
+        {
+          "level": 1.83,
+          "t": 200
+        },
+        {
+          "level": 1.82,
+          "t": 220
+        },
+        {
+          "level": 1.8,
+          "t": 240
+        },
+        {
+          "level": 1.55,
+          "t": 260
+        },
+        {
+          "level": 1.53,
+          "t": 280
+        },
+        {
+          "level": 1.59,
+          "t": 300
+        },
+        {
+          "level": 1.67,
+          "t": 320
+        },
+        {
+          "level": 1.49,
+          "t": 340
+        },
+        {
+          "level": 1.5,
+          "t": 360
+        },
+        {
+          "level": 1.57,
+          "t": 380
+        },
+        {
+          "level": 1.64,
+          "t": 400
+        },
+        {
+          "level": 1.72,
+          "t": 420
+        },
+        {
+          "level": 1.49,
+          "t": 440
+        },
+        {
+          "level": 1.54,
+          "t": 460
+        },
+        {
+          "level": 1.62,
+          "t": 480
+        },
+        {
+          "level": 1.7,
+          "t": 500
+        },
+        {
+          "level": 1.83,
+          "t": 520
+        },
+        {
+          "level": 1.82,
+          "t": 540
+        },
+        {
+          "level": 1.8,
+          "t": 560
+        },
+        {
+          "level": 1.49,
+          "t": 580
+        },
+        {
+          "level": 1.5,
+          "t": 600
+        },
+        {
+          "level": 1.49,
+          "t": 620
+        },
+        {
+          "level": 1.49,
+          "t": 640
+        },
+        {
+          "level": 1.49,
+          "t": 660
+        },
+        {
+          "level": 1.49,
+          "t": 680
+        },
+        {
+          "level": 1.49,
+          "t": 692
         }
       ],
-      "waterPeak": 0.472,
+      "waterPeak": 2.116,
       "whistledSurvivors": 2,
-      "whistles": 1
+      "whistles": 1,
+      "winchCranks": 0
     },
     {
-      "abilitiesUsed": 5,
-      "casualties": [],
+      "abilitiesUsed": 14,
+      "casualties": [
+        {
+          "cause": "the water",
+          "depth": 2.13,
+          "level": 1.27,
+          "name": "Survivor4",
+          "t": 132.3
+        },
+        {
+          "cause": "the water",
+          "depth": 2.05,
+          "level": 4.82,
+          "name": "Survivor10",
+          "t": 672.8
+        },
+        {
+          "cause": "the water",
+          "depth": 2.57,
+          "level": 5,
+          "name": "Survivor12",
+          "t": 674
+        }
+      ],
       "cellsDocked": 4,
       "crew": 4,
-      "dead": 0,
+      "dead": 4,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 312.5,
-      "evacuationAt": 257.8,
+      "elapsedSeconds": 795.4,
+      "evacuationAt": 741.6,
       "firstPowerAt": 1.7,
       "grade": "S",
       "log": [
         {
-          "t": 2961.2,
+          "t": 3289.2,
           "text": "powered Pump"
         },
         {
-          "t": 2962.2,
+          "t": 3290.2,
           "text": "powered Lift"
         },
         {
-          "t": 2963,
+          "t": 3290.9,
           "text": "powered Winch"
         },
         {
-          "t": 2963.7,
+          "t": 3291.7,
           "text": "powered Bridge"
         },
         {
-          "t": 2973.1,
+          "t": 3301,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 2974.1,
+          "t": 3302,
           "text": "escorting Survivor8 (Worker)"
         },
         {
-          "t": 2977.6,
+          "t": 3305.5,
           "text": "escorting Survivor5 (Deaf)"
         },
         {
-          "t": 3074.8,
+          "t": 3424,
+          "text": "escorting Survivor5 (Deaf)"
+        },
+        {
+          "t": 3424.3,
+          "text": "escorting Survivor5 (Deaf)"
+        },
+        {
+          "t": 3424.8,
+          "text": "escorting Survivor5 (Deaf)"
+        },
+        {
+          "t": 3427.8,
+          "text": "escorting Survivor5 (Deaf)"
+        },
+        {
+          "t": 3428.3,
+          "text": "escorting Survivor5 (Deaf)"
+        },
+        {
+          "t": 3430.3,
+          "text": "revived Survivor5"
+        },
+        {
+          "t": 3436.5,
+          "text": "escorting Survivor2 (Injured)"
+        },
+        {
+          "t": 3445,
+          "text": "escorting Survivor12 (Worker)"
+        },
+        {
+          "t": 3932.3,
+          "text": "ability Engineer"
+        },
+        {
+          "t": 3946.8,
+          "text": "revived Survivor6"
+        },
+        {
+          "t": 3947.8,
+          "text": "revived Survivor12"
+        },
+        {
+          "t": 3953.9,
+          "text": "revived Survivor6"
+        },
+        {
+          "t": 3954.9,
+          "text": "revived Survivor12"
+        },
+        {
+          "t": 3960.5,
           "text": "whistled 2 survivors in"
         },
         {
-          "t": 3079.8,
-          "text": "revived Survivor5"
+          "t": 3971.6,
+          "text": "bought SealKit"
         },
         {
-          "t": 3115.1,
-          "text": "revived Survivor5"
+          "t": 3971.9,
+          "text": "bought Rebreather"
         },
         {
-          "t": 3217.3,
-          "text": "evacuation called"
+          "t": 3972.1,
+          "text": "bought LiftServo"
         }
       ],
-      "lost": 3,
+      "lost": 7,
       "modifier": "Standard",
       "modifierApplied": true,
       "outcome": "win",
-      "outfallCranks": 0,
+      "outfallCranks": 18,
       "outfallOpens": 0,
-      "padAt": 312.5,
+      "padAt": 795.4,
       "playerDowns": 0,
-      "quotaAt": 253.8,
+      "quotaAt": 795.4,
       "reason": "team evacuated with the required survivors",
       "recovered": 0,
       "required": 7,
-      "rescued": 10,
+      "rescued": 7,
       "roles": [
         {
           "name": "Bot1",
@@ -1650,11 +1667,18 @@
         }
       ],
       "routes": [],
-      "salvage": 298,
-      "score": 2936,
+      "salvage": 145,
+      "score": 2525,
       "startedAt": 0,
-      "survivorDowns": 9,
-      "upgrades": [],
+      "survivorDowns": 8,
+      "upgrades": [
+        "Capacitor",
+        "FieldHospital",
+        "Impeller",
+        "LiftServo",
+        "Rebreather",
+        "SealKit"
+      ],
       "waterCurve": [
         {
           "level": 0.07,
@@ -1673,15 +1697,15 @@
           "t": 80
         },
         {
-          "level": 0.92,
+          "level": 0.5,
           "t": 100
         },
         {
-          "level": 1.49,
+          "level": 1.07,
           "t": 120
         },
         {
-          "level": 1.64,
+          "level": 1.49,
           "t": 140
         },
         {
@@ -1697,64 +1721,161 @@
           "t": 200
         },
         {
-          "level": 1.96,
+          "level": 2.02,
           "t": 220
         },
         {
-          "level": 1.92,
+          "level": 1.99,
           "t": 240
         },
         {
-          "level": 1.62,
+          "level": 1.72,
           "t": 260
         },
         {
-          "level": 1.49,
+          "level": 1.68,
           "t": 280
         },
         {
-          "level": 1.49,
+          "level": 1.65,
           "t": 300
         },
         {
-          "level": 1.49,
-          "t": 312
+          "level": 1.67,
+          "t": 320
+        },
+        {
+          "level": 1.5,
+          "t": 340
+        },
+        {
+          "level": 1.5,
+          "t": 360
+        },
+        {
+          "level": 1.56,
+          "t": 380
+        },
+        {
+          "level": 1.64,
+          "t": 400
+        },
+        {
+          "level": 1.72,
+          "t": 420
+        },
+        {
+          "level": 1.5,
+          "t": 440
+        },
+        {
+          "level": 1.53,
+          "t": 460
+        },
+        {
+          "level": 1.61,
+          "t": 480
+        },
+        {
+          "level": 1.69,
+          "t": 500
+        },
+        {
+          "level": 1.5,
+          "t": 520
+        },
+        {
+          "level": 1.92,
+          "t": 540
+        },
+        {
+          "level": 1.88,
+          "t": 560
+        },
+        {
+          "level": 1.85,
+          "t": 580
+        },
+        {
+          "level": 1.99,
+          "t": 600
+        },
+        {
+          "level": 1.95,
+          "t": 620
+        },
+        {
+          "level": 1.92,
+          "t": 640
+        },
+        {
+          "level": 3.43,
+          "t": 660
+        },
+        {
+          "level": 5.94,
+          "t": 680
+        },
+        {
+          "level": 9.52,
+          "t": 700
+        },
+        {
+          "level": 13.6,
+          "t": 720
+        },
+        {
+          "level": 17.06,
+          "t": 741
+        },
+        {
+          "level": 17.35,
+          "t": 762
+        },
+        {
+          "level": 17.65,
+          "t": 784
+        },
+        {
+          "level": 17.77,
+          "t": 795
         }
       ],
-      "waterPeak": 2.084,
-      "whistledSurvivors": 7,
-      "whistles": 4
+      "waterPeak": 17.771,
+      "whistledSurvivors": 10,
+      "whistles": 5,
+      "winchCranks": 7
     },
     {
-      "abilitiesUsed": 6,
+      "abilitiesUsed": 8,
       "casualties": [
         {
           "cause": "the water",
-          "depth": 2.91,
-          "level": 1.68,
-          "name": "Survivor12",
-          "t": 90.3
+          "depth": 2.67,
+          "level": 1.62,
+          "name": "Survivor4",
+          "t": 100.6
         },
         {
           "cause": "the water",
-          "depth": 2.31,
-          "level": 4.71,
+          "depth": 1.82,
+          "level": 3.15,
           "name": "Survivor6",
-          "t": 291.3
+          "t": 110.8
         },
         {
           "cause": "the water",
-          "depth": 5.68,
-          "level": 7.32,
-          "name": "Survivor10",
-          "t": 315.9
+          "depth": 4.87,
+          "level": 5.75,
+          "name": "Survivor12",
+          "t": 141.1
         },
         {
           "cause": "the water",
-          "depth": 5.14,
-          "level": 7.67,
+          "depth": 16.14,
+          "level": 26.35,
           "name": "Survivor3",
-          "t": 317.4
+          "t": 363.6
         }
       ],
       "cellsDocked": 4,
@@ -1762,83 +1883,107 @@
       "dead": 4,
       "dragsHauled": 0,
       "dragsStarted": 0,
-      "elapsedSeconds": 317.4,
+      "elapsedSeconds": 363.6,
       "firstPowerAt": 1.7,
       "grade": "S",
       "log": [
         {
-          "t": 3281.8,
+          "t": 4092.6,
           "text": "powered Pump"
         },
         {
-          "t": 3282.8,
+          "t": 4093.6,
           "text": "powered Lift"
         },
         {
-          "t": 3283.6,
+          "t": 4094.4,
           "text": "powered Winch"
         },
         {
-          "t": 3284.3,
+          "t": 4095.1,
           "text": "powered Bridge"
         },
         {
-          "t": 3293.7,
+          "t": 4104.5,
           "text": "relay repaired (+1 capacity)"
         },
         {
-          "t": 3294.7,
+          "t": 4105.5,
           "text": "escorting Survivor8 (Worker)"
         },
         {
-          "t": 3298.4,
-          "text": "escorting Survivor5 (Deaf)"
-        },
-        {
-          "t": 3305.2,
-          "text": "escorting Survivor7 (Injured)"
-        },
-        {
-          "t": 3314.2,
+          "t": 4109,
           "text": "escorting Survivor2 (Injured)"
         },
         {
-          "t": 3322.9,
-          "text": "carrying Survivor4"
+          "t": 4116,
+          "text": "escorting Survivor5 (Deaf)"
         },
         {
-          "t": 3360.4,
-          "text": "whistled 1 survivors in"
+          "t": 4123.2,
+          "text": "escorting Survivor7 (Injured)"
         },
         {
-          "t": 3544.4,
+          "t": 4177.2,
+          "text": "escorting Survivor7 (Injured)"
+        },
+        {
+          "t": 4177.5,
+          "text": "escorting Survivor7 (Injured)"
+        },
+        {
+          "t": 4178,
+          "text": "escorting Survivor7 (Injured)"
+        },
+        {
+          "t": 4178.5,
+          "text": "escorting Survivor7 (Injured)"
+        },
+        {
+          "t": 4178.7,
+          "text": "escorting Survivor7 (Injured)"
+        },
+        {
+          "t": 4179.2,
+          "text": "escorting Survivor7 (Injured)"
+        },
+        {
+          "t": 4185.5,
+          "text": "whistled 2 survivors in"
+        },
+        {
+          "t": 4194.7,
           "text": "ability Engineer"
         },
         {
-          "t": 3564.8,
-          "text": "whistled 1 survivors in"
+          "t": 4230,
+          "text": "escorting Survivor12 (Worker)"
         },
         {
-          "t": 3566.1,
-          "text": "revived Survivor6"
+          "t": 4230.8,
+          "text": "escorting Survivor12 (Worker)"
         },
         {
-          "t": 3571.2,
-          "text": "escorting Survivor6 (Dog)"
+          "t": 4231.3,
+          "text": "escorting Survivor12 (Worker)"
+        },
+        {
+          "t": 4232,
+          "text": "escorting Survivor12 (Worker)"
         }
       ],
-      "lost": 4,
+      "lost": 5,
       "modifier": "Catastrophe",
       "modifierApplied": true,
       "outcome": "fail",
-      "outfallCranks": 6,
+      "outfallCranks": 31,
       "outfallOpens": 0,
-      "padAt": 317.4,
+      "padAt": 363.6,
       "playerDowns": 0,
       "reason": "not enough survivors can still be saved",
       "recovered": 0,
       "required": 9,
-      "rescued": 6,
+      "rescued": 7,
       "roles": [
         {
           "name": "Bot1",
@@ -1858,11 +2003,18 @@
         }
       ],
       "routes": [],
-      "salvage": 218,
-      "score": 1771,
+      "salvage": 123,
+      "score": 2055,
       "startedAt": 0,
-      "survivorDowns": 1,
-      "upgrades": [],
+      "survivorDowns": 0,
+      "upgrades": [
+        "Capacitor",
+        "FieldHospital",
+        "Impeller",
+        "LiftServo",
+        "Rebreather",
+        "SealKit"
+      ],
       "waterCurve": [
         {
           "level": 0.1,
@@ -1873,11 +2025,11 @@
           "t": 40
         },
         {
-          "level": 0.98,
+          "level": 0.27,
           "t": 60
         },
         {
-          "level": 1.45,
+          "level": 0.75,
           "t": 80
         },
         {
@@ -1885,56 +2037,65 @@
           "t": 100
         },
         {
-          "level": 1.73,
+          "level": 3.9,
           "t": 120
         },
         {
-          "level": 1.85,
+          "level": 5.7,
           "t": 140
         },
         {
-          "level": 1.96,
-          "t": 160
+          "level": 7.56,
+          "t": 161
         },
         {
-          "level": 1.83,
-          "t": 180
+          "level": 9.86,
+          "t": 182
         },
         {
-          "level": 1.95,
-          "t": 200
+          "level": 11.7,
+          "t": 202
         },
         {
-          "level": 2.06,
-          "t": 220
+          "level": 13.44,
+          "t": 223
         },
         {
-          "level": 2.17,
-          "t": 240
+          "level": 15.24,
+          "t": 243
         },
         {
-          "level": 2.05,
-          "t": 260
+          "level": 16.81,
+          "t": 263
         },
         {
-          "level": 3.62,
-          "t": 280
+          "level": 18.63,
+          "t": 284
         },
         {
-          "level": 5.4,
-          "t": 300
+          "level": 20.4,
+          "t": 304
         },
         {
-          "level": 7.67,
-          "t": 317
+          "level": 22.9,
+          "t": 324
+        },
+        {
+          "level": 24.72,
+          "t": 344
+        },
+        {
+          "level": 26.35,
+          "t": 363
         }
       ],
-      "waterPeak": 7.67,
+      "waterPeak": 26.35,
       "whistledSurvivors": 6,
-      "whistles": 4
+      "whistles": 3,
+      "winchCranks": 0
     }
   ],
   "runs": 7,
   "unresolved": 0,
-  "wins": 5
+  "wins": 6
 }

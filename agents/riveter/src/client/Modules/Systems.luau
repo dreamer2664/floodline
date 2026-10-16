@@ -293,7 +293,10 @@ function Systems.refresh()
 	if route then
 		local liftPowered = route.liftPowered == true
 		local liftState = lift and lift.state or "?"
-		Systems.routeRows.Lift.Text = `Lift — {liftState}, {liftPowered and "powered" or "no power"}`
+		-- When the car is climbing on the hand winch, say so: "no power" alone reads like a dead end,
+		-- and the whole point of the winch is that it is not one.
+		local how = liftPowered and "powered" or (lift and lift.manual and "hand winch" or "no power — winch it")
+		Systems.routeRows.Lift.Text = `Lift — {liftState}, {how}`
 		Systems.routeRows.Lift.Parent.Dot.BackgroundColor3 = routeColor(liftPowered)
 		local sky = route.extended or 0
 		Systems.routeRows.Skybridge.Text = route.crossable and "Skybridge — walkable (roof route)"

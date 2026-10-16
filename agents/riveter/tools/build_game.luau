@@ -419,6 +419,11 @@ copyModel("World", function(world)
 	P(lift, "Lamp", V3.new(3, 0.3, 3), V3.new(0, 5.7, -32), C3.fromRGB(255, 236, 190), NEON, true, false, 0.2)
 	P(lift, "ControlBox", V3.new(1.6, 1.6, 1), V3.new(3.4, 2.4, -29), C3.fromRGB(70, 74, 84), METAL, true, true, 0)
 	prompt(lift.Platform, "Load Survivors", "Evac Lift", 0.35)
+	-- The hand winch: the tower's unpowered way up, and the counterpart to the outfall wheel.
+	P(lift, "WinchDrum", V3.new(1.4, 1.4, 0.9), V3.new(-3.2, 2.2, -29.2), C3.fromRGB(150, 118, 66), METAL, true, true, 0)
+	P(lift, "WinchHandle", V3.new(0.3, 0.3, 1.5), V3.new(-3.2, 2.2, -28.5), C3.fromRGB(198, 160, 92), METAL, true, true, 0)
+	P(lift, "WinchPost", V3.new(0.4, 1.6, 0.4), V3.new(-3.2, 1.4, -29.2), C3.fromRGB(96, 84, 62), METAL, true, true, 0)
+	P(lift, "WinchPlate", V3.new(1.8, 0.2, 1.4), V3.new(-3.2, 0.72, -29.0), C3.fromRGB(120, 100, 70), METAL, true, true, 0.1)
 	for i = 1, 4 do
 		local column = ((i - 1) % 2)
 		local row = math.floor((i - 1) / 2)

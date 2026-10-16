@@ -269,6 +269,30 @@ def main() -> int:
           and "PlayerService.drags[player]" in player_service,
           f"casualty rides the carrier, bleed stretch x{stretch.group(1) if stretch else '?'}")
 
+    # ---- 26. the hand winch is baked, prompted, wired and cannot be beaten by the motor ----
+    lift_service = read(SRC / "server" / "Modules" / "LiftService.luau")
+    built = read(ROOT / "tools" / "build_game.luau")
+    winch_names = [n for n in ("WinchDrum", "WinchHandle", "WinchPost") if n in built]
+    # Scoped to Config.Lift, and anchored one level deeper: "Winch" is also a consumer label.
+    lift_block = re.search(r"Config\.Lift = \{(.*?)\n\}\n", config_text, re.S)
+    winch_block = re.search(r"\n\tWinch = \{(.*?)\n\t\},", lift_block.group(1) if lift_block else "", re.S)
+    climb = re.search(r"HoldClimb = ([\d.]+)", winch_block.group(1) if winch_block else "")
+    decay = re.search(r"DecayPerSecond = ([\d.]+)", winch_block.group(1) if winch_block else "")
+    # The slip between holds has to be smaller than the climb, or the car never leaves the pad.
+    net = (float(climb.group(1)) if climb else 0) - (float(decay.group(1)) if decay else 1) * 1.5
+    check("the hand winch is a real unpowered way up the tower",
+          len(winch_names) == 3
+          and "Turn Winch" in lift_service
+          and "function Lift.crank" in lift_service
+          and "Lift.winchSlipping" in lift_service
+          and "RequestWinch" in read(SRC / "shared" / "Net.luau")
+          and net > 0.01,
+          f"parts={winch_names} net climb per hold={net:.3f}")
+    check("a hand-wound car cannot be finished by the electric motor",
+          "Lift.manual and Lift.progress < cfg.Winch.StallProgress" in lift_service
+          and "Lift.manual and cfg.Winch.DecayPerSecond" in lift_service,
+          "Moving/Returning honour the manual flag")
+
     failures = [c for c in checks if not c["ok"]]
     report = {
         "checks": checks,

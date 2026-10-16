@@ -11,7 +11,10 @@ local Util = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Lift = {}
 Lift.Name = "Lift"
 
-Lift.state = "Idle" -- Idle | Boarding | Moving | Dwell | Returning | Stalled
+Lift.state = "Idle"
+Lift.manual = false          -- the car is climbing on the hand winch, not on power
+Lift.now = 0                 -- run clock for crank pacing (wall time breaks in headless runs)
+Lift.lastCrankAt = 0 -- Idle | Boarding | Moving | Dwell | Returning | Stalled
 Lift.progress = 0
 Lift.passengers = {} :: { any }
 Lift.playerRiders = {} :: { [Player]: boolean }
@@ -144,6 +147,77 @@ function Lift.load(player: Player?): (boolean, string?)
 	return true, nil
 end
 
+-- ===================== the hand winch =====================
+
+-- One completed hold on the winch handle. It only works while the car is at the base with the grid
+-- dark, and it drives the same progress value the powered motor drives, so the rest of the service
+-- (passengers, unloading, the pad) does not care which one is pulling.
+function Lift.crank(player: Player, seconds: number?): (boolean, string?)
+	local cfg = config()
+	if not ctx.roundActive() then
+		return false, "The winch is only worth turning during a round."
+	end
+	if ctx.power.isPowered("Lift") then
+		return false, "The lift is powered — the motor is faster than you are."
+	end
+	if Lift.state ~= "Idle" and Lift.state ~= "Boarding" then
+		return false, "The car is already moving."
+	end
+	if Lift.lastCrankAt > 0 and Lift.now - Lift.lastCrankAt < cfg.Winch.CooldownSeconds then
+		return false, "Keep turning."
+	end
+	Lift.lastCrankAt = Lift.now
+	local work = cfg.Winch.HoldClimb
+	if seconds then
+		-- Scripted or AI-driven holds pass a duration; scale the climb by it so a longer pull is a
+		-- bigger pull, with the configured hold as the unit.
+		work *= seconds / cfg.Winch.HoldSeconds
+	end
+	Lift.manual = true
+	Lift.progress = math.clamp(Lift.progress + work, 0, 1)
+	applyProgress(Lift.progress)
+	if Lift.progress >= cfg.Winch.StallProgress and Lift.state == "Idle" and #Lift.passengers > 0 then
+		Lift.state = "Boarding"
+		Lift.timer = 0
+	end
+	if Lift.progress >= 0.999 then
+		Lift.state = "Dwell"
+		Lift.timer = cfg.DwellSeconds
+		Lift.unloadSurvivors()
+		ctx.addScore(player, cfg.Winch.Score, "winched the lift up")
+		ctx.notify("The car reaches the tower on muscle alone.", "good")
+		Lift.manual = false
+	else
+		ctx.notifyPlayer(player, `Winch: {math.floor(Lift.progress * 100)}%` , "info")
+	end
+	Lift.setDirty()
+	return true, nil
+end
+
+-- The drum slips: with nobody turning, a hand-wound car creeps back down and eventually falls back
+-- to the base, which is what makes the winch a commitment rather than an alternative to power.
+function Lift.winchSlipping(dt: number): boolean
+	local cfg = config()
+	if not Lift.manual then
+		return false
+	end
+	if Lift.state == "Dwell" or Lift.state == "Moving" or Lift.state == "Returning" or Lift.state == "Stalled" then
+		return false
+	end
+	Lift.progress = math.max(0, Lift.progress - cfg.Winch.DecayPerSecond * dt)
+	applyProgress(Lift.progress)
+	if Lift.progress <= 0 and Lift.manual then
+		Lift.manual = false
+		ctx.notify("The winch drum runs out — the car settles back onto the pad.", "warn")
+	end
+	Lift.setDirty()
+	return true
+end
+
+function Lift.onWinchHandle(): boolean
+	return Lift.manual
+end
+
 function Lift.boardSurvivor(survivor): boolean
 	if #Lift.passengers >= capacity() then
 		return false
@@ -202,7 +276,11 @@ function Lift.update(dt: number)
 		return
 	end
 	local cfg = config()
+	Lift.now += dt
 	local powered = ctx.power.isPowered("Lift")
+	if Lift.manual and not powered then
+		Lift.winchSlipping(dt)
+	end
 
 	if Lift.state == "Moving" or Lift.state == "Returning" then
 		if not powered then
@@ -243,6 +321,17 @@ function Lift.update(dt: number)
 	end
 
 	if Lift.state == "Moving" then
+		-- A hand-wound car arrives under its own slip rules: if the drum has run back past the
+		-- landing threshold, the car settles onto the pad instead of a powered motor appearing to
+		-- carry it up. Without this the winch could "succeed" by being slower than the electric drive.
+		if Lift.manual and Lift.progress < cfg.Winch.StallProgress then
+			Lift.manual = false
+			Lift.state = "Returning"
+			Lift.direction = -1
+			ctx.notify("The winch slips — the car settles back onto the pad.", "warn")
+			Lift.setDirty()
+			return
+		end
 		local before = Lift.baseCFrame():Lerp(Lift.topCFrame(), Lift.progress * Lift.progress * (3 - 2 * Lift.progress))
 		Lift.progress = math.min(1, Lift.progress + dt / travelSeconds())
 		local eased = Lift.progress * Lift.progress * (3 - 2 * Lift.progress)
@@ -270,12 +359,15 @@ function Lift.update(dt: number)
 	end
 
 	if Lift.state == "Returning" then
-		Lift.progress = math.max(0, Lift.progress - dt / travelSeconds())
+		-- Muscles drop the car: a return driven by nobody is slower coming down than the motor.
+		local speed = Lift.manual and cfg.Winch.DecayPerSecond or (1 / travelSeconds())
+		Lift.progress = math.max(0, Lift.progress - speed * dt)
 		applyProgress(Lift.progress)
 		if Lift.progress <= 0 then
 			Lift.state = "Idle"
 			Lift.direction = 0
 			Lift.called = false
+			Lift.manual = false
 			Lift.setDirty()
 		end
 		return
@@ -290,6 +382,7 @@ function Lift.snapshot()
 		capacity = capacity(),
 		powered = ctx.power.isPowered("Lift"),
 		atBase = Lift.isAtBase(),
+		manual = Lift.manual,
 	}
 end
 
@@ -313,6 +406,35 @@ function Lift.reset()
 		applyProgress(0)
 	end
 	Lift.setDirty()
+end
+
+-- The winch handle is a baked part on the lift car, so the prompt is attached once at boot rather
+-- than by the interact service (which owns the walk-up prompts).
+local function wireWinchPrompt()
+	local handle = ctx.world.winchHandle and ctx.world.winchHandle()
+	if not (handle and handle:IsA("BasePart")) then
+		ctx.log("[Lift] winch handle missing from the baked car")
+		return
+	end
+	local existing = (handle :: BasePart):FindFirstChild("WinchPrompt")
+	if existing then
+		existing:Destroy()
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "WinchPrompt"
+	prompt.ActionText = "Turn Winch"
+	prompt.ObjectText = "Evac Lift"
+	prompt.HoldDuration = ctx.config.Lift.Winch.HoldSeconds
+	prompt.MaxActivationDistance = 9
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = handle
+	prompt.Triggered:Connect(function(player: Player)
+		local ok, reason = Lift.crank(player)
+		if not ok and reason then
+			ctx.notifyPlayer(player, reason, "warn")
+		end
+	end)
+	ctx.log(`[Lift] winch handle wired at {handle.Position}`)
 end
 
 function Lift.Init(context)
@@ -361,6 +483,7 @@ end
 function Lift.Start(context)
 	ctx = context
 	Lift.reset()
+	wireWinchPrompt()
 	RunService.Heartbeat:Connect(function(dt)
 		if ctx.roundActive() then
 			Lift.update(math.min(dt, 0.2))

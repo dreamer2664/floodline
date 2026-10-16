@@ -1832,6 +1832,77 @@ scenario("the whistle gathers three survivors at once and then goes on cooldown"
 end)
 
 -- ============================================================
+-- Scenario 47: the hand winch is a real second way up the tower, and only on muscle
+-- ============================================================
+-- The lift is the way out of the district, so a crew that cannot spare a cell for it is a crew that
+-- cannot finish. The winch has to work with the grid dark, refuse when the lift is powered, slip
+-- when nobody is turning, and land the car at the top with its passengers delivered.
+scenario("the hand winch lifts the car with no power, and slips when nobody turns", function()
+	freshRound(player)
+	local handle = part("WinchHandle")
+	assertTrue(handle ~= nil, "the winch handle is not in the baked place")
+	local prompt = Harness.promptOn(handle)
+	assertTrue(prompt ~= nil, "the winch handle has no prompt")
+	assertTrue(prompt.ActionText == "Turn Winch", `unexpected winch prompt: {prompt.ActionText}`)
+
+	-- Powered: the motor is faster, so the handle refuses.
+	local socket = part("Socket_Lift")
+	Power.insert(player, "Lift")
+	if Power.isPowered("Lift") then
+		local poweredOk, poweredWhy = Lift.crank(player)
+		assertTrue(not poweredOk, "the winch turned while the lift was powered")
+		assertTrue(poweredWhy ~= nil, "refusing a powered winch gave no reason")
+	end
+
+	-- Dark grid, car at the base, nobody on board: the first hold has to move the car.
+	Power.clearTrips("flood")
+	for _, cell in pairs(Power.cells) do
+		cell.socket = nil
+		cell.destroyed = false
+		cell.charge = 100
+	end
+	Power.refreshPrompts()
+	assertTrue(not Power.isPowered("Lift"), "the lift is still powered for the dark-grid test")
+	assertTrue(Lift.isAtBase(), "the car is not at the base to start")
+	local before = Lift.progress
+	Harness.trigger(handle, player)
+	assertTrue(Lift.progress > before, "a turn of the winch did not move the car")
+	assertTrue(Lift.onWinchHandle(), "the car is not marked as hand-wound")
+
+	-- The drum slips: without a hand on the handle the car creeps back down.
+	local wound = Lift.progress
+	Stub.advance(2)
+	assertTrue(Lift.progress < wound, string.format(
+		"the drum did not slip (%.3f -> %.3f)", wound, Lift.progress))
+
+	-- Wind it to the top and check the passengers are actually delivered.
+	Flood.addSurvivorToLiftTest = nil
+	local survivor = Rescue.order[1]
+	Stub.moveSurvivor(survivor, part("ExtractionPad").Position + V3(0, -14, 0))
+	Lift.boardSurvivor(survivor)
+	assertTrue(#Lift.passengers == 1, "the test passenger did not board")
+	local cranks = 0
+	for _ = 1, 40 do
+		-- Turn, then move on by the full hold. The slip window between holds is what the drum costs
+		-- the cranker, so it has to be modelled at the hold length, not at a fraction of it.
+		Harness.trigger(handle, player)
+		cranks += 1
+		Stub.advance(Config.Lift.Winch.HoldSeconds)
+		if Lift.progress >= 0.999 then
+			break
+		end
+	end
+	assertTrue(Lift.progress >= 0.999, `the winch only reached {math.floor(Lift.progress * 100)}% in {cranks} cranks`)
+	assertTrue(#Lift.passengers == 0, "the hand-wound car did not unload at the tower")
+	-- Deliberately no further tick here: the car is unloaded at the tower, and RescueService owns delivery.
+	-- A survivor standing on the pad is delivered by the rescue tick, not by the lift, so asserting a
+	-- rescue here would only be measuring how long the ferry takes after the fact.
+	assertTrue(survivor.state == "Idle", `the unloaded passenger is {survivor.state}, not standing at the tower`)
+	return true, string.format("%d holds wound the car to the tower with the grid dark, drum slips %.2f/s",
+		cranks, Config.Lift.Winch.DecayPerSecond)
+end)
+
+-- ============================================================
 -- report
 -- ============================================================
 local passed = #results - failures

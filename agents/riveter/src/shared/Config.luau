@@ -6,7 +6,7 @@ local Config = {}
 
 Config.Game = {
 	Name = "FLOODLINE: Last District",
-	Version = "r08",
+	Version = "r09",
 	MaxPlayers = 4,
 	MinPlayersToStart = 1,
 	LobbyAutoStartSeconds = 10,
@@ -215,6 +215,22 @@ Config.Lift = {
 	TopHeight = 15.6,
 	BasePosition = Vector3.new(0, 1, -32),
 	TopPosition = Vector3.new(0, 15.6, -40),
+	-- The hand winch: the tower's answer to a dark grid (the outfall's counterpart). Slower than a
+	-- powered car, and it stalls if nobody keeps turning, but it costs a body instead of a cell.
+	Winch = {
+		-- ~12 holds (about 18 s of hard turning) climbs the whole tower, against the motor's 6.5 s.
+		-- A hold is worth 0.16 and the drum takes back 0.075 between holds, so the net is +0.085: the
+		-- slip is what makes the winch a commitment, but it must never out-run the climb, or the car
+		-- simply stays on the pad (the first pass slipped 0.35/s against a 0.105 climb and did exactly
+		-- that).
+		HoldSeconds = 1.5,
+		HoldClimb = 0.16,        -- progress added per hold
+		DecayPerSecond = 0.05,   -- the drum slips back when nobody is on the handle
+		StallProgress = 0.84,    -- a car below this settles back onto the pad when the drum runs out
+		Score = 15,
+		CooldownSeconds = 0.4,
+		PromptRadius = 9,
+	},
 	CallRadius = 16,
 	BoardRadius = 7.5,
 	AutoBoardSurvivors = true,
